@@ -18,6 +18,21 @@ Meshes are outputted by Geometries and contain nodes, element connectivity infor
 
 Contains all finite element Assemblers that take (bi)linear forms and Meshes as inputs (and possibly additional info such as Elements) and output matrices.
 
+## fem/element.py
+
+TODO
+
+## fem/quadrature.py
+
+TODO
+
+## TODO list
+
+* facet assembly in AssemblerTriP1
+* global coordinates and interpolation in AssemblerTriP1
+* AssemblerTetP1 and MeshTet and GeometryMeshTet
+* AssemblerElement (and Element classes)
+
 ## Running tests
 
 Usually it suffices to write
