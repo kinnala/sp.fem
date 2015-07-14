@@ -1,6 +1,8 @@
-# fem
+# fem.py
 
 In this repository you find the working draft of a flexible, fully-interpreted and yet well-performing finite element code written in scipy/Python.
+
+The code is initially (c) Tom Gustafsson but the license will be modified in thefuture.
 
 ## Description of files
 
@@ -18,18 +20,22 @@ Meshes are outputted by Geometries and contain nodes, element connectivity infor
 
 Contains all finite element Assemblers that take (bi)linear forms and Meshes as inputs (and possibly additional info such as Elements) and output matrices.
 
-## fem/element.py
+### fem/mapping.py
+
+Mappings such as affine mappings, isoparametric mappings, ... ?
+
+### fem/element.py
 
 TODO
 
-## fem/quadrature.py
+### fem/quadrature.py
 
 TODO
 
 ## TODO list
 
 * facet assembly in AssemblerTriP1
-* global coordinates and interpolation in AssemblerTriP1
+* global coordinates(ok) and interpolation in AssemblerTriP1
 * AssemblerTetP1 and MeshTet and GeometryMeshTet
 * AssemblerElement (and Element classes)
 
