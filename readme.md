@@ -1,8 +1,8 @@
-# fem.py
+# sp.fem
 
-In this repository you find the working draft of a flexible, fully-interpreted and yet well-performing finite element code written in scipy/Python.
+In this repository you find the working draft of a flexible, fully-interpreted and yet well-performing finite element code written in SciPy/Python.
 
-The code is initially (c) Tom Gustafsson but the license will be modified in thefuture.
+The code is initially (c) Tom Gustafsson but the license will change in the future.
 
 ## Description of files
 
