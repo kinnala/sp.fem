@@ -7,7 +7,6 @@ class Assembler:
     """
     Superclass for assemblers.
     """
-
     def __init__(self):
         raise NotImplementedError("Assembler constructor not implemented!")
 
@@ -46,6 +45,7 @@ class AssemblerTriP1(Assembler):
         gradphi[0]=np.tile(np.array([-1.,-1.]),(X.shape[1],1)).T
         gradphi[1]=np.tile(np.array([1.,0.]),(X.shape[1],1)).T
         gradphi[2]=np.tile(np.array([0.,1.]),(X.shape[1],1)).T    
+        # TODO investigate turning these into two 1d arrays; could be faster?
         
         # bilinear form
         if form.__code__.co_argcount==5:
@@ -126,4 +126,9 @@ class AssemblerTriP1(Assembler):
         phi={}
         phi[0]=1.-X
         phi[1]=X
+
+        # local basis function gradients
+        gradphi={}
+        gradphi[0]=np.ones(X.shape[0])*(-1.)
+        gradphi[1]=np.ones(X.shape[0])
 

@@ -40,6 +40,8 @@ class MappingAffineTri(Mapping):
     def __init__(self,mesh):
         if not isinstance(mesh,fem.mesh.MeshTri):
             raise TypeError("MappingAffineTri initialized with an incompatible mesh type!")
+
+        # Matrices and vectors for triangle mappings
         self.A={0:{},1:{}}
 
         self.A[0][0]=mesh.p[0,mesh.t[1,:]]-mesh.p[0,mesh.t[0,:]]
@@ -61,6 +63,17 @@ class MappingAffineTri(Mapping):
         self.invA[1][0]=-self.A[1][0]/self.detA
         self.invA[1][1]=self.A[0][0]/self.detA 
 
+        # Matrices and vectors for boundary mappings
+        self.B={}
+
+        self.B[0]=mesh.p[0,mesh.facets[1,:]]-mesh.p[0,mesh.facets[0,:]]
+        self.B[1]=mesh.p[1,mesh.facets[1,:]]-mesh.p[1,mesh.facets[0,:]]
+
+        self.c={}
+
+        self.c[0]=mesh.p[0,mesh.facets[0,:]]
+        self.c[1]=mesh.p[1,mesh.facets[0,:]]
+
     def F(self,X):
         """
         Affine map F(X)=AX+b.
@@ -70,7 +83,7 @@ class MappingAffineTri(Mapping):
         x-coordinates and D[1] corresponding to y-coordinates.
         Both D[0] and D[1] are Nelems x Npoints.
         """
-        y={0:{},1:{}}
+        y={}
         y[0]=np.outer(self.A[0][0],X[0,:])+np.outer(self.A[0][1],X[1,:])+self.b[0]
         y[1]=np.outer(self.A[1][0],X[0,:])+np.outer(self.A[1][1],X[1,:])+self.b[1]
         return y
@@ -79,10 +92,10 @@ class MappingAffineTri(Mapping):
         """
         Inverse map F^{-1}(x)=A^{-1}(x-b).
         """
-        Y={0:{},1:{}}
+        Y={}
         Y[0]=x[0]-self.b[0]
         Y[1]=x[1]-self.b[1]
-        y={0:{},1:{}}
+        y={}
         y[0]=self.invA[0][0]*Y[0].T+self.invA[0][1]*Y[1].T
         y[1]=self.invA[1][0]*Y[0].T+self.invA[1][1]*Y[1].T
         y[0]=y[0].T
@@ -90,7 +103,13 @@ class MappingAffineTri(Mapping):
         return y
 
     def G(self,X)
-        y={0:{},1:{}}
+        """
+        Boundary mappings.
+        """
+        y={}
+        y[0]=np.outer(self.B[0],X)+self.c[0]
+        y[1]=np.outer(self.B[1],X)+self.c[1]
+        return y
 
 
         
