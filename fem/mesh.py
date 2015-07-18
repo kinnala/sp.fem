@@ -5,18 +5,18 @@ from mayavi import mlab
 from mpl_toolkits.mplot3d import Axes3D
 
 class Mesh:
-  """
-  Superclass for all meshes.
-  """
-
-  p=np.empty([0,0],dtype=np.float_)
-  t=np.empty([0,0],dtype=np.intp)
-
-  def __init__(self,p,t):
-    raise NotImplementedError("Mesh constructor not implemented!")
-
-  def plot(self):
-    raise NotImplementedError("Mesh.plot() not implemented!")
+    """
+    Superclass for all meshes.
+    """
+  
+    p=np.empty([0,0],dtype=np.float_)
+    t=np.empty([0,0],dtype=np.intp)
+  
+    def __init__(self,p,t):
+        raise NotImplementedError("Mesh constructor not implemented!")
+  
+    def plot(self):
+        raise NotImplementedError("Mesh.plot() not implemented!")
 
 class MeshTri(Mesh):
   """
@@ -44,13 +44,15 @@ class MeshTri(Mesh):
     self.facets=self.facets[:,ixa]
     self.t2f=ixb.reshape((3,self.t.shape[1]))
 
-    # build facet-to-triangle mapping TODO
+    # build facet-to-triangle mapping
+    e_tmp=np.hstack((self.t2f[0,:],self.t2f[1,:],self.t2f[2,:]))
+    t_tmp=np.tile(np.arange(self.t.shape[1]),(1,3))
   
   def boundary_nodes(self):
     """
     Return an array of boundary node indices.
     """
-    return np.nonzero(self.f2t[1,:]==0)[0]
+    return np.nonzero(self.f2t[1,:]==0)[0] # TODO this seems to be broken
 
   def plot(self,z=None,smooth=False):
     """
