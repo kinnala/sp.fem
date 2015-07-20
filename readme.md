@@ -44,3 +44,7 @@ TODO
 Usually it suffices to write
 ```ipython -m unittest discover```
 in the base directory.
+
+Also, e.g,
+```ipython -m unittest fem.test_mesh```
+is fine for running a single test module.

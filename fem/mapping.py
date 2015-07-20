@@ -102,7 +102,7 @@ class MappingAffineTri(Mapping):
         y[1]=y[1].T
         return y
 
-    def G(self,X)
+    def G(self,X):
         """
         Boundary mappings.
         """
