@@ -41,7 +41,7 @@ class MappingAffineTri(Mapping):
         if not isinstance(mesh,fem.mesh.MeshTri):
             raise TypeError("MappingAffineTri initialized with an incompatible mesh type!")
 
-        # Matrices and vectors for triangle mappings
+        # Matrices and vectors for triangle mappings: F(X)=AX+b
         self.A={0:{},1:{}}
 
         self.A[0][0]=mesh.p[0,mesh.t[1,:]]-mesh.p[0,mesh.t[0,:]]
@@ -63,7 +63,7 @@ class MappingAffineTri(Mapping):
         self.invA[1][0]=-self.A[1][0]/self.detA
         self.invA[1][1]=self.A[0][0]/self.detA 
 
-        # Matrices and vectors for boundary mappings
+        # Matrices and vectors for boundary mappings: G(X)=BX+c
         self.B={}
 
         self.B[0]=mesh.p[0,mesh.facets[1,:]]-mesh.p[0,mesh.facets[0,:]]
@@ -73,6 +73,8 @@ class MappingAffineTri(Mapping):
 
         self.c[0]=mesh.p[0,mesh.facets[0,:]]
         self.c[1]=mesh.p[1,mesh.facets[0,:]]
+
+        self.detB=np.sqrt(self.B[0]**2+self.B[1]**2)
 
     def F(self,X):
         """
@@ -104,7 +106,7 @@ class MappingAffineTri(Mapping):
 
     def G(self,X):
         """
-        Boundary mappings.
+        Boundary mapping G(X)=Bx+c.
         """
         y={}
         y[0]=np.outer(self.B[0],X)+self.c[0]

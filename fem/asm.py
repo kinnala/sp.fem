@@ -20,6 +20,7 @@ class AssemblerTriP1(Assembler):
         self.b=self.mapping.b
         self.detA=self.mapping.detA
         self.invA=self.mapping.invA
+        self.detB=self.mapping.detB
         self.mesh=mesh
 
     def iasm(self,form):
@@ -28,6 +29,7 @@ class AssemblerTriP1(Assembler):
         """
         nv=self.mesh.p.shape[1]
         nt=self.mesh.t.shape[1]
+        # TODO add support for assembling on a subset
         
         # quadrature points and weights (2nd order accurate)
         # TODO use quadrature interface
@@ -112,9 +114,13 @@ class AssemblerTriP1(Assembler):
         else:
             raise NotImplementedError("AssemblerTriP1 iasm not implemented for the given number of form arguments!")
 
-    def fasm(self,form):
+    def fasm(self,form,find=np.nonzero(self.mesh.f2t[1,:]==-1)[0]):
         """
         Facet assembly.
+        
+        By default assembles on exterior facets.
+        Include 'find' (facet indices) parameter
+        to assemble on some other set of facets.
         """
         nv=self.mesh.p.shape[1]
         nt=self.mesh.t.shape[1]
@@ -150,6 +156,7 @@ class AssemblerTriP1(Assembler):
             cols=np.zeros(9*ne)
 
             # mappings
+            tind=self.mesh.f2t[0,find]
             x=self.mapping.G(X) # reference face to global face
             Y=self.mapping.invF(x) # global triangle to reference triangle
 
@@ -157,14 +164,14 @@ class AssemblerTriP1(Assembler):
 
             for j in [0,1,2]:
                 u=phi[j](Y[0],Y[1])
-                #du={}
+                du={}
                 #du[0]=np.outer(self.invA[0][0],gradphi[j][0,:])+\
                 #      np.outer(self.invA[1][0],gradphi[j][1,:])
                 #du[1]=np.outer(self.invA[0][1],gradphi[j][0,:])+\
                 #      np.outer(self.invA[1][1],gradphi[j][1,:])
                 for i in [0,1,2]:
                     v=phi[i](Y[0],Y[1])
-                    #   dv={}
+                    dv={}
                     #   dv[0]=np.outer(self.invA[0][0],gradphi[i][0,:])+\
                     #         np.outer(self.invA[1][0],gradphi[i][1,:])
                     #   dv[1]=np.outer(self.invA[0][1],gradphi[i][0,:])+\
@@ -174,7 +181,7 @@ class AssemblerTriP1(Assembler):
                     ixs=slice(nt*(3*j+i),nt*(3*j+i+1))
                     
                     # compute entries of local stiffness matrices
-                    data[ixs]=np.dot(form(u,v,du,dv,x),W)*np.abs(self.detA)
+                    data[ixs]=np.dot(form(u,v,du,dv,x),W)*np.abs(self.detB)
                     rows[ixs]=self.mesh.t[i,:]
                     cols[ixs]=self.mesh.t[j,:]
         
