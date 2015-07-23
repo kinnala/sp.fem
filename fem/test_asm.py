@@ -63,7 +63,7 @@ class AssemblerTriP1FullPoisson(AssemblerTriP1BasicTest):
         f=a.iasm(fv)
 
         gv=lambda v,dv,x: g(x[0],x[1])*v
-        g=a.iasm(gv)
+        g=a.fasm(gv)
 
         D=np.nonzero(self.mesh.p[0,:]==0)[0]
         I=np.setdiff1d(np.arange(0,self.mesh.p.shape[1]),D)

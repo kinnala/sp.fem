@@ -112,7 +112,7 @@ class AssemblerTriP1(Assembler):
         
             return coo_matrix((data,(rows,cols)),shape=(nv,1)).toarray().T[0]
         else:
-            raise NotImplementedError("AssemblerTriP1 iasm not implemented for the given number of form arguments!")
+            raise NotImplementedError("AssemblerTriP1.iasm not implemented for the given number of form arguments!")
 
     def fasm(self,form,find=None):
         """
@@ -187,5 +187,38 @@ class AssemblerTriP1(Assembler):
                     cols[ixs]=self.mesh.t[j,tind]
         
             return coo_matrix((data,(rows,cols)),shape=(nv,nv)).tocsr()
+        # linear form
+        elif form.__code__.co_argcount==3:
+            # initialize sparse matrix structures
+            data=np.zeros(3*ne)
+            rows=np.zeros(3*ne)
+            cols=np.zeros(3*ne)
+
+            # mappings
+            tind=self.mesh.f2t[0,find]
+            x=self.mapping.G(X,find=find) # reference face to global face
+            Y=self.mapping.invF(x,tind=tind) # global triangle to reference triangle
+
+            # TODO interpolation
+
+            for i in [0,1,2]:
+                v=phi[i](Y[0],Y[1])
+                dv={}
+                #   dv[0]=np.outer(self.invA[0][0],gradphi[i][0,:])+\
+                #         np.outer(self.invA[1][0],gradphi[i][1,:])
+                #   dv[1]=np.outer(self.invA[0][1],gradphi[i][0,:])+\
+                #         np.outer(self.invA[1][1],gradphi[i][1,:])
+        
+                # find correct location in data,rows,cols
+                ixs=slice(ne*i,ne*(i+1))
+                
+                # compute entries of local stiffness matrices
+                data[ixs]=np.dot(form(v,dv,x),W)*np.abs(self.detB[find])
+                rows[ixs]=self.mesh.t[i,tind]
+                cols[ixs]=np.zeros(ne)
+        
+            return coo_matrix((data,(rows,cols)),shape=(nv,1)).toarray().T[0]
+        else:
+            raise NotImplementedError("AssemblerTriP1.fasm not implemented for the given number of form arguments!")
 
 
