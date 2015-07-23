@@ -114,17 +114,18 @@ class AssemblerTriP1(Assembler):
         else:
             raise NotImplementedError("AssemblerTriP1 iasm not implemented for the given number of form arguments!")
 
-    def fasm(self,form,find=np.nonzero(self.mesh.f2t[1,:]==-1)[0]):
+    def fasm(self,form,find=None):
         """
-        Facet assembly.
+        Facet assembly on all exterior facets.
         
-        By default assembles on exterior facets.
         Include 'find' (facet indices) parameter
         to assemble on some other set of facets.
         """
+        if find is None:
+            find=np.nonzero(self.mesh.f2t[1,:]==-1)[0]
         nv=self.mesh.p.shape[1]
         nt=self.mesh.t.shape[1]
-        ne=self.mesh.facets.shape[1]
+        ne=find.shape[0]
 
         X=np.array([1.127016653792584e-1,5.0000000000000000e-1,8.872983346207417e-1])
         W=np.array([2.777777777777779e-1,4.4444444444444444e-1,2.777777777777778e-1])
@@ -157,8 +158,8 @@ class AssemblerTriP1(Assembler):
 
             # mappings
             tind=self.mesh.f2t[0,find]
-            x=self.mapping.G(X) # reference face to global face
-            Y=self.mapping.invF(x) # global triangle to reference triangle
+            x=self.mapping.G(X,find=find) # reference face to global face
+            Y=self.mapping.invF(x,tind=tind) # global triangle to reference triangle
 
             # TODO interpolation
 
@@ -178,12 +179,12 @@ class AssemblerTriP1(Assembler):
                     #         np.outer(self.invA[1][1],gradphi[i][1,:])
             
                     # find correct location in data,rows,cols
-                    ixs=slice(nt*(3*j+i),nt*(3*j+i+1))
+                    ixs=slice(ne*(3*j+i),ne*(3*j+i+1))
                     
                     # compute entries of local stiffness matrices
-                    data[ixs]=np.dot(form(u,v,du,dv,x),W)*np.abs(self.detB)
-                    rows[ixs]=self.mesh.t[i,:]
-                    cols[ixs]=self.mesh.t[j,:]
+                    data[ixs]=np.dot(form(u,v,du,dv,x),W)*np.abs(self.detB[find])
+                    rows[ixs]=self.mesh.t[i,tind]
+                    cols[ixs]=self.mesh.t[j,tind]
         
             return coo_matrix((data,(rows,cols)),shape=(nv,nv)).tocsr()
 

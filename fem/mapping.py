@@ -51,8 +51,8 @@ class MappingAffineTri(Mapping):
 
         self.b={}
 
-        self.b[0]=mesh.p[0,mesh.t[:,0]]
-        self.b[1]=mesh.p[0,mesh.t[:,0]]
+        self.b[0]=mesh.p[0,mesh.t[0,:]]
+        self.b[1]=mesh.p[1,mesh.t[0,:]]
 
         self.detA=self.A[0][0]*self.A[1][1]-self.A[0][1]*self.A[1][0]
 
@@ -86,31 +86,45 @@ class MappingAffineTri(Mapping):
         Both D[0] and D[1] are Nelems x Npoints.
         """
         y={}
-        y[0]=np.outer(self.A[0][0],X[0,:])+np.outer(self.A[0][1],X[1,:])+self.b[0]
-        y[1]=np.outer(self.A[1][0],X[0,:])+np.outer(self.A[1][1],X[1,:])+self.b[1]
-        return y
-
-    def invF(self,x):
-        """
-        Inverse map F^{-1}(x)=A^{-1}(x-b).
-        """
-        Y={}
-        Y[0]=x[0]-self.b[0]
-        Y[1]=x[1]-self.b[1]
-        y={}
-        y[0]=self.invA[0][0]*Y[0].T+self.invA[0][1]*Y[1].T
-        y[1]=self.invA[1][0]*Y[0].T+self.invA[1][1]*Y[1].T
+        y[0]=np.outer(self.A[0][0],X[0,:]).T+np.outer(self.A[0][1],X[1,:]).T+self.b[0]
+        y[1]=np.outer(self.A[1][0],X[0,:]).T+np.outer(self.A[1][1],X[1,:]).T+self.b[1]
         y[0]=y[0].T
         y[1]=y[1].T
         return y
 
-    def G(self,X):
+    def invF(self,x,tind=None):
+        """
+        Inverse map F^{-1}(x)=A^{-1}(x-b).
+        """
+        Y={}
+        y={}
+        if tind is None:
+            Y[0]=x[0].T-self.b[0]
+            Y[1]=x[1].T-self.b[1]
+            y[0]=self.invA[0][0]*Y[0]+self.invA[0][1]*Y[1]
+            y[1]=self.invA[1][0]*Y[0]+self.invA[1][1]*Y[1]
+        else:
+            Y[0]=x[0].T-self.b[0][tind]
+            Y[1]=x[1].T-self.b[1][tind]
+            y[0]=self.invA[0][0][tind]*Y[0]+self.invA[0][1][tind]*Y[1]
+            y[1]=self.invA[1][0][tind]*Y[0]+self.invA[1][1][tind]*Y[1]
+        y[0]=y[0].T
+        y[1]=y[1].T
+        return y
+
+    def G(self,X,find=None):
         """
         Boundary mapping G(X)=Bx+c.
         """
         y={}
-        y[0]=np.outer(self.B[0],X)+self.c[0]
-        y[1]=np.outer(self.B[1],X)+self.c[1]
+        if find is None:
+            y[0]=np.outer(self.B[0],X).T+self.c[0]
+            y[1]=np.outer(self.B[1],X).T+self.c[1]
+        else:
+            y[0]=np.outer(self.B[0][find],X).T+self.c[0][find]
+            y[1]=np.outer(self.B[1][find],X).T+self.c[1][find]
+        y[0]=y[0].T
+        y[1]=y[1].T
         return y
 
 

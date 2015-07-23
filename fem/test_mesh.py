@@ -3,11 +3,11 @@ import fem.mesh
 import fem.geometry
 import numpy as np
 
-class MeshBasicTest(unittest.TestCase):
+class MeshTriBasicTest(unittest.TestCase):
     def setUp(self):
         self.geom=fem.geometry.GeometryMeshTri()
 
-class MeshFacetIndexing(MeshBasicTest):
+class MeshTriFacetIndexing(MeshTriBasicTest):
     """
     Compare the facet indexing to a known test case.
     """
