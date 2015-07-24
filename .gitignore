@@ -3,3 +3,4 @@
 *.pyc
 oldassembly.py
 play.py
+play*.py
