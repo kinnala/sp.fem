@@ -48,8 +48,8 @@ class AssemblerTriP1FullPoisson(AssemblerTriP1BasicTest):
     TODO add equation and bc's.
     """
     def runTest(self):
-        f=lambda x,y: 100.0*((x>=0.4)&(x<=0.6)&(y>=0.4)&(y<=0.6))
-        g=lambda x,y: (y==0)*1.0+(y==1)*(-1.0)
+        F=lambda x,y: 100.0*((x>=0.4)&(x<=0.6)&(y>=0.4)&(y<=0.6))
+        G=lambda x,y: (y==0)*1.0+(y==1)*(-1.0)
 
         a=fem.asm.AssemblerTriP1(self.mesh)
 
@@ -59,10 +59,10 @@ class AssemblerTriP1FullPoisson(AssemblerTriP1BasicTest):
         uv=lambda u,v,du,dv,x: u*v
         B=a.fasm(uv)
         
-        fv=lambda v,dv,x: f(x[0],x[1])*v
+        fv=lambda v,dv,x: F(x[0],x[1])*v
         f=a.iasm(fv)
 
-        gv=lambda v,dv,x: g(x[0],x[1])*v
+        gv=lambda v,dv,x: G(x[0],x[1])*v
         g=a.fasm(gv)
 
         D=np.nonzero(self.mesh.p[0,:]==0)[0]
@@ -71,4 +71,4 @@ class AssemblerTriP1FullPoisson(AssemblerTriP1BasicTest):
         x=np.zeros(K.shape[0])
         x[I]=scipy.sparse.linalg.spsolve(K[np.ix_(I,I)]+B[np.ix_(I,I)],f[I]+g[I])
 
-        self.assertAlmostEqual(np.max(x),2.064287505122583)
+        self.assertAlmostEqual(np.max(x),1.89635971369,places=2)

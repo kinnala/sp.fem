@@ -109,7 +109,6 @@ class AssemblerTriP1(Assembler):
                 data[ixs]=np.dot(form(v,dv,x),W)*np.abs(self.detA)
                 rows[ixs]=self.mesh.t[i,:]
                 cols[ixs]=np.zeros(nt)
-                
         
             return coo_matrix((data,(rows,cols)),shape=(nv,1)).toarray().T[0]
         else:
