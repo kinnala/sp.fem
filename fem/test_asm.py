@@ -42,6 +42,41 @@ class AssemblerTriP1Poisson(AssemblerTriP1BasicTest):
 
         self.assertAlmostEqual(np.max(x),0.073614737354524146)
 
+class AssemblerTriP1AnalyticWithXY(AssemblerTriP1BasicTest):
+    """
+    Poisson test case with analytic solution.
+
+    f=sin(pi*x)*sin(pi*y)
+
+    and u=0 on the boundary.
+    """
+    def runTest(self):
+        I=self.I
+        D=self.D
+
+        a=fem.asm.AssemblerTriP1(self.mesh)
+
+        def dudv(u,v,du,dv,x):
+            return du[0]*dv[0]+du[1]*dv[1]
+        K=a.iasm(dudv)
+
+        def fv(v,dv,x):
+                return 2*np.pi**2*np.sin(np.pi*x[0])*np.sin(np.pi*x[1])*v
+        f=a.iasm(fv)
+
+
+        x=np.zeros(K.shape[0])
+        x[I]=scipy.sparse.linalg.spsolve(K[np.ix_(I,I)],f[I])
+
+        def truex():
+            X=self.mesh.p[0,:]
+            Y=self.mesh.p[1,:]
+            return np.sin(np.pi*X)*np.sin(np.pi*Y)
+
+        self.assertAlmostEqual(np.max(x-truex()),0.0,places=3)
+
+
+
 class AssemblerTriP1FullPoisson(AssemblerTriP1BasicTest):
     """
     Poisson test from Huhtala's MATLAB package.
