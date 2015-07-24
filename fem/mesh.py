@@ -1,7 +1,11 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.tri as mtri
-from mayavi import mlab
+try:
+    from mayavi import mlab
+    opt_mayavi=True
+except:
+    opt_mayavi=False
 from mpl_toolkits.mplot3d import Axes3D
 
 class Mesh:
@@ -81,8 +85,11 @@ class MeshTri(Mesh):
       # visualize a solution vector
       if smooth:
         # use mayavi
-        mlab.triangular_mesh(self.p[0,:],self.p[1,:],z,self.t.T)
-        mlab.show()
+        if opt_mayavi:
+            mlab.triangular_mesh(self.p[0,:],self.p[1,:],z,self.t.T)
+            mlab.show()
+        else:
+            raise ImportError("Mayavi not imported because it is not installed!")
       else:
         # use matplotlib
         ax=fig.gca(projection='3d')

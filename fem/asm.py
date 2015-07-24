@@ -33,7 +33,8 @@ class AssemblerTriP1(Assembler):
         
         # quadrature points and weights (2nd order accurate)
         # TODO use quadrature interface
-        X=np.array([[1.666666666666666666666e-01,6.666666666666666666666e-01,1.666666666666666666666e-01],[1.666666666666666666666e-01,1.666666666666666666666e-01,6.666666666666666666666e-01]])
+        X=np.array([[1.666666666666666666666e-01,6.666666666666666666666e-01,1.666666666666666666666e-01],
+                    [1.666666666666666666666e-01,1.666666666666666666666e-01,6.666666666666666666666e-01]])
         W=np.array([1.666666666666666666666e-01,1.666666666666666666666e-01,1.666666666666666666666e-01])
 
         # local basis functions
@@ -48,6 +49,7 @@ class AssemblerTriP1(Assembler):
         gradphi[1]=np.tile(np.array([1.,0.]),(X.shape[1],1)).T
         gradphi[2]=np.tile(np.array([0.,1.]),(X.shape[1],1)).T    
         # TODO investigate turning these into two 1d arrays; could be faster?
+        x=self.mapping.F(X)
         
         # bilinear form
         if form.__code__.co_argcount==5:
@@ -56,7 +58,6 @@ class AssemblerTriP1(Assembler):
             rows=np.zeros(9*nt)
             cols=np.zeros(9*nt)
         
-            x=self.mapping.F(X)
             # TODO interpolation
         
             for j in [0,1,2]:
@@ -92,7 +93,6 @@ class AssemblerTriP1(Assembler):
             cols=np.zeros(3*nt)
             
             # TODO interpolation
-            x=self.mapping.F(X)
         
             for i in [0,1,2]:
                 v=np.tile(phi[i],(nt,1))
@@ -109,6 +109,7 @@ class AssemblerTriP1(Assembler):
                 data[ixs]=np.dot(form(v,dv,x),W)*np.abs(self.detA)
                 rows[ixs]=self.mesh.t[i,:]
                 cols[ixs]=np.zeros(nt)
+                
         
             return coo_matrix((data,(rows,cols)),shape=(nv,1)).toarray().T[0]
         else:
