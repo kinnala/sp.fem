@@ -130,24 +130,21 @@ class AssemblerTriP1(Assembler):
         X=np.array([1.127016653792584e-1,5.0000000000000000e-1,8.872983346207417e-1])
         W=np.array([2.777777777777779e-1,4.4444444444444444e-1,2.777777777777778e-1])
         
-        #   # local basis functions
-        #   phi={}
-        #   phi[0]=1.-X
-        #   phi[1]=X
-
-        #   # local basis function gradients
-        #   gradphi={}
-        #   gradphi[0]=np.ones(X.shape[0])*(-1.)
-        #   gradphi[1]=np.ones(X.shape[0])
         # local basis
         phi={}
         phi[0]=lambda x,y: 1-x-y
         phi[1]=lambda x,y: x
         phi[2]=lambda x,y: y
 
-        #gradphi={}
-        #TODO gradient support
+        gradphi_x={}
+        gradphi_x[0]=lambda x,y: -1.+0*x
+        gradphi_x[1]=lambda x,y: 1.+0*x
+        gradphi_x[2]=lambda x,y: 0*x
 
+        gradphi_y={}
+        gradphi_y[0]=lambda x,y: -1.+0*x
+        gradphi_y[1]=lambda x,y: 0+0*x
+        gradphi_y[2]=lambda x,y: 1.+0*x
 
         # bilinear form
         if form.__code__.co_argcount==5:
@@ -166,18 +163,18 @@ class AssemblerTriP1(Assembler):
             for j in [0,1,2]:
                 u=phi[j](Y[0],Y[1])
                 du={}
-                #du[0]=np.outer(self.invA[0][0],gradphi[j][0,:])+\
-                #      np.outer(self.invA[1][0],gradphi[j][1,:])
-                #du[1]=np.outer(self.invA[0][1],gradphi[j][0,:])+\
-                #      np.outer(self.invA[1][1],gradphi[j][1,:])
+                du[0]=self.invA[0][0][tind,None]*gradphi_x[j](Y[0],Y[1])+\
+                      self.invA[1][0][tind,None]*gradphi_y[j](Y[0],Y[1])
+                du[1]=self.invA[1][0][tind,None]*gradphi_x[j](Y[0],Y[1])+\
+                      self.invA[1][1][tind,None]*gradphi_y[j](Y[0],Y[1])
                 for i in [0,1,2]:
                     v=phi[i](Y[0],Y[1])
                     dv={}
-                    #   dv[0]=np.outer(self.invA[0][0],gradphi[i][0,:])+\
-                    #         np.outer(self.invA[1][0],gradphi[i][1,:])
-                    #   dv[1]=np.outer(self.invA[0][1],gradphi[i][0,:])+\
-                    #         np.outer(self.invA[1][1],gradphi[i][1,:])
-            
+                    dv[0]=self.invA[0][0][tind,None]*gradphi_x[i](Y[0],Y[1])+\
+                          self.invA[1][0][tind,None]*gradphi_y[i](Y[0],Y[1])
+                    dv[1]=self.invA[1][0][tind,None]*gradphi_x[i](Y[0],Y[1])+\
+                          self.invA[1][1][tind,None]*gradphi_y[i](Y[0],Y[1])
+           
                     # find correct location in data,rows,cols
                     ixs=slice(ne*(3*j+i),ne*(3*j+i+1))
                     
@@ -204,10 +201,10 @@ class AssemblerTriP1(Assembler):
             for i in [0,1,2]:
                 v=phi[i](Y[0],Y[1])
                 dv={}
-                #   dv[0]=np.outer(self.invA[0][0],gradphi[i][0,:])+\
-                #         np.outer(self.invA[1][0],gradphi[i][1,:])
-                #   dv[1]=np.outer(self.invA[0][1],gradphi[i][0,:])+\
-                #         np.outer(self.invA[1][1],gradphi[i][1,:])
+                dv[0]=self.invA[0][0][tind,None]*gradphi_x[i](Y[0],Y[1])+\
+                      self.invA[1][0][tind,None]*gradphi_y[i](Y[0],Y[1])
+                dv[1]=self.invA[1][0][tind,None]*gradphi_x[i](Y[0],Y[1])+\
+                      self.invA[1][1][tind,None]*gradphi_y[i](Y[0],Y[1])
         
                 # find correct location in data,rows,cols
                 ixs=slice(ne*i,ne*(i+1))
