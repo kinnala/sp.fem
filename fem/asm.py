@@ -50,9 +50,10 @@ class AssemblerTriP1(Assembler):
         gradphi[2]=np.tile(np.array([0.,1.]),(X.shape[1],1)).T    
         # TODO investigate turning these into two 1d arrays; could be faster?
         x=self.mapping.F(X)
+        h=np.tile(np.array([np.sqrt(np.abs(self.detA))]).T,(1,W.shape[0]))
         
         # bilinear form
-        if form.__code__.co_argcount==5:
+        if form.__code__.co_argcount==6:
             # initialize sparse matrix structures
             data=np.zeros(9*nt)
             rows=np.zeros(9*nt)
@@ -79,14 +80,14 @@ class AssemblerTriP1(Assembler):
                     ixs=slice(nt*(3*j+i),nt*(3*j+i+1))
                     
                     # compute entries of local stiffness matrices
-                    data[ixs]=np.dot(form(u,v,du,dv,x),W)*np.abs(self.detA)
+                    data[ixs]=np.dot(form(u,v,du,dv,x,h),W)*np.abs(self.detA)
                     rows[ixs]=self.mesh.t[i,:]
                     cols[ixs]=self.mesh.t[j,:]
         
             return coo_matrix((data,(rows,cols)),shape=(nv,nv)).tocsr()
 
         # linear form
-        elif form.__code__.co_argcount==3:
+        elif form.__code__.co_argcount==4:
             # initialize sparse matrix structures
             data=np.zeros(3*nt)
             rows=np.zeros(3*nt)
@@ -106,7 +107,7 @@ class AssemblerTriP1(Assembler):
                 ixs=slice(nt*i,nt*(i+1))
                 
                 # compute entries of local stiffness matrices
-                data[ixs]=np.dot(form(v,dv,x),W)*np.abs(self.detA)
+                data[ixs]=np.dot(form(v,dv,x,h),W)*np.abs(self.detA)
                 rows[ixs]=self.mesh.t[i,:]
                 cols[ixs]=np.zeros(nt)
         
@@ -145,16 +146,38 @@ class AssemblerTriP1(Assembler):
         gradphi_y[0]=lambda x,y: -1.+0*x
         gradphi_y[1]=lambda x,y: 0+0*x
         gradphi_y[2]=lambda x,y: 1.+0*x
+        
+        nhat_x={}
+        nhat_x[0]=0.
+        nhat_x[1]=1.
+        nhat_x[2]=-1.
+
+        nhat_y={}
+        nhat_y[0]=-1.
+        nhat_y[1]=1.
+        nhat_y[2]=0.
+        
+        tind=self.mesh.f2t[0,find]
+        h=np.tile(np.array([self.detB[tind]]).T,(1,W.shape[0]))
+        
+        n_x={}
+        n_x[0]=self.A[0][0]*nhat_x[0]+self.A[0][1]*nhat_y[0]
+        n_x[1]=self.A[0][0]*nhat_x[1]+self.A[0][1]*nhat_y[1]
+        n_x[2]=self.A[0][0]*nhat_x[2]+self.A[0][1]*nhat_y[2]
+
+        n_y={}
+        n_y[0]=self.A[1][0]*nhat_x[0]+self.A[1][1]*nhat_y[0]
+        n_y[1]=self.A[1][0]*nhat_x[1]+self.A[1][1]*nhat_y[1]
+        n_y[2]=self.A[1][0]*nhat_x[2]+self.A[1][1]*nhat_y[2]
 
         # bilinear form
-        if form.__code__.co_argcount==5:
+        if form.__code__.co_argcount==6:
             # initialize sparse matrix structures
             data=np.zeros(9*ne)
             rows=np.zeros(9*ne)
             cols=np.zeros(9*ne)
 
             # mappings
-            tind=self.mesh.f2t[0,find]
             x=self.mapping.G(X,find=find) # reference face to global face
             Y=self.mapping.invF(x,tind=tind) # global triangle to reference triangle
 
@@ -179,20 +202,19 @@ class AssemblerTriP1(Assembler):
                     ixs=slice(ne*(3*j+i),ne*(3*j+i+1))
                     
                     # compute entries of local stiffness matrices
-                    data[ixs]=np.dot(form(u,v,du,dv,x),W)*np.abs(self.detB[find])
+                    data[ixs]=np.dot(form(u,v,du,dv,x,h),W)*np.abs(self.detB[find])
                     rows[ixs]=self.mesh.t[i,tind]
                     cols[ixs]=self.mesh.t[j,tind]
         
             return coo_matrix((data,(rows,cols)),shape=(nv,nv)).tocsr()
         # linear form
-        elif form.__code__.co_argcount==3:
+        elif form.__code__.co_argcount==4:
             # initialize sparse matrix structures
             data=np.zeros(3*ne)
             rows=np.zeros(3*ne)
             cols=np.zeros(3*ne)
 
             # mappings
-            tind=self.mesh.f2t[0,find]
             x=self.mapping.G(X,find=find) # reference face to global face
             Y=self.mapping.invF(x,tind=tind) # global triangle to reference triangle
 
@@ -210,7 +232,7 @@ class AssemblerTriP1(Assembler):
                 ixs=slice(ne*i,ne*(i+1))
                 
                 # compute entries of local stiffness matrices
-                data[ixs]=np.dot(form(v,dv,x),W)*np.abs(self.detB[find])
+                data[ixs]=np.dot(form(v,dv,x,h),W)*np.abs(self.detB[find])
                 rows[ixs]=self.mesh.t[i,tind]
                 cols[ixs]=np.zeros(ne)
         
