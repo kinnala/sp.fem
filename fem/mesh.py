@@ -30,7 +30,8 @@ class MeshTri(Mesh):
   p=np.empty([2,0],dtype=np.float_)
   t=np.empty([3,0],dtype=np.intp)
   facets=np.empty([2,0],dtype=np.intp)
-  t2f=np.empty([2,0],dtype=np.intp)
+  t2f=np.empty([3,0],dtype=np.intp)
+  f2t=np.empty([2,0],dtype=np.intp)
 
   def __init__(self,p,t):
     self.p=p
@@ -68,7 +69,7 @@ class MeshTri(Mesh):
     """
     Return an array of boundary node indices.
     """
-    return np.nonzero(self.f2t[1,:]==0)[0] # TODO this seems to be broken
+    return np.unique(self.facets[:,np.nonzero(self.f2t[1,:]==-1)].flatten())
 
   def plot(self,z=None,smooth=False):
     """
