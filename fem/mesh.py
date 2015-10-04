@@ -69,7 +69,7 @@ class MeshTri(Mesh):
     """
     Return an array of boundary node indices.
     """
-    return np.unique(self.facets[:,np.nonzero(self.f2t[1,:]==-1)].flatten())
+    return np.unique(self.facets[:,np.nonzero(self.f2t[1,:]==-1)[0]])
 
   def plot(self,z=None,smooth=False):
     """
@@ -81,14 +81,12 @@ class MeshTri(Mesh):
       xs=np.vstack((self.p[0,self.facets[0,:]],self.p[0,self.facets[1,:]]))
       ys=np.vstack((self.p[1,self.facets[0,:]],self.p[1,self.facets[1,:]]))
       plt.plot(xs,ys,'k')
-      plt.show()
     else:
       # visualize a solution vector
       if smooth:
         # use mayavi
         if opt_mayavi:
             mlab.triangular_mesh(self.p[0,:],self.p[1,:],z,self.t.T)
-            mlab.show()
         else:
             raise ImportError("Mayavi not imported because it is not installed!")
       else:
@@ -96,6 +94,15 @@ class MeshTri(Mesh):
         ax=fig.gca(projection='3d')
         ts=mtri.Triangulation(self.p[0,:],self.p[1,:],self.t.T)
         ax.plot_trisurf(self.p[0,:],self.p[1,:],z,triangles=ts.triangles,cmap=plt.cm.Spectral)
-        plt.show()
+        
+  def show(self):
+    """
+    Call after plot functions.
+    """
+    if opt_mayavi:
+      mlab.show()
+    else:
+      plt.show()
+      
 
 

@@ -3,6 +3,9 @@ import fem.mesh
 import fem.mapping
 from scipy.sparse import coo_matrix
 
+import matplotlib.pyplot as plt
+import time
+
 class Assembler:
     """
     Superclass for assemblers.
@@ -147,39 +150,49 @@ class AssemblerTriP1(Assembler):
         gradphi_y[1]=lambda x,y: 0+0*x
         gradphi_y[2]=lambda x,y: 1.+0*x
         
-        nhat_x={}
-        nhat_x[0]=0.
-        nhat_x[1]=1.
-        nhat_x[2]=-1.
-
-        nhat_y={}
-        nhat_y[0]=-1.
-        nhat_y[1]=1.
-        nhat_y[2]=0.
-        
+        # boundary triangle indices
         tind=self.mesh.f2t[0,find]
         h=np.tile(np.array([self.detB[tind]]).T,(1,W.shape[0]))
-        
-        n_x={}
-        n_x[0]=self.A[0][0]*nhat_x[0]+self.A[0][1]*nhat_y[0]
-        n_x[1]=self.A[0][0]*nhat_x[1]+self.A[0][1]*nhat_y[1]
-        n_x[2]=self.A[0][0]*nhat_x[2]+self.A[0][1]*nhat_y[2]
 
-        n_y={}
-        n_y[0]=self.A[1][0]*nhat_x[0]+self.A[1][1]*nhat_y[0]
-        n_y[1]=self.A[1][0]*nhat_x[1]+self.A[1][1]*nhat_y[1]
-        n_y[2]=self.A[1][0]*nhat_x[2]+self.A[1][1]*nhat_y[2]
+        # mappings
+        x=self.mapping.G(X,find=find) # reference face to global face
+        Y=self.mapping.invF(x,tind=tind) # global triangle to reference triangle
+        
+        # tangent vectors
+        t={}
+        t[0]=self.mesh.p[0,self.mesh.facets[0,find]]-self.mesh.p[0,self.mesh.facets[1,find]]
+        t[1]=self.mesh.p[1,self.mesh.facets[0,find]]-self.mesh.p[1,self.mesh.facets[1,find]]
+        
+        # normalize tangent vectors
+        t[2]=np.sqrt(t[0]**2+t[1]**2)
+        t[0]/=t[2]
+        t[1]/=t[2]
+        
+        # normal vectors
+        n={}
+        n[0]=-t[1]
+        n[1]=t[0]
+
+        # map normal vectors to reference coords to correct sign (outward normals wanted)
+        n_ref={}
+        n_ref[0]=self.invA[0][0][tind]*n[0]+self.invA[1][0][tind]*n[1]
+        n_ref[1]=self.invA[0][1][tind]*n[0]+self.invA[1][1][tind]*n[1]
+        
+        # change the sign of the following normal vectors
+        meps=1e-14
+        csgn=np.nonzero((n_ref[0]<0)*(n_ref[1]<0)+(n_ref[0]>0)*(n_ref[1]<meps)*(n_ref[1]>-meps)+(n_ref[0]<meps)*(n_ref[0]>-meps)*(n_ref[1]>0))[0]
+        n[0][csgn]=(-1.)*(n[0][csgn])
+        n[1][csgn]=(-1.)*(n[1][csgn])
+        
+        n[0]=np.tile(n[0][:,None],(1,W.shape[0]))
+        n[1]=np.tile(n[1][:,None],(1,W.shape[0]))
 
         # bilinear form
-        if form.__code__.co_argcount==6:
+        if form.__code__.co_argcount==7:
             # initialize sparse matrix structures
             data=np.zeros(9*ne)
             rows=np.zeros(9*ne)
             cols=np.zeros(9*ne)
-
-            # mappings
-            x=self.mapping.G(X,find=find) # reference face to global face
-            Y=self.mapping.invF(x,tind=tind) # global triangle to reference triangle
 
             # TODO interpolation
 
@@ -202,21 +215,17 @@ class AssemblerTriP1(Assembler):
                     ixs=slice(ne*(3*j+i),ne*(3*j+i+1))
                     
                     # compute entries of local stiffness matrices
-                    data[ixs]=np.dot(form(u,v,du,dv,x,h),W)*np.abs(self.detB[find])
+                    data[ixs]=np.dot(form(u,v,du,dv,x,h,n),W)*np.abs(self.detB[find])
                     rows[ixs]=self.mesh.t[i,tind]
                     cols[ixs]=self.mesh.t[j,tind]
         
             return coo_matrix((data,(rows,cols)),shape=(nv,nv)).tocsr()
         # linear form
-        elif form.__code__.co_argcount==4:
+        elif form.__code__.co_argcount==5:
             # initialize sparse matrix structures
             data=np.zeros(3*ne)
             rows=np.zeros(3*ne)
             cols=np.zeros(3*ne)
-
-            # mappings
-            x=self.mapping.G(X,find=find) # reference face to global face
-            Y=self.mapping.invF(x,tind=tind) # global triangle to reference triangle
 
             # TODO interpolation
 
@@ -232,7 +241,7 @@ class AssemblerTriP1(Assembler):
                 ixs=slice(ne*i,ne*(i+1))
                 
                 # compute entries of local stiffness matrices
-                data[ixs]=np.dot(form(v,dv,x,h),W)*np.abs(self.detB[find])
+                data[ixs]=np.dot(form(v,dv,x,h,n),W)*np.abs(self.detB[find])
                 rows[ixs]=self.mesh.t[i,tind]
                 cols[ixs]=np.zeros(ne)
         
