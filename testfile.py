@@ -23,7 +23,7 @@ def fv(v,dv,x,h):
     return 2*np.pi**2*np.sin(np.pi*x[0])*np.sin(np.pi*x[1])*v
     
 def G(x,y):
-    return np.sin(np.pi*x)
+    return np.sin(np.pi*x)*0
     
 def gv(v,dv,x,h,n):
     return G(x[0],x[1])*v+gamma*1/h*G(x[0],x[1])*v-dv[0]*n[0]*G(x[0],x[1])-dv[1]*n[1]*G(x[0],x[1])

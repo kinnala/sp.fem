@@ -201,14 +201,14 @@ class AssemblerTriP1(Assembler):
                 du={}
                 du[0]=self.invA[0][0][tind,None]*gradphi_x[j](Y[0],Y[1])+\
                       self.invA[1][0][tind,None]*gradphi_y[j](Y[0],Y[1])
-                du[1]=self.invA[1][0][tind,None]*gradphi_x[j](Y[0],Y[1])+\
+                du[1]=self.invA[0][1][tind,None]*gradphi_x[j](Y[0],Y[1])+\
                       self.invA[1][1][tind,None]*gradphi_y[j](Y[0],Y[1])
                 for i in [0,1,2]:
                     v=phi[i](Y[0],Y[1])
                     dv={}
                     dv[0]=self.invA[0][0][tind,None]*gradphi_x[i](Y[0],Y[1])+\
                           self.invA[1][0][tind,None]*gradphi_y[i](Y[0],Y[1])
-                    dv[1]=self.invA[1][0][tind,None]*gradphi_x[i](Y[0],Y[1])+\
+                    dv[1]=self.invA[0][1][tind,None]*gradphi_x[i](Y[0],Y[1])+\
                           self.invA[1][1][tind,None]*gradphi_y[i](Y[0],Y[1])
            
                     # find correct location in data,rows,cols
@@ -234,7 +234,7 @@ class AssemblerTriP1(Assembler):
                 dv={}
                 dv[0]=self.invA[0][0][tind,None]*gradphi_x[i](Y[0],Y[1])+\
                       self.invA[1][0][tind,None]*gradphi_y[i](Y[0],Y[1])
-                dv[1]=self.invA[1][0][tind,None]*gradphi_x[i](Y[0],Y[1])+\
+                dv[1]=self.invA[0][1][tind,None]*gradphi_x[i](Y[0],Y[1])+\
                       self.invA[1][1][tind,None]*gradphi_y[i](Y[0],Y[1])
         
                 # find correct location in data,rows,cols
