@@ -15,7 +15,7 @@ a=fem.asm.AssemblerTriP1(mesh)
 def dudv(u,v,du,dv,x,h):
     return du[0]*dv[0]+du[1]*dv[1]
     
-gamma=0.1
+gamma=200
 def uv(u,v,du,dv,x,h,n):
     return gamma*1/h*u*v-du[0]*n[0]*v-du[1]*n[1]*v-u*dv[0]*n[0]-u*dv[1]*n[1]
     
@@ -42,5 +42,6 @@ y[I]=scipy.sparse.linalg.spsolve(K[np.ix_(I,I)],f[I]-K[np.ix_(I,D)].dot(y[D]))
 
 mesh.plot(x)
 mesh.plot(y)
+mesh.plot(x-y)
 
 mesh.show()

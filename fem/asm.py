@@ -152,7 +152,8 @@ class AssemblerTriP1(Assembler):
         
         # boundary triangle indices
         tind=self.mesh.f2t[0,find]
-        h=np.tile(np.array([self.detB[tind]]).T,(1,W.shape[0]))
+        #h=np.tile(np.array([self.detB[tind]]).T,(1,W.shape[0]))
+        h=np.tile(np.sqrt(np.abs(self.detB[tind,None])),(1,W.shape[0]))
 
         # mappings
         x=self.mapping.G(X,find=find) # reference face to global face
