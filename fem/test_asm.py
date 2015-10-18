@@ -28,8 +28,8 @@ class AssemblerTriP1Poisson(AssemblerTriP1BasicTest):
     with $u=0$ on the boundary.
     """
     def runTest(self):
-        bilin=lambda u,v,du,dv,x: du[0]*dv[0]+du[1]*dv[1]
-        lin=lambda v,dv,x: 1*v
+        bilin=lambda u,v,du,dv,x,h: du[0]*dv[0]+du[1]*dv[1]
+        lin=lambda v,dv,x,h: 1*v
 
         a=fem.asm.AssemblerTriP1(self.mesh)
 
@@ -56,11 +56,11 @@ class AssemblerTriP1AnalyticWithXY(AssemblerTriP1BasicTest):
 
         a=fem.asm.AssemblerTriP1(self.mesh)
 
-        def dudv(u,v,du,dv,x):
+        def dudv(u,v,du,dv,x,h):
             return du[0]*dv[0]+du[1]*dv[1]
         K=a.iasm(dudv)
 
-        def fv(v,dv,x):
+        def fv(v,dv,x,h):
                 return 2*np.pi**2*np.sin(np.pi*x[0])*np.sin(np.pi*x[1])*v
         f=a.iasm(fv)
 
@@ -88,16 +88,16 @@ class AssemblerTriP1FullPoisson(AssemblerTriP1BasicTest):
 
         a=fem.asm.AssemblerTriP1(self.mesh)
 
-        dudv=lambda u,v,du,dv,x: du[0]*dv[0]+du[1]*dv[1]
+        dudv=lambda u,v,du,dv,x,h: du[0]*dv[0]+du[1]*dv[1]
         K=a.iasm(dudv)
 
-        uv=lambda u,v,du,dv,x: u*v
+        uv=lambda u,v,du,dv,x,h,n: u*v
         B=a.fasm(uv)
         
-        fv=lambda v,dv,x: F(x[0],x[1])*v
+        fv=lambda v,dv,x,h: F(x[0],x[1])*v
         f=a.iasm(fv)
 
-        gv=lambda v,dv,x: G(x[0],x[1])*v
+        gv=lambda v,dv,x,h,n: G(x[0],x[1])*v
         g=a.fasm(gv)
 
         D=np.nonzero(self.mesh.p[0,:]==0)[0]

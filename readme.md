@@ -42,7 +42,7 @@ TODO
 ## Running tests
 
 Usually it suffices to write
-```ipython -m unittest discover```
+```ipython -m unittest discover ./fem```
 in the base directory.
 
 Also, e.g,
