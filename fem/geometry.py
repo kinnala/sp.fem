@@ -1,6 +1,7 @@
 import numpy as np
 import fem.mesh
 
+import os
 import matplotlib.pyplot as plt
 import shapely.geometry as shgeom
 
@@ -84,6 +85,62 @@ class GeometryShapelyTriangle2D(Geometry):
                 xs=np.append(xs,itr[0])
                 ys=np.append(ys,itr[1])
             plt.plot(xs,ys,'k-')
+
+    def mesh(self,hmax=1.0):
+        """
+        Call triangle to generate a mesh.
+        """
+        xs=np.array([])
+        ys=np.array([])
+        segstart=np.array([])
+        segend=np.array([])
+        itrn=0
+        if isinstance(self.g.boundary,shgeom.multilinestring.MultiLineString):
+            # iterate over boundaries
+            for itr in self.g.boundary:
+                for jtr in itr.coords:
+                    xs=np.append(xs,jtr[0])
+                    ys=np.append(ys,jtr[1])
+                    segstart=np.append(segstart,itrn)
+                    segend=np.append(segend,itrn+1)
+                    itrn=itrn+1
+                segstart=segstart[0:-1]
+                segend=segend[0:-1]
+        else:
+            for itr in self.g.boundary.coords:
+                xs=np.append(xs,itr[0])
+                ys=np.append(ys,itr[1])
+                segstart=np.append(segstart,itrn)
+                segend=np.append(segend,itrn+1)
+                itrn=itrn+1
+
+        f=open('geom.poly','w') 
+        f.write('%d 2 0 0\n'%len(xs))
+        for itr in range(0,len(xs)):
+            f.write('%d %f %f\n'%(itr,xs[itr],ys[itr]))
+        f.write('%d 0\n'%len(segstart))
+        for itr in range(0,len(segstart)):
+            f.write('%d %d %d\n'%(itr,segstart[itr],segend[itr]))
+        f.write('0\n')
+        f.write('0')
+        f.close()
+
+        os.system("./triangle/triangle -q -a%f -p geom.poly > /dev/null"%hmax**2)
+
+        mesh=self.load_triangle("geom")
+
+        os.system("rm geom.poly")
+        os.system("rm geom.1.ele")
+        os.system("rm geom.1.node")
+        os.system("rm geom.1.poly")
+
+        return mesh
+
+    def load_triangle(self,fname):
+        t=np.loadtxt(open(fname+".1.ele","rb"),delimiter=None,comments="#",skiprows=1).T
+        p=np.loadtxt(open(fname+".1.node","rb"),delimiter=None,comments="#",skiprows=1).T
+        return fem.mesh.MeshTri(p[1:3,:],t[1:,:].astype(np.intp))
+
 
 class GeometryMeshTri(Geometry):
     """
