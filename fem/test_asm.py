@@ -23,9 +23,9 @@ class AssemblerTriP1BasicTest(unittest.TestCase):
         self.I=np.setdiff1d(np.arange(0,self.mesh.p.shape[1]),self.D)
 
 class AssemblerTriP1Poisson(AssemblerTriP1BasicTest):
-    """
-    Simple Poisson test. Solving $-\Delta u = 1$ in an unit square
-    with $u=0$ on the boundary.
+    """Simple Poisson test.
+    
+    Solving $-\Delta u = 1$ in an unit square with $u=0$ on the boundary.
     """
     def runTest(self):
         bilin=lambda u,v,du,dv,x,h: du[0]*dv[0]+du[1]*dv[1]
@@ -43,12 +43,9 @@ class AssemblerTriP1Poisson(AssemblerTriP1BasicTest):
         self.assertAlmostEqual(np.max(x),0.073614737354524146)
 
 class AssemblerTriP1AnalyticWithXY(AssemblerTriP1BasicTest):
-    """
-    Poisson test case with analytic solution.
+    """Poisson test case with analytic solution.
 
-    f=sin(pi*x)*sin(pi*y)
-
-    and u=0 on the boundary.
+    Loading f=sin(pi*x)*sin(pi*y) and u=0 on the boundary.
     """
     def runTest(self):
         I=self.I
@@ -78,8 +75,8 @@ class AssemblerTriP1AnalyticWithXY(AssemblerTriP1BasicTest):
 
 
 class AssemblerTriP1FullPoisson(AssemblerTriP1BasicTest):
-    """
-    Poisson test from Huhtala's MATLAB package.
+    """Poisson test from Huhtala's MATLAB package.
+
     TODO add equation and bc's.
     """
     def runTest(self):
@@ -107,3 +104,41 @@ class AssemblerTriP1FullPoisson(AssemblerTriP1BasicTest):
         x[I]=scipy.sparse.linalg.spsolve(K[np.ix_(I,I)]+B[np.ix_(I,I)],f[I]+g[I])
 
         self.assertAlmostEqual(np.max(x),1.89635971369,places=2)
+
+class AssemblerTriP1Nitsche(AssemblerTriP1BasicTest):
+    """Solve Poisson with and without Nitsche approximating Dirichlet BC."""
+    def runTest(self):
+        mesh=self.mesh
+        a=fem.asm.AssemblerTriP1(mesh)
+        D=self.D
+        I=self.I
+
+        def dudv(u,v,du,dv,x,h):
+            return du[0]*dv[0]+du[1]*dv[1]
+            
+        gamma=200
+        def uv(u,v,du,dv,x,h,n):
+            return gamma*1/h*u*v-du[0]*n[0]*v-du[1]*n[1]*v-u*dv[0]*n[0]-u*dv[1]*n[1]
+            
+        def fv(v,dv,x,h):
+            return 2*np.pi**2*np.sin(np.pi*x[0])*np.sin(np.pi*x[1])*v
+            
+        def G(x,y):
+            return np.sin(np.pi*x)*0
+            
+        def gv(v,dv,x,h,n):
+            return G(x[0],x[1])*v+gamma*1/h*G(x[0],x[1])*v-dv[0]*n[0]*G(x[0],x[1])-dv[1]*n[1]*G(x[0],x[1])
+
+        K=a.iasm(dudv)
+        B=a.fasm(uv)
+        f=a.iasm(fv)
+        g=a.fasm(gv)
+
+        x=np.zeros(K.shape[0])
+        x=scipy.sparse.linalg.spsolve(K+B,f+g)
+
+        y=np.zeros(K.shape[0])
+        y[D]=G(mesh.p[0,D],mesh.p[1,D])
+        y[I]=scipy.sparse.linalg.spsolve(K[np.ix_(I,I)],f[I]-K[np.ix_(I,D)].dot(y[D]))
+
+        self.assertAlmostEqual(np.linalg.norm(x-y),0.0,places=2)
