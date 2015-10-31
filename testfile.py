@@ -4,7 +4,7 @@ import fem.asm
 import scipy.sparse.linalg
 
 geom=fem.geometry.GeometryMeshTri()
-geom.refine(3)
+geom.refine(5)
 mesh=geom.mesh()
 
 D=mesh.boundary_nodes()
@@ -12,36 +12,20 @@ I=np.setdiff1d(np.arange(0,mesh.p.shape[1]),D)
 
 a=fem.asm.AssemblerTriP1(mesh)
 
-def dudv(u,v,du,dv,x,h):
-    return du[0]*dv[0]+du[1]*dv[1]
-    
-gamma=200
-def uv(u,v,du,dv,x,h,n):
-    return gamma*1/h*u*v-du[0]*n[0]*v-du[1]*n[1]*v-u*dv[0]*n[0]-u*dv[1]*n[1]
-    
-def fv(v,dv,x,h):
-    return 2*np.pi**2*np.sin(np.pi*x[0])*np.sin(np.pi*x[1])*v
-    
+def dudv(u,v,du,dv,x,h,w,dw):
+    return (du[0]*dv[0]+du[1]*dv[1])/np.sqrt(1+dw[0]**2+dw[1]**2)
+
 def G(x,y):
-    return np.sin(np.pi*x)*0
+    return np.sin(np.pi*x)*np.cos(np.pi*y)
+
+x=np.zeros(mesh.p.shape[1])
+x[D]=G(mesh.p[0,D],mesh.p[1,D])
     
-def gv(v,dv,x,h,n):
-    return G(x[0],x[1])*v+gamma*1/h*G(x[0],x[1])*v-dv[0]*n[0]*G(x[0],x[1])-dv[1]*n[1]*G(x[0],x[1])
-
-K=a.iasm(dudv)
-B=a.fasm(uv)
-f=a.iasm(fv)
-g=a.fasm(gv)
-
-x=np.zeros(K.shape[0])
-x=scipy.sparse.linalg.spsolve(K+B,f+g)
-
-y=np.zeros(K.shape[0])
-y[D]=G(mesh.p[0,D],mesh.p[1,D])
-y[I]=scipy.sparse.linalg.spsolve(K[np.ix_(I,I)],f[I]-K[np.ix_(I,D)].dot(y[D]))
-
-mesh.plot(x)
-mesh.plot(y)
-mesh.plot(x-y)
+for itr in range(3):
+    K=a.iasm(dudv,w=x)
+    y=x
+    x[I]=scipy.sparse.linalg.spsolve(K[np.ix_(I,I)],-K[np.ix_(I,D)].dot(x[D]))
+    print np.linalg.norm(y-x)
+    mesh.plot(x)
 
 mesh.show()

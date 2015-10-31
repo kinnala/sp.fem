@@ -23,7 +23,7 @@ class AssemblerTriP1(Assembler):
         self.detB=self.mapping.detB
         self.mesh=mesh
 
-    def iasm(self,form,intorder=2):
+    def iasm(self,form,intorder=2,w=None):
         """Interior assembly."""
         nv=self.mesh.p.shape[1]
         nt=self.mesh.t.shape[1]
@@ -42,18 +42,32 @@ class AssemblerTriP1(Assembler):
         gradphi[0]=np.tile(np.array([-1.,-1.]),(X.shape[1],1)).T
         gradphi[1]=np.tile(np.array([1.,0.]),(X.shape[1],1)).T
         gradphi[2]=np.tile(np.array([0.,1.]),(X.shape[1],1)).T    
-        # TODO investigate turning these into two 1d arrays; could be faster?
+
+        # global quadrature points
         x=self.mapping.F(X)
+
+        # mesh parameters
         h=np.tile(np.array([np.sqrt(np.abs(self.detA))]).T,(1,W.shape[0]))
+
+        # interpolation of a previous solution vector
+        if w is not None:
+            w1=np.outer(w[self.mesh.t[0,:]],phi[0])+\
+               np.outer(w[self.mesh.t[1,:]],phi[1])+\
+               np.outer(w[self.mesh.t[2,:]],phi[2])
+            dw1={}
+            dw1[0]=np.outer(w[self.mesh.t[0,:]],gradphi[0][0,:])+\
+                   np.outer(w[self.mesh.t[1,:]],gradphi[1][0,:])+\
+                   np.outer(w[self.mesh.t[2,:]],gradphi[2][0,:])
+            dw1[1]=np.outer(w[self.mesh.t[0,:]],gradphi[0][1,:])+\
+                   np.outer(w[self.mesh.t[1,:]],gradphi[1][1,:])+\
+                   np.outer(w[self.mesh.t[2,:]],gradphi[2][1,:])
         
         # bilinear form
-        if form.__code__.co_argcount==6:
+        if form.__code__.co_argcount==8:
             # initialize sparse matrix structures
             data=np.zeros(9*nt)
             rows=np.zeros(9*nt)
             cols=np.zeros(9*nt)
-        
-            # TODO interpolation
         
             for j in [0,1,2]:
                 u=np.tile(phi[j],(nt,1))
@@ -74,21 +88,19 @@ class AssemblerTriP1(Assembler):
                     ixs=slice(nt*(3*j+i),nt*(3*j+i+1))
                     
                     # compute entries of local stiffness matrices
-                    data[ixs]=np.dot(form(u,v,du,dv,x,h),W)*np.abs(self.detA)
+                    data[ixs]=np.dot(form(u,v,du,dv,x,h,w1,dw1),W)*np.abs(self.detA)
                     rows[ixs]=self.mesh.t[i,:]
                     cols[ixs]=self.mesh.t[j,:]
         
             return coo_matrix((data,(rows,cols)),shape=(nv,nv)).tocsr()
 
         # linear form
-        elif form.__code__.co_argcount==4:
+        elif form.__code__.co_argcount==6:
             # initialize sparse matrix structures
             data=np.zeros(3*nt)
             rows=np.zeros(3*nt)
             cols=np.zeros(3*nt)
             
-            # TODO interpolation
-        
             for i in [0,1,2]:
                 v=np.tile(phi[i],(nt,1))
                 dv={}
@@ -101,7 +113,7 @@ class AssemblerTriP1(Assembler):
                 ixs=slice(nt*i,nt*(i+1))
                 
                 # compute entries of local stiffness matrices
-                data[ixs]=np.dot(form(v,dv,x,h),W)*np.abs(self.detA)
+                data[ixs]=np.dot(form(v,dv,x,h,w1,dw1),W)*np.abs(self.detA)
                 rows[ixs]=self.mesh.t[i,:]
                 cols[ixs]=np.zeros(nt)
         
