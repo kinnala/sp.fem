@@ -1,22 +1,19 @@
 import numpy as np
 import fem.mesh
 import fem.mapping
+from fem.quadrature import get_quadrature
 from scipy.sparse import coo_matrix
 
 import matplotlib.pyplot as plt
 import time
 
 class Assembler:
-    """
-    Superclass for assemblers.
-    """
+    """Superclass for assemblers."""
     def __init__(self):
-        raise NotImplementedError("Assembler constructor not implemented!")
+        raise NotImplementedError("Assembler: constructor not implemented!")
 
 class AssemblerTriP1(Assembler):
-    """
-    A fast (bi)linear form assembler with triangular P1 Lagrange elements.
-    """
+    """A fast (bi)linear form assembler with triangular P1 Lagrange elements."""
     def __init__(self,mesh):
         self.mapping=fem.mapping.MappingAffineTri(mesh)
         self.A=self.mapping.A
@@ -26,19 +23,13 @@ class AssemblerTriP1(Assembler):
         self.detB=self.mapping.detB
         self.mesh=mesh
 
-    def iasm(self,form):
-        """
-        Interior assembly.
-        """
+    def iasm(self,form,intorder=2):
+        """Interior assembly."""
         nv=self.mesh.p.shape[1]
         nt=self.mesh.t.shape[1]
         # TODO add support for assembling on a subset
         
-        # quadrature points and weights (2nd order accurate)
-        # TODO use quadrature interface
-        X=np.array([[1.666666666666666666666e-01,6.666666666666666666666e-01,1.666666666666666666666e-01],
-                    [1.666666666666666666666e-01,1.666666666666666666666e-01,6.666666666666666666666e-01]])
-        W=np.array([1.666666666666666666666e-01,1.666666666666666666666e-01,1.666666666666666666666e-01])
+        X,W=get_quadrature("tri",intorder)
 
         # local basis functions
         phi={}
@@ -118,12 +109,12 @@ class AssemblerTriP1(Assembler):
         else:
             raise NotImplementedError("AssemblerTriP1.iasm not implemented for the given number of form arguments!")
 
-    def fasm(self,form,find=None):
-        """
-        Facet assembly on all exterior facets.
+    def fasm(self,form,find=None,intorder=2):
+        """Facet assembly on all exterior facets.
         
-        Include 'find' (facet indices) parameter
-        to assemble on some other set of facets.
+        Keyword arguments:
+        find - include to assemble on some other set of facets
+        intorder - change integration order (default 2)
         """
         if find is None:
             find=np.nonzero(self.mesh.f2t[1,:]==-1)[0]
@@ -131,8 +122,7 @@ class AssemblerTriP1(Assembler):
         nt=self.mesh.t.shape[1]
         ne=find.shape[0]
 
-        X=np.array([1.127016653792584e-1,5.0000000000000000e-1,8.872983346207417e-1])
-        W=np.array([2.777777777777779e-1,4.4444444444444444e-1,2.777777777777778e-1])
+        X,W=get_quadrature("line",intorder)
         
         # local basis
         phi={}
@@ -152,7 +142,6 @@ class AssemblerTriP1(Assembler):
         
         # boundary triangle indices
         tind=self.mesh.f2t[0,find]
-        #h=np.tile(np.array([self.detB[tind]]).T,(1,W.shape[0]))
         h=np.tile(np.sqrt(np.abs(self.detB[tind,None])),(1,W.shape[0]))
 
         # mappings
@@ -181,7 +170,9 @@ class AssemblerTriP1(Assembler):
         
         # change the sign of the following normal vectors
         meps=1e-14
-        csgn=np.nonzero((n_ref[0]<0)*(n_ref[1]<0)+(n_ref[0]>0)*(n_ref[1]<meps)*(n_ref[1]>-meps)+(n_ref[0]<meps)*(n_ref[0]>-meps)*(n_ref[1]>0))[0]
+        csgn=np.nonzero((n_ref[0]<0)*(n_ref[1]<0)+\
+                        (n_ref[0]>0)*(n_ref[1]<meps)*(n_ref[1]>-meps)+\
+                        (n_ref[0]<meps)*(n_ref[0]>-meps)*(n_ref[1]>0))[0]
         n[0][csgn]=(-1.)*(n[0][csgn])
         n[1][csgn]=(-1.)*(n[1][csgn])
         
