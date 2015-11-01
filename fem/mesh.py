@@ -65,6 +65,10 @@ class MeshTri(Mesh):
         """Return an array of boundary node indices."""
         return np.unique(self.facets[:,np.nonzero(self.f2t[1,:]==-1)[0]])
 
+    def interior_nodes(self):
+        """Return an array of interior node indices."""
+        return np.setdiff1d(np.arange(0,self.p.shape[1]),self.boundary_nodes())
+
     def plot(self,z=None,smooth=False):
         """Draw the mesh or visualize nodal function."""
         fig=plt.figure()
