@@ -3,12 +3,14 @@ import fem.mesh
 
 import os
 import matplotlib.pyplot as plt
-import shapely.geometry as shgeom
+try:
+    import shapely.geometry as shgeom
+    opt_shapely=True
+except:
+    opt_shapely=False
 
 class Geometry:
-    """
-    Superclass for all geometries.
-    """
+    """Superclass for all geometries."""
 
     def __init__(self):
         raise NotImplementedError("Geometry constructor not implemented!")
@@ -17,8 +19,7 @@ class Geometry:
         raise NotImplementedError("Geometry mesher not implemented!")
 
 class GeometryShapelyTriangle2D(Geometry):
-    """
-    Shapely geometry meshed using Triangle.
+    """Shapely geometry meshed using Triangle.
 
     Geometry tuples are added to list and then
     processed with Shapely. The resulting exterior
@@ -34,7 +35,10 @@ class GeometryShapelyTriangle2D(Geometry):
     """
 
     def __init__(self,glist):
-        self.glist=glist
+        if opt_shapely:
+            self.glist=glist
+        else:
+            raise ImportError("Shapely not supported by the host system!")
 
     def process(self):
         if self.glist[0][0]!='+':
@@ -62,8 +66,7 @@ class GeometryShapelyTriangle2D(Geometry):
             raise NotImplementedError("GeometryShapelyTriangle2D.resolve_gtuple: given shape not implemented!")
 
     def draw(self):
-        """
-        Draw the boundary curves of the geometric object.
+        """Draw the boundary curves of the geometric object.
 
         Run matplotlib plt.show() after this.
         """
@@ -87,8 +90,9 @@ class GeometryShapelyTriangle2D(Geometry):
             plt.plot(xs,ys,'k-')
 
     def mesh(self,hmax=1.0):
-        """
-        Call triangle to generate a mesh.
+        """Call Triangle to generate a mesh.
+
+        TODO document this
         """
         xs=np.array([])
         ys=np.array([])
@@ -143,9 +147,7 @@ class GeometryShapelyTriangle2D(Geometry):
 
 
 class GeometryMeshTri(Geometry):
-    """
-    A geometry defined by a triangular mesh.
-    """
+    """A geometry defined by a triangular mesh."""
 
     p=np.empty([2,0],dtype=np.float_)
     t=np.empty([3,0],dtype=np.intp)
@@ -158,16 +160,12 @@ class GeometryMeshTri(Geometry):
         return fem.mesh.MeshTri(self.p,self.t)
 
     def refine(self,N=1):
-        """
-        Perform one or more refines on the mesh.
-        """
+        """Perform one or more refines on the mesh."""
         for itr in range(N):
             self.single_refine()
 
     def single_refine(self):
-        """
-        Perform a single mesh refine.
-        """
+        """Perform a single mesh refine."""
         mesh=fem.mesh.MeshTri(self.p,self.t)
         # rename variables
         t=mesh.t

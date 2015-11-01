@@ -9,9 +9,7 @@ except:
 from mpl_toolkits.mplot3d import Axes3D
 
 class Mesh:
-    """
-    Superclass for all meshes.
-    """
+    """Superclass for all meshes."""
 
     p=np.empty([0,0],dtype=np.float_)
     t=np.empty([0,0],dtype=np.intp)
@@ -23,9 +21,7 @@ class Mesh:
         raise NotImplementedError("Mesh.plot() not implemented!")
 
 class MeshTri(Mesh):
-    """
-    Triangular mesh.
-    """
+    """Triangular mesh."""
 
     p=np.empty([2,0],dtype=np.float_)
     t=np.empty([3,0],dtype=np.intp)
@@ -66,15 +62,11 @@ class MeshTri(Mesh):
         self.f2t[1,np.nonzero(self.f2t[0,:]==self.f2t[1,:])[0]]=-1
 
     def boundary_nodes(self):
-        """
-        Return an array of boundary node indices.
-        """
+        """Return an array of boundary node indices."""
         return np.unique(self.facets[:,np.nonzero(self.f2t[1,:]==-1)[0]])
 
     def plot(self,z=None,smooth=False):
-        """
-        Draw the mesh or visualize nodal function.
-        """
+        """Draw the mesh or visualize nodal function."""
         fig=plt.figure()
         if z is None:
             # visualize the mesh
@@ -98,7 +90,7 @@ class MeshTri(Mesh):
                 if opt_mayavi:
                     mlab.triangular_mesh(self.p[0,:],self.p[1,:],z,self.t.T)
                 else:
-                    raise ImportError("Mayavi not imported because it is not installed!")
+                    raise ImportError("Mayavi not supported by the host system!")
             else:
                 # use matplotlib
                 ax=fig.gca(projection='3d')
@@ -106,9 +98,7 @@ class MeshTri(Mesh):
                 ax.plot_trisurf(self.p[0,:],self.p[1,:],z,triangles=ts.triangles,cmap=plt.cm.Spectral)
 
     def show(self):
-        """
-        Call after plot functions.
-        """
+        """Call after plot functions."""
         if opt_mayavi:
             mlab.show()
         else:
