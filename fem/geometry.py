@@ -1,5 +1,6 @@
 import numpy as np
 import fem.mesh
+import platform
 
 import os
 import matplotlib.pyplot as plt
@@ -47,20 +48,20 @@ class GeometryShapelyTriangle2D(Geometry):
         iterg=iter(self.glist)
         next(iterg)
         for itr in iterg:
-            if itr[0] is '+':
+            if itr[0]=='+':
                 self.g=self.g.union(self.resolve_gtuple(itr))
-            elif itr[0] is '-':
+            elif itr[0]=='-':
                 self.g=self.g.difference(self.resolve_gtuple(itr))
             else:
                 raise Exception("GeometryShapelyTriangle2D: first item in gtuple must be '+' or '-'!")
 
 
     def resolve_gtuple(self,gtuple):
-        if gtuple[1] is 'circle':
+        if gtuple[1]=='circle':
             return shgeom.Point(gtuple[2],gtuple[3]).buffer(gtuple[4],gtuple[5])
-        elif gtuple[1] is 'polygon':
+        elif gtuple[1]=='polygon':
             return shgeom.Polygon([tuple(i) for i in gtuple[2].T])
-        elif gtuple[1] is 'box':
+        elif gtuple[1]=='box':
             return shgeom.box(gtuple[2],gtuple[3],gtuple[4],gtuple[5])
         else:
             raise NotImplementedError("GeometryShapelyTriangle2D.resolve_gtuple: given shape not implemented!")
@@ -70,6 +71,7 @@ class GeometryShapelyTriangle2D(Geometry):
 
         Run matplotlib plt.show() after this.
         """
+        # if there is multiple boundaries
         if isinstance(self.g.boundary,shgeom.multilinestring.MultiLineString):
             # iterate over boundaries
             plt.figure()
@@ -90,10 +92,11 @@ class GeometryShapelyTriangle2D(Geometry):
             plt.plot(xs,ys,'k-')
 
     def mesh(self,hmax=1.0):
-        """Call Triangle to generate a mesh.
-
-        TODO document this
-        """
+        """Call Triangle to generate a mesh."""
+        # TODO fix meshing of holes
+        # process the geometry list with Shapely
+        self.process()
+        # data arrays for boundary line segments
         xs=np.array([])
         ys=np.array([])
         segstart=np.array([])
@@ -118,6 +121,7 @@ class GeometryShapelyTriangle2D(Geometry):
                 segend=np.append(segend,itrn+1)
                 itrn=itrn+1
 
+        # write the boundary segments to Triangle input format
         f=open('geom.poly','w') 
         f.write('%d 2 0 0\n'%len(xs))
         for itr in range(0,len(xs)):
@@ -129,14 +133,22 @@ class GeometryShapelyTriangle2D(Geometry):
         f.write('0')
         f.close()
 
-        os.system("./triangle/triangle -q -a%f -p geom.poly > /dev/null"%hmax**2)
+        # run Triangle (OS dependent)
+        if platform.system()=="Linux":
+            os.system("./fem/triangle/triangle -q -a%f -p geom.poly > /dev/null"%hmax**2)
+        elif platform.system()=="Windows":
+            os.system("fem\\triangle\\triangle.exe -q -Q -a%f -p geom.poly"%hmax**2)
+        else:
+            raise NotImplementedError("GeometryShapelyTriangle2D: Not implemented for your platform!")
 
+        # load output of Triangle
         mesh=self.load_triangle("geom")
 
-        os.system("rm geom.poly")
-        os.system("rm geom.1.ele")
-        os.system("rm geom.1.node")
-        os.system("rm geom.1.poly")
+        if platform.system()=="Linux":
+            os.system("rm geom.poly")
+            os.system("rm geom.1.ele")
+            os.system("rm geom.1.node")
+            os.system("rm geom.1.poly")
 
         return mesh
 

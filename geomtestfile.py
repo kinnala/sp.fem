@@ -11,9 +11,6 @@ geomlist=[
 
 g=fegeom.GeometryShapelyTriangle2D(geomlist)
 
-g.process()
-g.process()
-
 mesh=g.mesh(0.05)
 
 g.draw()
