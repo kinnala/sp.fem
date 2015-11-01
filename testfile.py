@@ -18,15 +18,14 @@ def dudv(u,v,du,dv,x,h,w,dw):
 def G(x,y):
     return np.cos(2*np.pi*np.abs(x+y))
 
-x=np.zeros(mesh.p.shape[1])
-x[D]=G(mesh.p[0,D],mesh.p[1,D])
-    
-for itr in range(3):
-    K=a.iasm(dudv,w=x)
-    y=np.copy(x)
-    x[I]=scipy.sparse.linalg.spsolve(K[np.ix_(I,I)],-K[np.ix_(I,D)].dot(x[D]))
-    print np.linalg.norm(x)
-    mesh.plot(x-y)
+u=np.zeros(mesh.p.shape[1])
+u[D]=G(mesh.p[0,D],mesh.p[1,D])
 
-mesh.plot(x)
+for itr in range(5):
+    K=a.iasm(dudv,w=u)
+    U=np.copy(u)
+    u[I]=scipy.sparse.linalg.spsolve(K[np.ix_(I,I)],-K[np.ix_(I,D)].dot(u[D]))
+    mesh.plot(u-U)
+
+mesh.plot(u)
 mesh.show()
