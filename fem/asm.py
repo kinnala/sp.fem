@@ -55,13 +55,32 @@ class AssemblerTriP1(Assembler):
                np.outer(w[self.mesh.t[1,:]],phi[1])+\
                np.outer(w[self.mesh.t[2,:]],phi[2])
             dw1={}
-            dw1[0]=np.outer(w[self.mesh.t[0,:]],gradphi[0][0,:])+\
-                   np.outer(w[self.mesh.t[1,:]],gradphi[1][0,:])+\
-                   np.outer(w[self.mesh.t[2,:]],gradphi[2][0,:])
-            dw1[1]=np.outer(w[self.mesh.t[0,:]],gradphi[0][1,:])+\
-                   np.outer(w[self.mesh.t[1,:]],gradphi[1][1,:])+\
-                   np.outer(w[self.mesh.t[2,:]],gradphi[2][1,:])
-        
+            dw1[0]=(np.outer(self.invA[0][0],gradphi[0][0,:])+\
+                    np.outer(self.invA[1][0],gradphi[0][1,:]))*\
+                    w[self.mesh.t[0,:]][:,None]+\
+                   (np.outer(self.invA[0][0],gradphi[1][0,:])+\
+                    np.outer(self.invA[1][0],gradphi[1][1,:]))*\
+                    w[self.mesh.t[1,:]][:,None]+\
+                   (np.outer(self.invA[0][0],gradphi[2][0,:])+\
+                    np.outer(self.invA[1][0],gradphi[2][1,:]))*\
+                    w[self.mesh.t[2,:]][:,None]
+            dw1[1]=(np.outer(self.invA[0][1],gradphi[0][0,:])+\
+                    np.outer(self.invA[1][1],gradphi[0][1,:]))*\
+                    w[self.mesh.t[0,:]][:,None]+\
+                   (np.outer(self.invA[0][1],gradphi[1][0,:])+\
+                    np.outer(self.invA[1][1],gradphi[1][1,:]))*\
+                    w[self.mesh.t[1,:]][:,None]+\
+                   (np.outer(self.invA[0][1],gradphi[2][0,:])+\
+                    np.outer(self.invA[1][1],gradphi[2][1,:]))*\
+                    w[self.mesh.t[2,:]][:,None]
+
+           #dw1[0]=np.outer(w[self.mesh.t[0,:]],gradphi[0][0,:])+\
+           #       np.outer(w[self.mesh.t[1,:]],gradphi[1][0,:])+\
+           #       np.outer(w[self.mesh.t[2,:]],gradphi[2][0,:])
+           #dw1[1]=np.outer(w[self.mesh.t[0,:]],gradphi[0][1,:])+\
+           #       np.outer(w[self.mesh.t[1,:]],gradphi[1][1,:])+\
+           #       np.outer(w[self.mesh.t[2,:]],gradphi[2][1,:])
+
         # bilinear form
         if form.__code__.co_argcount==8:
             # initialize sparse matrix structures
