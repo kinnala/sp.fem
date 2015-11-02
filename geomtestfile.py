@@ -9,9 +9,11 @@ geomlist=[
         #('-','box',0.6,0,2.0,2.0)
         ]
 
+holes=[(0.0,0.0),(1.0,0.0)]
+
 g=fegeom.GeometryShapelyTriangle2D(geomlist)
 
-mesh=g.mesh(0.05)
+mesh=g.mesh(0.2,holes=holes)
 
 g.draw()
 mesh.plot()

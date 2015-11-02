@@ -91,7 +91,7 @@ class GeometryShapelyTriangle2D(Geometry):
                 ys=np.append(ys,itr[1])
             plt.plot(xs,ys,'k-')
 
-    def mesh(self,hmax=1.0):
+    def mesh(self,hmax=1.0,minangle=20.0,holes=None):
         """Call Triangle to generate a mesh."""
         # TODO fix meshing of holes
         # process the geometry list with Shapely
@@ -129,15 +129,26 @@ class GeometryShapelyTriangle2D(Geometry):
         f.write('%d 0\n'%len(segstart))
         for itr in range(0,len(segstart)):
             f.write('%d %d %d\n'%(itr,segstart[itr],segend[itr]))
-        f.write('0\n')
+
+        # write hole markers
+        if holes is None:
+            f.write('0\n')
+        else:
+            f.write('%d\n'%len(holes))
+            itrn=0
+            for itr in holes:
+                f.write('%d %f %f\n'%(itrn,itr[0],itr[1]))
+                itrn=itrn+1
+
+        # TODO implement regional attributes
         f.write('0')
         f.close()
 
         # run Triangle (OS dependent)
         if platform.system()=="Linux":
-            os.system("./fem/triangle/triangle -q -a%f -p geom.poly > /dev/null"%hmax**2)
+            os.system("./fem/triangle/triangle -q%f -Q -a%f -p geom.poly"%(minangle,hmax**2))
         elif platform.system()=="Windows":
-            os.system("fem\\triangle\\triangle.exe -q -Q -a%f -p geom.poly"%hmax**2)
+            os.system("fem\\triangle\\triangle.exe -q%f -Q -a%f -p geom.poly"%(minangle,hmax**2))
         else:
             raise NotImplementedError("GeometryShapelyTriangle2D: Not implemented for your platform!")
 
@@ -153,8 +164,11 @@ class GeometryShapelyTriangle2D(Geometry):
         return mesh
 
     def load_triangle(self,fname):
-        t=np.loadtxt(open(fname+".1.ele","rb"),delimiter=None,comments="#",skiprows=1).T
-        p=np.loadtxt(open(fname+".1.node","rb"),delimiter=None,comments="#",skiprows=1).T
+        try:
+            t=np.loadtxt(open(fname+".1.ele","rb"),delimiter=None,comments="#",skiprows=1).T
+            p=np.loadtxt(open(fname+".1.node","rb"),delimiter=None,comments="#",skiprows=1).T
+        except:
+            raise Exception("GeometryShapelyTriangle2D: A problem with meshing!")
         return fem.mesh.MeshTri(p[1:3,:],t[1:,:].astype(np.intp))
 
 
