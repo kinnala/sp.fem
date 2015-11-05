@@ -136,7 +136,7 @@ class AssemblerTriP1(Assembler):
         else:
             raise NotImplementedError("AssemblerTriP1.iasm not implemented for the given number of form arguments!")
 
-    def fasm(self,form,find=None,intorder=2):
+    def fasm(self,form,find=None,intorder=2,w=None):
         """Facet assembly on all exterior facets.
         
         Keyword arguments:
@@ -153,7 +153,7 @@ class AssemblerTriP1(Assembler):
         
         # local basis
         phi={}
-        phi[0]=lambda x,y: 1-x-y
+        phi[0]=lambda x,y: 1.-x-y
         phi[1]=lambda x,y: x
         phi[2]=lambda x,y: y
 
@@ -164,7 +164,7 @@ class AssemblerTriP1(Assembler):
 
         gradphi_y={}
         gradphi_y[0]=lambda x,y: -1.+0*x
-        gradphi_y[1]=lambda x,y: 0+0*x
+        gradphi_y[1]=lambda x,y: 0*x
         gradphi_y[2]=lambda x,y: 1.+0*x
         
         # boundary triangle indices
@@ -181,9 +181,9 @@ class AssemblerTriP1(Assembler):
         t[1]=self.mesh.p[1,self.mesh.facets[0,find]]-self.mesh.p[1,self.mesh.facets[1,find]]
         
         # normalize tangent vectors
-        t[2]=np.sqrt(t[0]**2+t[1]**2)
-        t[0]/=t[2]
-        t[1]/=t[2]
+        tlen=np.sqrt(t[0]**2+t[1]**2)
+        t[0]/=tlen
+        t[1]/=tlen
         
         # normal vectors
         n={}
@@ -196,7 +196,7 @@ class AssemblerTriP1(Assembler):
         n_ref[1]=self.invA[0][1][tind]*n[0]+self.invA[1][1][tind]*n[1]
         
         # change the sign of the following normal vectors
-        meps=1e-14
+        meps=np.finfo(float).eps
         csgn=np.nonzero((n_ref[0]<0)*(n_ref[1]<0)+\
                         (n_ref[0]>0)*(n_ref[1]<meps)*(n_ref[1]>-meps)+\
                         (n_ref[0]<meps)*(n_ref[0]>-meps)*(n_ref[1]>0))[0]
@@ -206,14 +206,19 @@ class AssemblerTriP1(Assembler):
         n[0]=np.tile(n[0][:,None],(1,W.shape[0]))
         n[1]=np.tile(n[1][:,None],(1,W.shape[0]))
 
+        if w is not None:
+            w1=phi[0](Y[0],Y[1])*w[self.mesh.t[0,tind][:,None]]+\
+               phi[1](Y[0],Y[1])*w[self.mesh.t[1,tind][:,None]]+\
+               phi[2](Y[0],Y[1])*w[self.mesh.t[2,tind][:,None]]
+        else:
+            w1=None
+
         # bilinear form
-        if form.__code__.co_argcount==7:
+        if form.__code__.co_argcount==8:
             # initialize sparse matrix structures
             data=np.zeros(9*ne)
             rows=np.zeros(9*ne)
             cols=np.zeros(9*ne)
-
-            # TODO interpolation
 
             for j in [0,1,2]:
                 u=phi[j](Y[0],Y[1])
@@ -234,19 +239,17 @@ class AssemblerTriP1(Assembler):
                     ixs=slice(ne*(3*j+i),ne*(3*j+i+1))
                     
                     # compute entries of local stiffness matrices
-                    data[ixs]=np.dot(form(u,v,du,dv,x,h,n),W)*np.abs(self.detB[find])
+                    data[ixs]=np.dot(form(u,v,du,dv,x,h,n,w1),W)*np.abs(self.detB[find])
                     rows[ixs]=self.mesh.t[i,tind]
                     cols[ixs]=self.mesh.t[j,tind]
         
             return coo_matrix((data,(rows,cols)),shape=(nv,nv)).tocsr()
         # linear form
-        elif form.__code__.co_argcount==5:
+        elif form.__code__.co_argcount==6:
             # initialize sparse matrix structures
             data=np.zeros(3*ne)
             rows=np.zeros(3*ne)
             cols=np.zeros(3*ne)
-
-            # TODO interpolation
 
             for i in [0,1,2]:
                 v=phi[i](Y[0],Y[1])
@@ -260,7 +263,7 @@ class AssemblerTriP1(Assembler):
                 ixs=slice(ne*i,ne*(i+1))
                 
                 # compute entries of local stiffness matrices
-                data[ixs]=np.dot(form(v,dv,x,h,n),W)*np.abs(self.detB[find])
+                data[ixs]=np.dot(form(v,dv,x,h,n,w1),W)*np.abs(self.detB[find])
                 rows[ixs]=self.mesh.t[i,tind]
                 cols[ixs]=np.zeros(ne)
         
