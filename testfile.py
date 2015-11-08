@@ -2,6 +2,7 @@ import numpy as np
 import fem.geometry
 import fem.asm
 import scipy.sparse.linalg
+from sys import exit
 
 geom=fem.geometry.GeometryMeshTri()
 geom.refine(3)
@@ -12,7 +13,8 @@ I=np.setdiff1d(np.arange(0,mesh.p.shape[1]),D1)
 
 a=fem.asm.AssemblerTriP1(mesh)
 
-def dudv(u,v,du,dv,x,h,w,dw):
+#def dudv(u,v,du,dv,x,h,w,dw):
+def dudv(du,dv):
     return du[0]*dv[0]+du[1]*dv[1]
 
 def uv(u,v,du,dv,x,h,n,w):

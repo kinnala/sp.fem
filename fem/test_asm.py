@@ -85,16 +85,17 @@ class AssemblerTriP1FullPoisson(AssemblerTriP1BasicTest):
 
         a=fem.asm.AssemblerTriP1(self.mesh)
 
-        dudv=lambda u,v,du,dv,x,h,w,dw: du[0]*dv[0]+du[1]*dv[1]
+        dudv=lambda du,dv: du[0]*dv[0]+du[1]*dv[1]
         K=a.iasm(dudv)
 
-        uv=lambda u,v,du,dv,x,h,n: u*v
+        #uv=lambda u,v,du,dv,x,h,n: u*v
+        uv=lambda u,v: u*v
         B=a.fasm(uv)
         
-        fv=lambda v,dv,x,h,w,dw: F(x[0],x[1])*v
+        fv=lambda v,x: F(x[0],x[1])*v
         f=a.iasm(fv)
 
-        gv=lambda v,dv,x,h,n: G(x[0],x[1])*v
+        gv=lambda v,x: G(x[0],x[1])*v
         g=a.fasm(gv)
 
         D=np.nonzero(self.mesh.p[0,:]==0)[0]

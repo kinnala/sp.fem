@@ -1,6 +1,7 @@
 import numpy as np
 import fem.mesh
 import fem.mapping
+import inspect
 from fem.quadrature import get_quadrature
 from scipy.sparse import coo_matrix
 
@@ -11,6 +12,52 @@ class Assembler:
     """Superclass for assemblers."""
     def __init__(self):
         raise NotImplementedError("Assembler: constructor not implemented!")
+
+    def fillargs(self,oldform,newargs):
+        """Used for filling functions with required set of arguments."""
+        oldargs=inspect.getargspec(oldform).args
+        if oldargs==newargs:
+            # the given form already has correct arguments
+            return oldform
+
+        y=[]
+        for oarg in oldargs:
+            # add corresponding new argument index to y for
+            # each old argument
+            for ix,narg in enumerate(newargs):
+                if oarg==narg:
+                    y.append(ix)
+                    break
+
+        if len(oldargs)==1:
+            def newform(*x):
+                return oldform(x[y[0]])
+        elif len(oldargs)==2:
+            def newform(*x):
+                return oldform(x[y[0]],x[y[1]])
+        elif len(oldargs)==3:
+            def newform(*x):
+                return oldform(x[y[0]],x[y[1]],x[y[2]])
+        elif len(oldargs)==4:
+            def newform(*x):
+                return oldform(x[y[0]],x[y[1]],x[y[2]],x[y[3]])
+        elif len(oldargs)==5:
+            def newform(*x):
+                return oldform(x[y[0]],x[y[1]],x[y[2]],x[y[3]],x[y[4]])
+        elif len(oldargs)==6:
+            def newform(*x):
+                return oldform(x[y[0]],x[y[1]],x[y[2]],x[y[3]],x[y[4]],x[y[5]])
+        elif len(oldargs)==7:
+            def newform(*x):
+                return oldform(x[y[0]],x[y[1]],x[y[2]],x[y[3]],x[y[4]],x[y[5]],x[y[6]])
+        elif len(oldargs)==8:
+            def newform(*x):
+                return oldform(x[y[0]],x[y[1]],x[y[2]],x[y[3]],x[y[4]],x[y[5]],x[y[6]],x[y[7]])
+        else:
+            raise NotImplementedError("Assembler.fillargs: the maximum number of arguments reached")
+
+        return newform
+
 
 class AssemblerTriP1(Assembler):
     """A fast (bi)linear form assembler with triangular P1 Lagrange elements."""
@@ -27,6 +74,17 @@ class AssemblerTriP1(Assembler):
         """Interior assembly."""
         nv=self.mesh.p.shape[1]
         nt=self.mesh.t.shape[1]
+
+        # check and fix parameters of form
+        oldparams=inspect.getargspec(form).args
+        if 'u' in oldparams or 'du' in oldparams:
+            paramlist=['u','v','du','dv','x','h','w','dw']
+            bilinear=True
+        else:
+            paramlist=['v','dv','x','h','w','dw']
+            bilinear=False
+        fform=self.fillargs(form,paramlist)
+
         # TODO add support for assembling on a subset
         
         X,W=get_quadrature("tri",intorder)
@@ -78,7 +136,7 @@ class AssemblerTriP1(Assembler):
             dw1=None
 
         # bilinear form
-        if form.__code__.co_argcount==8:
+        if bilinear:
             # initialize sparse matrix structures
             data=np.zeros(9*nt)
             rows=np.zeros(9*nt)
@@ -103,14 +161,14 @@ class AssemblerTriP1(Assembler):
                     ixs=slice(nt*(3*j+i),nt*(3*j+i+1))
                     
                     # compute entries of local stiffness matrices
-                    data[ixs]=np.dot(form(u,v,du,dv,x,h,w1,dw1),W)*np.abs(self.detA)
+                    data[ixs]=np.dot(fform(u,v,du,dv,x,h,w1,dw1),W)*np.abs(self.detA)
                     rows[ixs]=self.mesh.t[i,:]
                     cols[ixs]=self.mesh.t[j,:]
         
             return coo_matrix((data,(rows,cols)),shape=(nv,nv)).tocsr()
 
         # linear form
-        elif form.__code__.co_argcount==6:
+        else:
             # initialize sparse matrix structures
             data=np.zeros(3*nt)
             rows=np.zeros(3*nt)
@@ -128,13 +186,11 @@ class AssemblerTriP1(Assembler):
                 ixs=slice(nt*i,nt*(i+1))
                 
                 # compute entries of local stiffness matrices
-                data[ixs]=np.dot(form(v,dv,x,h,w1,dw1),W)*np.abs(self.detA)
+                data[ixs]=np.dot(fform(v,dv,x,h,w1,dw1),W)*np.abs(self.detA)
                 rows[ixs]=self.mesh.t[i,:]
                 cols[ixs]=np.zeros(nt)
         
             return coo_matrix((data,(rows,cols)),shape=(nv,1)).toarray().T[0]
-        else:
-            raise NotImplementedError("AssemblerTriP1.iasm not implemented for the given number of form arguments!")
 
     def fasm(self,form,find=None,intorder=2,w=None):
         """Facet assembly on all exterior facets.
@@ -148,6 +204,16 @@ class AssemblerTriP1(Assembler):
         nv=self.mesh.p.shape[1]
         nt=self.mesh.t.shape[1]
         ne=find.shape[0]
+
+        # check and fix parameters of form
+        oldparams=inspect.getargspec(form).args
+        if 'u' in oldparams or 'du' in oldparams:
+            paramlist=['u','v','du','dv','x','h','n','w']
+            bilinear=True
+        else:
+            paramlist=['v','dv','x','h','n','w']
+            bilinear=False
+        fform=self.fillargs(form,paramlist)
 
         X,W=get_quadrature("line",intorder)
         
@@ -214,7 +280,7 @@ class AssemblerTriP1(Assembler):
             w1=None
 
         # bilinear form
-        if form.__code__.co_argcount==8:
+        if bilinear:
             # initialize sparse matrix structures
             data=np.zeros(9*ne)
             rows=np.zeros(9*ne)
@@ -239,13 +305,13 @@ class AssemblerTriP1(Assembler):
                     ixs=slice(ne*(3*j+i),ne*(3*j+i+1))
                     
                     # compute entries of local stiffness matrices
-                    data[ixs]=np.dot(form(u,v,du,dv,x,h,n,w1),W)*np.abs(self.detB[find])
+                    data[ixs]=np.dot(fform(u,v,du,dv,x,h,n,w1),W)*np.abs(self.detB[find])
                     rows[ixs]=self.mesh.t[i,tind]
                     cols[ixs]=self.mesh.t[j,tind]
         
             return coo_matrix((data,(rows,cols)),shape=(nv,nv)).tocsr()
         # linear form
-        elif form.__code__.co_argcount==6:
+        else:
             # initialize sparse matrix structures
             data=np.zeros(3*ne)
             rows=np.zeros(3*ne)
@@ -263,12 +329,9 @@ class AssemblerTriP1(Assembler):
                 ixs=slice(ne*i,ne*(i+1))
                 
                 # compute entries of local stiffness matrices
-                data[ixs]=np.dot(form(v,dv,x,h,n,w1),W)*np.abs(self.detB[find])
+                data[ixs]=np.dot(fform(v,dv,x,h,n,w1),W)*np.abs(self.detB[find])
                 rows[ixs]=self.mesh.t[i,tind]
                 cols[ixs]=np.zeros(ne)
         
             return coo_matrix((data,(rows,cols)),shape=(nv,1)).toarray().T[0]
-        else:
-            raise NotImplementedError("AssemblerTriP1.fasm not implemented for the given number of form arguments!")
-
 
