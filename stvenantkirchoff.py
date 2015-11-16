@@ -4,6 +4,7 @@ import scipy.sparse.linalg
 import scipy.sparse as spsp
 import matplotlib.pyplot as plt
 import fem.geometry as fegeom
+import copy
 
 geomlist=[
         ('+','box',0,0,0.2,2.0)
@@ -59,9 +60,10 @@ u=np.zeros(2*N)
 #u[DUx]=1.0
 
 alpha=0.3
+step=1
 
 # continuation
-for ctr in np.arange(0,1.1,0.1):
+for ctr in np.arange(0,2.1,0.1):
     bcdispy=-ctr*0.075
     print "upper face displacement: "+str(bcdispy)
     # newton
@@ -83,6 +85,15 @@ for ctr in np.arange(0,1.1,0.1):
         u[I]=alpha*u[I]+(1-alpha)*U[I]
         
         if np.linalg.norm(u-U)<=1e-5:
+            sf=1.
+            dmesh=copy.deepcopy(mesh)
+            dmesh.p[0,:]=dmesh.p[0,:]+sf*u[I1]
+            dmesh.p[1,:]=dmesh.p[1,:]+sf*u[I2]
+            dmesh.plot()
+            plt.xlim(-1,1)
+            plt.ylim(0,2)
+            plt.savefig('stvenant_step'+str(step).zfill(2)+'.png')
+            step=step+1
             break
         print np.linalg.norm(u-U)
 
