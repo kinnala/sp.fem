@@ -60,25 +60,31 @@ u=np.zeros(2*N)
 
 alpha=0.3
 
-for itr in range(100):
-    # continuation
-    u[DUy]=-np.min((itr/50.,1.))*0.075 
-    
-    K11=a.iasm(dudv11,w1=u[I1],w2=u[I2],intorder=4)
-    K12=a.iasm(dudv12,w1=u[I1],w2=u[I2],intorder=4)
-    K21=a.iasm(dudv21,w1=u[I1],w2=u[I2],intorder=4)
-    K22=a.iasm(dudv22,w1=u[I1],w2=u[I2],intorder=4)
-    K=spsp.vstack((spsp.hstack((K11,K12)),spsp.hstack((K21,K22)))).tocsr()
-    
-    f1=a.iasm(dv1,w1=u[I1],w2=u[I2],intorder=4)
-    f2=a.iasm(dv2,w1=u[I1],w2=u[I2],intorder=4)
-    f=np.hstack((f1,f2))
-    
-    U=np.copy(u)
-    u[I]=u[I]+scipy.sparse.linalg.spsolve(K[np.ix_(I,I)],-f[I])
-    u[I]=alpha*u[I]+(1-alpha)*U[I]
-    
-    print np.linalg.norm(u-U)
+# continuation
+for ctr in np.arange(0,1.1,0.1):
+    bcdispy=-ctr*0.075
+    print "upper face displacement: "+str(bcdispy)
+    # newton
+    for itr in range(100):
+        u[DUy]=bcdispy
+        
+        K11=a.iasm(dudv11,w1=u[I1],w2=u[I2],intorder=4)
+        K12=a.iasm(dudv12,w1=u[I1],w2=u[I2],intorder=4)
+        K21=a.iasm(dudv21,w1=u[I1],w2=u[I2],intorder=4)
+        K22=a.iasm(dudv22,w1=u[I1],w2=u[I2],intorder=4)
+        K=spsp.vstack((spsp.hstack((K11,K12)),spsp.hstack((K21,K22)))).tocsr()
+        
+        f1=a.iasm(dv1,w1=u[I1],w2=u[I2],intorder=4)
+        f2=a.iasm(dv2,w1=u[I1],w2=u[I2],intorder=4)
+        f=np.hstack((f1,f2))
+        
+        U=np.copy(u)
+        u[I]=u[I]+scipy.sparse.linalg.spsolve(K[np.ix_(I,I)],-f[I])
+        u[I]=alpha*u[I]+(1-alpha)*U[I]
+        
+        if np.linalg.norm(u-U)<=1e-5:
+            break
+        print np.linalg.norm(u-U)
 
 sf=2.
 mesh.p[0,:]=mesh.p[0,:]+sf*u[I1]
