@@ -28,8 +28,8 @@ class AssemblerTriP1Poisson(AssemblerTriP1BasicTest):
     Solving $-\Delta u = 1$ in an unit square with $u=0$ on the boundary.
     """
     def runTest(self):
-        bilin=lambda u,v,du,dv,x,h,w,dw: du[0]*dv[0]+du[1]*dv[1]
-        lin=lambda v,dv,x,h,w,dw: 1*v
+        bilin=lambda u,v,du,dv,x,h: du[0]*dv[0]+du[1]*dv[1]
+        lin=lambda v,dv,x,h: 1*v
 
         a=fem.asm.AssemblerTriP1(self.mesh)
 
@@ -53,11 +53,11 @@ class AssemblerTriP1AnalyticWithXY(AssemblerTriP1BasicTest):
 
         a=fem.asm.AssemblerTriP1(self.mesh)
 
-        def dudv(u,v,du,dv,x,h,w,dw):
+        def dudv(u,v,du,dv,x,h):
             return du[0]*dv[0]+du[1]*dv[1]
         K=a.iasm(dudv)
 
-        def fv(v,dv,x,h,w,dw):
+        def fv(v,dv,x,h):
                 return 2*np.pi**2*np.sin(np.pi*x[0])*np.sin(np.pi*x[1])*v
         f=a.iasm(fv)
 
@@ -114,14 +114,14 @@ class AssemblerTriP1Nitsche(AssemblerTriP1BasicTest):
         D=self.D
         I=self.I
 
-        def dudv(u,v,du,dv,x,h,w,dw):
+        def dudv(u,v,du,dv,x,h):
             return du[0]*dv[0]+du[1]*dv[1]
             
         gamma=200
         def uv(u,v,du,dv,x,h,n):
             return gamma*1/h*u*v-du[0]*n[0]*v-du[1]*n[1]*v-u*dv[0]*n[0]-u*dv[1]*n[1]
             
-        def fv(v,dv,x,h,w,dw):
+        def fv(v,dv,x,h):
             return 2*np.pi**2*np.sin(np.pi*x[0])*np.sin(np.pi*x[1])*v
             
         def G(x,y):
@@ -155,13 +155,13 @@ class AssemblerTriP1Interp(AssemblerTriP1BasicTest):
         def G(x,y):
             return np.sin(np.pi*x)
 
-        def test(v,dv,x,h,w,dw):
-            return dw[0]*dv[0]+dw[1]*dv[1]
-        def test2(u,v,du,dv,x,h,w,dw):
+        def test(v,dv,x,h,w1,dw1):
+            return dw1[0]*dv[0]+dw1[1]*dv[1]
+        def test2(u,v,du,dv,x,h,w1,dw1):
             return du[0]*dv[0]+du[1]*dv[1]
 
         u=G(mesh.p[0,:],mesh.p[1,:])
-        g=a.iasm(test,w=u)
+        g=a.iasm(test,w1=u)
         K=a.iasm(test2)
         
         self.assertAlmostEqual(np.linalg.norm(g-K*u),0.0,places=10)
