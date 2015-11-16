@@ -70,7 +70,7 @@ class AssemblerTriP1(Assembler):
         self.detB=self.mapping.detB
         self.mesh=mesh
 
-    def iasm(self,form,intorder=2,w=None):
+    def iasm(self,form,intorder=2,w1=None,w2=None):
         """Interior assembly."""
         nv=self.mesh.p.shape[1]
         nt=self.mesh.t.shape[1]
@@ -78,10 +78,10 @@ class AssemblerTriP1(Assembler):
         # check and fix parameters of form
         oldparams=inspect.getargspec(form).args
         if 'u' in oldparams or 'du' in oldparams:
-            paramlist=['u','v','du','dv','x','h','w','dw']
+            paramlist=['u','v','du','dv','x','h','w1','dw1','w2','dw2']
             bilinear=True
         else:
-            paramlist=['v','dv','x','h','w','dw']
+            paramlist=['v','dv','x','h','w1','dw1','w2','dw2']
             bilinear=False
         fform=self.fillargs(form,paramlist)
 
@@ -108,32 +108,59 @@ class AssemblerTriP1(Assembler):
         h=np.tile(np.array([np.sqrt(np.abs(self.detA))]).T,(1,W.shape[0]))
 
         # interpolation of a previous solution vector
-        if w is not None:
-            w1=np.outer(w[self.mesh.t[0,:]],phi[0])+\
-               np.outer(w[self.mesh.t[1,:]],phi[1])+\
-               np.outer(w[self.mesh.t[2,:]],phi[2])
-            dw1={}
-            dw1[0]=(np.outer(self.invA[0][0],gradphi[0][0,:])+\
+        if w1 is not None:
+            W1=np.outer(w1[self.mesh.t[0,:]],phi[0])+\
+               np.outer(w1[self.mesh.t[1,:]],phi[1])+\
+               np.outer(w1[self.mesh.t[2,:]],phi[2])
+            dW1={}
+            dW1[0]=(np.outer(self.invA[0][0],gradphi[0][0,:])+\
                     np.outer(self.invA[1][0],gradphi[0][1,:]))*\
-                    w[self.mesh.t[0,:]][:,None]+\
+                    w1[self.mesh.t[0,:]][:,None]+\
                    (np.outer(self.invA[0][0],gradphi[1][0,:])+\
                     np.outer(self.invA[1][0],gradphi[1][1,:]))*\
-                    w[self.mesh.t[1,:]][:,None]+\
+                    w1[self.mesh.t[1,:]][:,None]+\
                    (np.outer(self.invA[0][0],gradphi[2][0,:])+\
                     np.outer(self.invA[1][0],gradphi[2][1,:]))*\
-                    w[self.mesh.t[2,:]][:,None]
-            dw1[1]=(np.outer(self.invA[0][1],gradphi[0][0,:])+\
+                    w1[self.mesh.t[2,:]][:,None]
+            dW1[1]=(np.outer(self.invA[0][1],gradphi[0][0,:])+\
                     np.outer(self.invA[1][1],gradphi[0][1,:]))*\
-                    w[self.mesh.t[0,:]][:,None]+\
+                    w1[self.mesh.t[0,:]][:,None]+\
                    (np.outer(self.invA[0][1],gradphi[1][0,:])+\
                     np.outer(self.invA[1][1],gradphi[1][1,:]))*\
-                    w[self.mesh.t[1,:]][:,None]+\
+                    w1[self.mesh.t[1,:]][:,None]+\
                    (np.outer(self.invA[0][1],gradphi[2][0,:])+\
                     np.outer(self.invA[1][1],gradphi[2][1,:]))*\
-                    w[self.mesh.t[2,:]][:,None]
+                    w1[self.mesh.t[2,:]][:,None]
         else:
-            w1=None
-            dw1=None
+            W1=None
+            dW1=None
+
+        if w2 is not None:
+            W2=np.outer(w2[self.mesh.t[0,:]],phi[0])+\
+               np.outer(w2[self.mesh.t[1,:]],phi[1])+\
+               np.outer(w2[self.mesh.t[2,:]],phi[2])
+            dW2={}
+            dW2[0]=(np.outer(self.invA[0][0],gradphi[0][0,:])+\
+                    np.outer(self.invA[1][0],gradphi[0][1,:]))*\
+                    w2[self.mesh.t[0,:]][:,None]+\
+                   (np.outer(self.invA[0][0],gradphi[1][0,:])+\
+                    np.outer(self.invA[1][0],gradphi[1][1,:]))*\
+                    w2[self.mesh.t[1,:]][:,None]+\
+                   (np.outer(self.invA[0][0],gradphi[2][0,:])+\
+                    np.outer(self.invA[1][0],gradphi[2][1,:]))*\
+                    w2[self.mesh.t[2,:]][:,None]
+            dW2[1]=(np.outer(self.invA[0][1],gradphi[0][0,:])+\
+                    np.outer(self.invA[1][1],gradphi[0][1,:]))*\
+                    w2[self.mesh.t[0,:]][:,None]+\
+                   (np.outer(self.invA[0][1],gradphi[1][0,:])+\
+                    np.outer(self.invA[1][1],gradphi[1][1,:]))*\
+                    w2[self.mesh.t[1,:]][:,None]+\
+                   (np.outer(self.invA[0][1],gradphi[2][0,:])+\
+                    np.outer(self.invA[1][1],gradphi[2][1,:]))*\
+                    w2[self.mesh.t[2,:]][:,None]
+        else:
+            W2=None
+            dW2=None
 
         # bilinear form
         if bilinear:
@@ -161,7 +188,7 @@ class AssemblerTriP1(Assembler):
                     ixs=slice(nt*(3*j+i),nt*(3*j+i+1))
                     
                     # compute entries of local stiffness matrices
-                    data[ixs]=np.dot(fform(u,v,du,dv,x,h,w1,dw1),W)*np.abs(self.detA)
+                    data[ixs]=np.dot(fform(u,v,du,dv,x,h,W1,dW1,W2,dW2),W)*np.abs(self.detA)
                     rows[ixs]=self.mesh.t[i,:]
                     cols[ixs]=self.mesh.t[j,:]
         
@@ -186,7 +213,7 @@ class AssemblerTriP1(Assembler):
                 ixs=slice(nt*i,nt*(i+1))
                 
                 # compute entries of local stiffness matrices
-                data[ixs]=np.dot(fform(v,dv,x,h,w1,dw1),W)*np.abs(self.detA)
+                data[ixs]=np.dot(fform(v,dv,x,h,W1,dW1,W2,dW2),W)*np.abs(self.detA)
                 rows[ixs]=self.mesh.t[i,:]
                 cols[ixs]=np.zeros(nt)
         
