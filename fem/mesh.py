@@ -29,10 +29,17 @@ class MeshTri(Mesh):
     t2f=np.empty([3,0],dtype=np.intp)
     f2t=np.empty([2,0],dtype=np.intp)
 
-    def __init__(self,p,t):
+    def __init__(self,p,t,fixmesh=False):
         self.p=p
         self.t=t
         self.t.sort(axis=0)
+        
+        # if the mesh is not proper (duplicate points) then fix it
+        if fixmesh:
+            tmp=np.ascontiguousarray(self.p.T)
+            tmp,ixa,ixb=np.unique(tmp.view([('',tmp.dtype)]*tmp.shape[1]),return_index=True,return_inverse=True)
+            self.p=self.p[:,ixa]
+            self.t=ixb[self.t]
   
         # define facets
         self.facets=np.vstack((self.t[0,:],self.t[1,:]))

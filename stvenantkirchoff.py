@@ -92,7 +92,7 @@ for ctr in np.arange(0,2.1,0.1):
             dmesh.plot()
             plt.xlim(-1,1)
             plt.ylim(0,2)
-            plt.savefig('stvenant_step'+str(step).zfill(2)+'.png')
+            #plt.savefig('stvenant_step'+str(step).zfill(2)+'.png')
             step=step+1
             break
         print np.linalg.norm(u-U)

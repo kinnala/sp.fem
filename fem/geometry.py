@@ -169,7 +169,7 @@ class GeometryShapelyTriangle2D(Geometry):
             p=np.loadtxt(open(fname+".1.node","rb"),delimiter=None,comments="#",skiprows=1).T
         except:
             raise Exception("GeometryShapelyTriangle2D: A problem with meshing!")
-        return fem.mesh.MeshTri(p[1:3,:],t[1:,:].astype(np.intp))
+        return fem.mesh.MeshTri(p[1:3,:],t[1:,:].astype(np.intp),fixmesh=True)
 
 
 class GeometryMeshTri(Geometry):
