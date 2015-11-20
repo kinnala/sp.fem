@@ -8,9 +8,7 @@ class MeshTriBasicTest(unittest.TestCase):
         self.geom=fem.geometry.GeometryMeshTri()
 
 class MeshTriFacetIndexing(MeshTriBasicTest):
-    """
-    Compare the facet indexing to a known test case.
-    """
+    """Compare the facet indexing to a known test case."""
     def runTest(self):
         geom=self.geom
         geom.refine(1)

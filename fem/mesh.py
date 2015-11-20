@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.tri as mtri
+import scipy.interpolate as spi
 try:
     from mayavi import mlab
     opt_mayavi=True
@@ -75,6 +76,12 @@ class MeshTri(Mesh):
     def interior_nodes(self):
         """Return an array of interior node indices."""
         return np.setdiff1d(np.arange(0,self.p.shape[1]),self.boundary_nodes())
+
+    def interpolator(self,x):
+        """Return a function which interpolates values with P1 basis."""
+        # TODO make this faster (i.e. use the mesh in self)
+        return spi.LinearNDInterpolator(self.p.T,x)
+        
 
     def draw(self):
         """Draw the mesh."""

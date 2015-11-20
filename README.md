@@ -14,12 +14,12 @@ The code is initially (c) Tom Gustafsson but the license will change in the futu
 * Triangle (optional; for 2D meshing)
 * Mayavi (optional; for gl plots)
 
-## Linux
+## Intallation: Linux
 
 1. Install all dependencies (package manager of choice)
 2. Compile Triangle binary to ./fem/triangle/triangle (https://www.cs.cmu.edu/~quake/triangle.html)
 
-## Windows 
+## Installation: Windows 
 
 1. Install Anaconda
 2. Install Shapely as follows:
@@ -38,9 +38,7 @@ The code is initially (c) Tom Gustafsson but the license will change in the futu
 ## Running tests
 
 Usually it suffices to write
-```ipython -m unittest discover ./fem```
+```ipython2 -m unittest discover ./fem```
+or
+```python -m unittest discover -v ./fem```
 in the base directory.
-
-Also, e.g,
-```ipython -m unittest fem.test_mesh```
-is fine for running a single test module.

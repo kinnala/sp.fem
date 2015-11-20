@@ -19,7 +19,7 @@ class Geometry:
     def mesh(self):
         raise NotImplementedError("Geometry mesher not implemented!")
 
-class GeometryShapelyTriangle2D(Geometry):
+class GeometryShapely2D(Geometry):
     """Shapely geometry meshed using Triangle.
 
     Geometry tuples are added to list and then
@@ -35,25 +35,29 @@ class GeometryShapelyTriangle2D(Geometry):
     refined boundary edges.
     """
 
-    def __init__(self,glist):
+    def __init__(self,glist,holes=None):
         if opt_shapely:
             self.glist=glist
+            self.holes=holes
         else:
-            raise ImportError("Shapely not supported by the host system!")
+            raise ImportError("GeometryShapely2D: Shapely not supported by the host system!")
 
     def process(self):
         if self.glist[0][0]!='+':
-            raise Exception("GeometryShapelyTriangle2D: first geometry tuple must be ('+',...)!")
+            raise Exception("GeometryShapely2D: first geometry tuple must be ('+',...)!")
+        # resolve the first tuple and iterate over rest
         self.g=self.resolve_gtuple(self.glist[0])
         iterg=iter(self.glist)
         next(iterg)
         for itr in iterg:
             if itr[0]=='+':
+                # '+' denotes union
                 self.g=self.g.union(self.resolve_gtuple(itr))
             elif itr[0]=='-':
+                # '-' denotes set difference
                 self.g=self.g.difference(self.resolve_gtuple(itr))
             else:
-                raise Exception("GeometryShapelyTriangle2D: first item in gtuple must be '+' or '-'!")
+                raise Exception("GeometryShapely2D: first item in each tuple must be '+' or '-'!")
 
 
     def resolve_gtuple(self,gtuple):
@@ -64,7 +68,7 @@ class GeometryShapelyTriangle2D(Geometry):
         elif gtuple[1]=='box':
             return shgeom.box(gtuple[2],gtuple[3],gtuple[4],gtuple[5])
         else:
-            raise NotImplementedError("GeometryShapelyTriangle2D.resolve_gtuple: given shape not implemented!")
+            raise NotImplementedError("GeometryShapely2D.resolve_gtuple: given shape not implemented!")
 
     def draw(self):
         """Draw the boundary curves of the geometric object.
@@ -91,9 +95,8 @@ class GeometryShapelyTriangle2D(Geometry):
                 ys=np.append(ys,itr[1])
             plt.plot(xs,ys,'k-')
 
-    def mesh(self,hmax=1.0,minangle=20.0,holes=None):
+    def mesh(self,hmax=1.0,minangle=20.0):
         """Call Triangle to generate a mesh."""
-        # TODO fix meshing of holes
         # process the geometry list with Shapely
         self.process()
         # data arrays for boundary line segments
@@ -102,6 +105,8 @@ class GeometryShapelyTriangle2D(Geometry):
         segstart=np.array([])
         segend=np.array([])
         itrn=0
+        # Shapely has different kind of data structure for multiboundary domains
+        # which must be handled differently
         if isinstance(self.g.boundary,shgeom.multilinestring.MultiLineString):
             # iterate over boundaries
             for itr in self.g.boundary:
@@ -113,6 +118,7 @@ class GeometryShapelyTriangle2D(Geometry):
                     itrn=itrn+1
                 segstart=segstart[0:-1]
                 segend=segend[0:-1]
+        # handle domains with a single boundary 
         else:
             for itr in self.g.boundary.coords:
                 xs=np.append(xs,itr[0])
@@ -131,12 +137,12 @@ class GeometryShapelyTriangle2D(Geometry):
             f.write('%d %d %d\n'%(itr,segstart[itr],segend[itr]))
 
         # write hole markers
-        if holes is None:
+        if self.holes is None:
             f.write('0\n')
         else:
-            f.write('%d\n'%len(holes))
+            f.write('%d\n'%len(self.holes))
             itrn=0
-            for itr in holes:
+            for itr in self.holes:
                 f.write('%d %f %f\n'%(itrn,itr[0],itr[1]))
                 itrn=itrn+1
 
@@ -150,16 +156,16 @@ class GeometryShapelyTriangle2D(Geometry):
         elif platform.system()=="Windows":
             os.system("fem\\triangle\\triangle.exe -q%f -Q -a%f -p geom.poly"%(minangle,hmax**2))
         else:
-            raise NotImplementedError("GeometryShapelyTriangle2D: Not implemented for your platform!")
+            raise NotImplementedError("GeometryShapely2D: Not implemented for your platform!")
 
         # load output of Triangle
         mesh=self.load_triangle("geom")
 
-        if platform.system()=="Linux":
-            os.system("rm geom.poly")
-            os.system("rm geom.1.ele")
-            os.system("rm geom.1.node")
-            os.system("rm geom.1.poly")
+        # remove communication files
+        os.remove("geom.poly")
+        os.remove("geom.1.ele")
+        os.remove("geom.1.node")
+        os.remove("geom.1.poly")
 
         return mesh
 
@@ -168,7 +174,7 @@ class GeometryShapelyTriangle2D(Geometry):
             t=np.loadtxt(open(fname+".1.ele","rb"),delimiter=None,comments="#",skiprows=1).T
             p=np.loadtxt(open(fname+".1.node","rb"),delimiter=None,comments="#",skiprows=1).T
         except:
-            raise Exception("GeometryShapelyTriangle2D: A problem with meshing!")
+            raise Exception("GeometryShapely2D: A problem with meshing!")
         return fem.mesh.MeshTri(p[1:3,:],t[1:,:].astype(np.intp),fixmesh=True)
 
 class GeometryMeshTri(Geometry):
@@ -212,13 +218,14 @@ class GeometryMeshTri(Geometry):
 
 
 class GeometryMeshTriComsol(GeometryMeshTri):
-    """A geometry defined by a mesh in COMSOL *.mphtext format."""
+    """A geometry defined by a triangular mesh in COMSOL *.mphtext format."""
 
     p=np.empty([2,0],dtype=np.float_)
     t=np.empty([3,0],dtype=np.intp)
 
     def __init__(self,filename):
-        if platform.system()=="Windows":
+        # TODO make this multiplatform
+        if platform.system()!="Linux":
             raise NotImplementedError("GeometryMeshTriComsol: Loading Comsol meshes not supported on this platform!")
         os.system("csplit "+filename+" '/^# Mesh point coordinates/' > /dev/null")
         os.system("mv xx01 tmp.fem")
