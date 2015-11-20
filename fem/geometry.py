@@ -171,7 +171,6 @@ class GeometryShapelyTriangle2D(Geometry):
             raise Exception("GeometryShapelyTriangle2D: A problem with meshing!")
         return fem.mesh.MeshTri(p[1:3,:],t[1:,:].astype(np.intp),fixmesh=True)
 
-
 class GeometryMeshTri(Geometry):
     """A geometry defined by a triangular mesh."""
 
@@ -211,3 +210,28 @@ class GeometryMeshTri(Geometry):
         self.p=newp
         self.t=newt
 
+
+class GeometryMeshTriComsol(GeometryMeshTri):
+    """A geometry defined by a mesh in COMSOL *.mphtext format."""
+
+    p=np.empty([2,0],dtype=np.float_)
+    t=np.empty([3,0],dtype=np.intp)
+
+    def __init__(self,filename):
+        if platform.system()=="Windows":
+            raise NotImplementedError("GeometryMeshTriComsol: Loading Comsol meshes not supported on this platform!")
+        os.system("csplit "+filename+" '/^# Mesh point coordinates/' > /dev/null")
+        os.system("mv xx01 tmp.fem")
+        os.system("csplit tmp.fem '/^# Elements/' > /dev/null")
+        os.system("mv xx00 vertices.fem")
+        os.system("mv xx01 elements.fem")
+        os.system("csplit elements.fem '/^$/' > /dev/null")
+        os.system("rm elements.fem")
+        os.system("mv xx00 elements.fem")
+        os.system("csplit vertices.fem '/^$/' > /dev/null")
+        os.system("rm vertices.fem")
+        os.system("mv xx00 vertices.fem")
+        t=np.loadtxt('elements.fem',dtype=np.int64).T
+        p=np.loadtxt('vertices.fem').T
+        self.p=p
+        self.t=t

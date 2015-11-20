@@ -76,37 +76,47 @@ class MeshTri(Mesh):
         """Return an array of interior node indices."""
         return np.setdiff1d(np.arange(0,self.p.shape[1]),self.boundary_nodes())
 
-    def plot(self,z=None,smooth=False):
-        """Draw the mesh or visualize nodal function."""
+    def draw(self):
+        """Draw the mesh."""
         fig=plt.figure()
-        if z is None:
-            # visualize the mesh
-            # faster plotting is achieved through
-            # None insertion trick.
-            xs=[]
-            ys=[]
-            for s,t,u,v in zip(self.p[0,self.facets[0,:]],self.p[1,self.facets[0,:]],self.p[0,self.facets[1,:]],self.p[1,self.facets[1,:]]):
-                xs.append(s)
-                xs.append(u)
-                xs.append(None)
-                ys.append(t)
-                ys.append(v)
-                ys.append(None)
-            plt.plot(xs,ys,'k')
+        # visualize the mesh
+        # faster plotting is achieved through
+        # None insertion trick.
+        xs=[]
+        ys=[]
+        for s,t,u,v in zip(self.p[0,self.facets[0,:]],self.p[1,self.facets[0,:]],self.p[0,self.facets[1,:]],self.p[1,self.facets[1,:]]):
+            xs.append(s)
+            xs.append(u)
+            xs.append(None)
+            ys.append(t)
+            ys.append(v)
+            ys.append(None)
+        plt.plot(xs,ys,'k')
 
+
+    def plot(self,z,smooth=False):
+        """Visualize nodal or elemental function (2d)."""
+        fig=plt.figure()
+        if smooth:
+            return plt.tripcolor(self.p[0,:],self.p[1,:],self.t.T,z,shading='gouraud')
         else:
-            # visualize a solution vector
-            if smooth:
-                # use mayavi
-                if opt_mayavi:
-                    mlab.triangular_mesh(self.p[0,:],self.p[1,:],z,self.t.T)
-                else:
-                    raise ImportError("Mayavi not supported by the host system!")
+            return plt.tripcolor(self.p[0,:],self.p[1,:],self.t.T,z)
+
+    def plot3(self,z,smooth=False):
+        """Visualize nodal function (3d i.e. three axes)."""
+        fig=plt.figure()
+        # visualize a solution vector
+        if smooth:
+            # use mayavi
+            if opt_mayavi:
+                mlab.triangular_mesh(self.p[0,:],self.p[1,:],z,self.t.T)
             else:
-                # use matplotlib
-                ax=fig.gca(projection='3d')
-                ts=mtri.Triangulation(self.p[0,:],self.p[1,:],self.t.T)
-                ax.plot_trisurf(self.p[0,:],self.p[1,:],z,triangles=ts.triangles,cmap=plt.cm.Spectral)
+                raise ImportError("Mayavi not supported by the host system!")
+        else:
+            # use matplotlib
+            ax=fig.gca(projection='3d')
+            ts=mtri.Triangulation(self.p[0,:],self.p[1,:],self.t.T)
+            ax.plot_trisurf(self.p[0,:],self.p[1,:],z,triangles=ts.triangles,cmap=plt.cm.Spectral)
 
     def show(self):
         """Call after plot functions."""
