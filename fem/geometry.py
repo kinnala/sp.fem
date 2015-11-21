@@ -128,27 +128,30 @@ class GeometryShapely2D(Geometry):
                 itrn=itrn+1
 
         # write the boundary segments to Triangle input format
-        f=open('geom.poly','w') 
-        f.write('%d 2 0 0\n'%len(xs))
-        for itr in range(0,len(xs)):
-            f.write('%d %f %f\n'%(itr,xs[itr],ys[itr]))
-        f.write('%d 0\n'%len(segstart))
-        for itr in range(0,len(segstart)):
-            f.write('%d %d %d\n'%(itr,segstart[itr],segend[itr]))
+        try:
+            f=open('geom.poly','w') 
+            f.write('%d 2 0 0\n'%len(xs))
+            for itr in range(0,len(xs)):
+                f.write('%d %f %f\n'%(itr,xs[itr],ys[itr]))
+            f.write('%d 0\n'%len(segstart))
+            for itr in range(0,len(segstart)):
+                f.write('%d %d %d\n'%(itr,segstart[itr],segend[itr]))
 
-        # write hole markers
-        if self.holes is None:
-            f.write('0\n')
-        else:
-            f.write('%d\n'%len(self.holes))
-            itrn=0
-            for itr in self.holes:
-                f.write('%d %f %f\n'%(itrn,itr[0],itr[1]))
-                itrn=itrn+1
+            # write hole markers
+            if self.holes is None:
+                f.write('0\n')
+            else:
+                f.write('%d\n'%len(self.holes))
+                itrn=0
+                for itr in self.holes:
+                    f.write('%d %f %f\n'%(itrn,itr[0],itr[1]))
+                    itrn=itrn+1
 
-        # TODO implement regional attributes
-        f.write('0')
-        f.close()
+            # TODO implement regional attributes
+            f.write('0')
+            f.close()
+        except:
+            raise Exception("GeometryShapely2D: Error when writing Triangle input file!")
 
         # run Triangle (OS dependent)
         if platform.system()=="Linux":
@@ -162,10 +165,13 @@ class GeometryShapely2D(Geometry):
         mesh=self.load_triangle("geom")
 
         # remove communication files
-        os.remove("geom.poly")
-        os.remove("geom.1.ele")
-        os.remove("geom.1.node")
-        os.remove("geom.1.poly")
+        try:
+            os.remove("geom.poly")
+            os.remove("geom.1.ele")
+            os.remove("geom.1.node")
+            os.remove("geom.1.poly")
+        except:
+            print "GeometryShapely2D: (WARNING) Error when removing Triangle output files!"
 
         return mesh
 

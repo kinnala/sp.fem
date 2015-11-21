@@ -12,7 +12,7 @@ geomlist=[
         ]
         
 g=fegeom.GeometryShapely2D(geomlist)
-mesh=g.mesh(0.02)
+mesh=g.mesh(0.025)
 
 mesh.draw()
 
@@ -92,7 +92,7 @@ u=np.zeros(3*N)
 Vel=100
 u[Dupperx]=Vel
 
-gamma=1e-3
+gamma=1e-1
 eps=1e-2 # works with zero when no-stress BC?
 
 A=spsp.vstack((spsp.hstack((A11,A12)),spsp.hstack((A21,A22))))
@@ -176,5 +176,5 @@ for itr in [3]:
     plt.plot(xs,soltruex,'ro-')
     plt.savefig('lid_compx_step'+str(itr).zfill(4)+'.png')
 
-    print np.linalg.norm(soltruex-u2fun(xs,0*xs+0.5))
-    print np.linalg.norm(soltruey-u1fun(ys,0*ys+0.5))
+    print np.max(np.abs(soltruex-u2fun(xs,0*xs+0.5)/Vel))
+    print np.max(np.abs(soltruey-u1fun(0*ys+0.5,ys)/Vel))
