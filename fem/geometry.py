@@ -36,6 +36,8 @@ class GeometryPSLG2D(Geometry):
         #            belonging to it
         self.holes=[]
         # each hole is a 2-tuple with x- and y-coordinates of hole
+        self.regions=[]
+        # each region is a dictionary
 
     def add_segment(self,vertices,marker=None):
         """Create a new boundary segment and append it to segment list."""
@@ -49,6 +51,9 @@ class GeometryPSLG2D(Geometry):
     def add_hole(self,location):
         """Add a hole."""
         self.holes.append(location)
+
+    def add_region(self,location,number=1,area=-1):
+        self.regions.append((location[0],location[1],number,area))
 
     def add_line(self,p1,p2,marker=None,nodes=np.array([0,1])):
         """Add a line.
@@ -130,14 +135,23 @@ class GeometryPSLG2D(Geometry):
                 for itr in range(0,len(self.holes)):
                     f.write('%d %f %f\n'%(itr,self.holes[itr][0],self.holes[itr][1]))
 
-            # TODO implement regional attributes
-            f.write('0')
+            # regional attributes
+            if len(self.regions)==0:
+                f.write('0')
+            else:
+                f.write('%d\n'%len(self.regions))
+                for itr in range(0,len(self.regions)):
+                    f.write('%d %f %f %d %f\n'%(itr,self.regions[itr][0],self.regions[itr][1],self.regions[itr][2],self.regions[itr][3]))
+
             f.close()
         except:
             raise Exception(self.__class__.__name__+": Error when writing Triangle input file!")
 
         # call Triangle to mesh the domain
-        self.call_triangle("-q%f -Q -a%f -p"%(minangle,hmax**2),inputfile=commfile)
+        if len(self.regions)==0:
+            self.call_triangle("-q%f -Q -a%f -p"%(minangle,hmax**2),inputfile=commfile)
+        else:
+            self.call_triangle("-q%f -Q -a -A -p"%minangle,inputfile=commfile)
 
         # load output of Triangle
         mesh=self.load_triangle_mesh(inputfile=commfile,keepfiles=True)
@@ -176,7 +190,7 @@ class GeometryPSLG2D(Geometry):
         for key,value in self.markers.iteritems():
             indexsets[key]=np.nonzero(markers==value)[0]
 
-        return fem.mesh.MeshTri(p[1:3,:],t[1:,:].astype(np.intp),fixmesh=True,markers=indexsets)
+        return fem.mesh.MeshTri(p[1:3,:],t[1:4,:].astype(np.intp),fixmesh=True,markers=indexsets)
 
 class GeometryShapely2D(Geometry):
     """Shapely geometry meshed using Triangle.
