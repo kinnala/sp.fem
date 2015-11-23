@@ -30,7 +30,7 @@ class MeshTri(Mesh):
     t2f=np.empty([3,0],dtype=np.intp)
     f2t=np.empty([2,0],dtype=np.intp)
 
-    def __init__(self,p,t,fixmesh=False):
+    def __init__(self,p,t,fixmesh=False,markers=None):
         self.p=p
         self.t=t
         self.t.sort(axis=0)
@@ -41,6 +41,12 @@ class MeshTri(Mesh):
             tmp,ixa,ixb=np.unique(tmp.view([('',tmp.dtype)]*tmp.shape[1]),return_index=True,return_inverse=True)
             self.p=self.p[:,ixa]
             self.t=ixb[self.t]
+            if markers is not None:
+                # fix markers
+                fixedmarkers={}
+                for key,value in markers.iteritems():
+                    fixedmarkers[key]=ixb[value]
+                markers=fixedmarkers
   
         # define facets
         self.facets=np.vstack((self.t[0,:],self.t[1,:]))
@@ -68,6 +74,13 @@ class MeshTri(Mesh):
 
         # second row to zero if repeated (i.e., on boundary)
         self.f2t[1,np.nonzero(self.f2t[0,:]==self.f2t[1,:])[0]]=-1
+        
+        if markers is None:
+            self.markers={}
+            self.markers['boundary']=self.boundary_nodes()
+            self.markers['interior']=self.interior_nodes()
+        else:
+            self.markers=markers
 
     def boundary_nodes(self):
         """Return an array of boundary node indices."""
@@ -99,6 +112,17 @@ class MeshTri(Mesh):
             ys.append(v)
             ys.append(None)
         plt.plot(xs,ys,'k')
+        return fig
+        
+    def draw_nodes(self,nodes,mark='bo'):
+        """Highlight some nodes."""
+        if isinstance(nodes,str):
+            try:
+                plt.plot(self.p[0,self.markers[nodes]],self.p[1,self.markers[nodes]],mark)
+            except:
+                raise Exception(self.__class__.__name__+": Given node set name not found!")
+        else:
+            plt.plot(self.p[0,nodes],self.p[1,nodes],mark)
 
 
     def plot(self,z,smooth=False):

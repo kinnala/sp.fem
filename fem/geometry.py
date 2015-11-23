@@ -19,6 +19,165 @@ class Geometry:
     def mesh(self):
         raise NotImplementedError("Geometry mesher not implemented!")
 
+class GeometryPSLG2D(Geometry):
+    """A geometry defined by PSLG (planar straight line graph).
+
+    PLSG's can be meshed using Triangle.
+    
+    This class also contains some methods to help defining
+    two-dimensional geometry boundaries."""
+
+    def __init__(self):
+        # boundary segments are held in this list
+        self.segments=[]
+        # each segment is a dictionary with the following keys
+        #   vertices = 2xN list of points in proper order
+        #   marker = string, name for the segment to identify nodes
+        #            belonging to it
+        self.holes=[]
+        # each hole is a 2-tuple with x- and y-coordinates of hole
+
+    def add_segment(self,vertices,marker=None):
+        """Create a new boundary segment and append it to segment list."""
+        if marker==None:
+            marker='boundary'
+        newseg={}
+        newseg['vertices']=vertices
+        newseg['marker']=marker
+        self.segments.append(newseg)
+
+    def add_hole(self,location):
+        """Add a hole."""
+        self.holes.append(location)
+
+    def add_line(self,p1,p2,marker=None,nodes=np.array([0,1])):
+        """Add a line.
+        
+        Include optional np.array 'nodes'
+        with parameters in the interval [0,1] to include
+        other than endpoint nodes.
+        
+        e.g. add_line((0,0),(1,1),nodes=np.linspace(0,1,10))"""
+        xs=nodes*p1[0]+(1-nodes)*p2[0]
+        ys=nodes*p1[1]+(1-nodes)*p2[1]
+        self.add_segment(np.vstack((xs,ys)),marker=marker)
+
+    def add_rectangle(self,x=0,y=0,width=1,height=1,marker=None):
+        self.add_segment(np.array([[x,y],[x+width,y],[x+width,y+height],[x,y+height],[x,y]]).T,marker=marker)
+
+    def add_circle(self,c=(0.0,0.0),r=1.0,nodes=np.linspace(0,2*np.pi,11),marker=None):
+        """Add a line.
+        
+        Include optional np.array 'nodes'
+        with parameters in the interval [0,2*pi] to include
+        more than 10 nodes.
+        
+        e.g. add_circle((0,0),1.0,nodes=np.linspace(0,2*np.pi,50))"""
+        xs=r*np.cos(nodes)+c[0]
+        ys=r*np.sin(nodes)+c[1]
+        self.add_segment(np.vstack((xs,ys)),marker=marker)
+
+    def mesh(self,hmax=1.0,minangle=20.0):
+        """Mesh the defined geometry using Triangle."""
+        commfile="geom"
+        # total number of vertices from self.segments
+        N=np.sum(np.array([seg['vertices'].shape[1] for seg in self.segments]))
+        # total number of segments
+        M=len(self.segments)
+        # total number of 'Triangle segments'
+        P=np.sum(np.array([seg['vertices'].shape[1]-1 for seg in self.segments]))
+
+        # enumerate boundary markers
+        markeri=1
+        self.markers={}
+        for itr in self.segments:
+            if itr['marker'] not in self.markers:
+                self.markers[itr['marker']]=markeri
+                markeri=markeri+1
+
+        if M==0:
+            raise Exception(self.__class__.__name__+": Cannot generate mesh since no boundary segments are defined!")
+
+        # write the boundary segments to Triangle input format
+        try:
+            f=open(commfile+".poly",'w') 
+            # format: # of vertices | dimension | # of attributes | # of markers
+            f.write('%d 2 0 0\n'%N)
+
+            offset=0
+            # loop over segments
+            for itr in range(0,M):
+                # loop over vertices of segment
+                for jtr in range(0,self.segments[itr]['vertices'].shape[1]):
+                    # format: vertex # | x | y
+                    f.write('%d %f %f\n'%(jtr+offset,self.segments[itr]['vertices'][0,jtr],self.segments[itr]['vertices'][1,jtr]))
+                offset+=self.segments[itr]['vertices'].shape[1]
+            # format: # of segments | # of boundary markers
+            f.write('%d 1\n'%P)
+            segmenti=0
+            offset=0
+            for itr in range(0,M):
+                for jtr in range(0,self.segments[itr]['vertices'].shape[1]-1):
+                    f.write('%d %d %d %s\n'%(segmenti,jtr+offset,jtr+1+offset,self.markers[self.segments[itr]['marker']]))
+                    segmenti=segmenti+1
+                offset+=self.segments[itr]['vertices'].shape[1]
+
+            # write hole markers
+            if len(self.holes)==0:
+                f.write('0\n')
+            else:
+                f.write('%d\n'%len(self.holes))
+                for itr in range(0,len(self.holes)):
+                    f.write('%d %f %f\n'%(itr,self.holes[itr][0],self.holes[itr][1]))
+
+            # TODO implement regional attributes
+            f.write('0')
+            f.close()
+        except:
+            raise Exception(self.__class__.__name__+": Error when writing Triangle input file!")
+
+        # call Triangle to mesh the domain
+        self.call_triangle("-q%f -Q -a%f -p"%(minangle,hmax**2),inputfile=commfile)
+
+        # load output of Triangle
+        mesh=self.load_triangle_mesh(inputfile=commfile,keepfiles=True)
+
+        return mesh
+
+    def call_triangle(self,args,inputfile="geom"):
+        # run Triangle (OS dependent)
+        if platform.system()=="Linux":
+            os.system("./fem/triangle/triangle "+args+" "+inputfile+".poly")
+        elif platform.system()=="Windows":
+            os.system("fem\\triangle\\triangle.exe "+args+" "+inputfile+".poly")
+        else:
+            raise NotImplementedError(self.__class__.__name__+": method 'call_triangle' not implemented for your platform!")
+
+    def load_triangle_mesh(self,inputfile="geom",keepfiles=False):
+        try:
+            t=np.loadtxt(open(inputfile+".1.ele","rb"),delimiter=None,comments="#",skiprows=1).T
+            p=np.loadtxt(open(inputfile+".1.node","rb"),delimiter=None,comments="#",skiprows=1).T
+        except:
+            raise Exception(self.__class__.__name__+": A problem when loading Triangle output files!")
+
+        if not keepfiles:
+            try:
+                os.remove(inputfile+".poly")
+                os.remove(inputfile+".1.ele")
+                os.remove(inputfile+".1.node")
+                os.remove(inputfile+".1.poly")
+            except:
+                print self.__class__.__name__+": (WARNING) Error when removing Triangle output files!"
+
+        # extract index sets corresponding to boundary markers
+        markers=p[3,:]
+        indexsets=self.markers.copy()
+
+        for key,value in self.markers.iteritems():
+            indexsets[key]=np.nonzero(markers==value)[0]
+
+        return fem.mesh.MeshTri(p[1:3,:],t[1:,:].astype(np.intp),fixmesh=True,markers=indexsets)
+
 class GeometryShapely2D(Geometry):
     """Shapely geometry meshed using Triangle.
 
