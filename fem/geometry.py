@@ -22,12 +22,17 @@ class Geometry:
 class GeometryPSLG2D(Geometry):
     """A geometry defined by PSLG (planar straight line graph).
 
-    PLSG's can be meshed using Triangle.
+    PSLG's can be meshed using Triangle.
     
     This class also contains some methods to help defining
-    two-dimensional geometry boundaries."""
+    two-dimensional geometry boundaries.
+    
+    TODO: Add string name enumeration for regions (also support in mesh)."""
 
     def __init__(self):
+        # TODO either change segments to tuples as well
+        #      or change holes and regions to dicts
+        #      for consistency.
         # boundary segments are held in this list
         self.segments=[]
         # each segment is a dictionary with the following keys
@@ -37,7 +42,7 @@ class GeometryPSLG2D(Geometry):
         self.holes=[]
         # each hole is a 2-tuple with x- and y-coordinates of hole
         self.regions=[]
-        # each region is a dictionary
+        # each region is a 4-tuple (x,y,number,areaconstraint)
 
     def add_segment(self,vertices,marker=None):
         """Create a new boundary segment and append it to segment list."""
@@ -71,7 +76,7 @@ class GeometryPSLG2D(Geometry):
         self.add_segment(np.array([[x,y],[x+width,y],[x+width,y+height],[x,y+height],[x,y]]).T,marker=marker)
 
     def add_circle(self,c=(0.0,0.0),r=1.0,nodes=np.linspace(0,2*np.pi,11),marker=None):
-        """Add a line.
+        """Add a circle.
         
         Include optional np.array 'nodes'
         with parameters in the interval [0,2*pi] to include
@@ -81,6 +86,35 @@ class GeometryPSLG2D(Geometry):
         xs=r*np.cos(nodes)+c[0]
         ys=r*np.sin(nodes)+c[1]
         self.add_segment(np.vstack((xs,ys)),marker=marker)
+
+    def draw(self,markers=False,regions=False,holes=False):
+        """Draw the segments.
+
+        Optionally visualize points with region marks
+        and hole marks."""
+        fig=plt.figure()
+        # visualize the geometry
+        xs=[]
+        ys=[]
+        for seg in self.segments:
+            for jtr in range(seg['vertices'].shape[1]-1):
+                xs.append(seg['vertices'][0,jtr])
+                xs.append(seg['vertices'][0,jtr+1])
+                xs.append(None)
+                ys.append(seg['vertices'][1,jtr])
+                ys.append(seg['vertices'][1,jtr+1])
+                ys.append(None)
+        plt.plot(xs,ys,'k')
+        if markers:
+            for itr in self.segments:
+                plt.text(itr['vertices'][0,0],itr['vertices'][1,0],itr['marker'],bbox=dict(facecolor='green', alpha=0.8))
+        if regions:
+            for itr in self.regions:
+                plt.text(itr[0],itr[1],str(itr[2]),bbox=dict(facecolor='red', alpha=0.8))
+        if holes:
+            for itr in self.holes:
+                plt.plot(itr[0],itr[1],'rx')
+        return fig
 
     def mesh(self,hmax=1.0,minangle=20.0):
         """Mesh the defined geometry using Triangle."""
@@ -100,6 +134,7 @@ class GeometryPSLG2D(Geometry):
                 self.markers[itr['marker']]=markeri
                 markeri=markeri+1
 
+        # check that there is at least one segment
         if M==0:
             raise Exception(self.__class__.__name__+": Cannot generate mesh since no boundary segments are defined!")
 
