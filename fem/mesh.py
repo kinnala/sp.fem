@@ -30,7 +30,7 @@ class MeshTri(Mesh):
     t2f=np.empty([3,0],dtype=np.intp)
     f2t=np.empty([2,0],dtype=np.intp)
 
-    def __init__(self,p,t,fixmesh=False,markers=None):
+    def __init__(self,p,t,fixmesh=False,markers=None,tmarkers=None):
         self.p=p
         self.t=t
         self.t.sort(axis=0)
@@ -81,6 +81,8 @@ class MeshTri(Mesh):
             self.markers['interior']=self.interior_nodes()
         else:
             self.markers=markers
+
+        self.tmarkers=tmarkers
 
     def boundary_nodes(self):
         """Return an array of boundary node indices."""

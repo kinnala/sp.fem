@@ -172,8 +172,8 @@ class AssemblerTriP1NavierStokes(unittest.TestCase):
     with Brezzi-Pitkaranta elements and and compare the results to Ghia et al."""
 
     def runTest(self):
-        geomlist=[('+','box',0,0,1,1)]
-        g=fem.geometry.GeometryShapely2D(geomlist)
+        g=fem.geometry.GeometryPSLG2D()
+        g.add_rectangle()
         mesh=g.mesh(0.025)
 
         N=mesh.p.shape[1]

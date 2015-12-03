@@ -10,8 +10,7 @@ The code is initially (c) Tom Gustafsson but the license will change in the futu
 * Numpy
 * Scipy
 * Matplotlib
-* Shapely (optional; for 2D geometries)
-* Triangle (optional; for 2D meshing)
+* Triangle (recommended; for 2D meshing)
 * Mayavi (optional; for gl plots)
 
 ## Intallation: Linux
@@ -22,10 +21,6 @@ The code is initially (c) Tom Gustafsson but the license will change in the futu
 ## Installation: Windows 
 
 1. Install Anaconda
-2. Install Shapely as follows:
-* Get whl-file from http://www.lfd.uci.edu/~gohlke/pythonlibs/
-* Open Anaconda Console: *conda run cmd*
-* Go to the directory with the downloaded whl-file and run *pip install [filename]*
 3. triangle.exe is already found under ./fem/triangle/
 
 ## TODO list

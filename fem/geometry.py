@@ -4,11 +4,6 @@ import platform
 
 import os
 import matplotlib.pyplot as plt
-try:
-    import shapely.geometry as shgeom
-    opt_shapely=True
-except:
-    opt_shapely=False
 
 class Geometry:
     """Superclass for all geometries."""
@@ -25,24 +20,25 @@ class GeometryPSLG2D(Geometry):
     PSLG's can be meshed using Triangle.
     
     This class also contains some methods to help defining
-    two-dimensional geometry boundaries.
-    
-    TODO: Add string name enumeration for regions (also support in mesh)."""
+    two-dimensional geometry boundaries."""
 
     def __init__(self):
-        # TODO either change segments to tuples as well
-        #      or change holes and regions to dicts
-        #      for consistency.
-        # boundary segments are held in this list
         self.segments=[]
         # each segment is a dictionary with the following keys
         #   vertices = 2xN list of points in proper order
-        #   marker = string, name for the segment to identify nodes
-        #            belonging to it
+        #   marker = string, name for the segment, for
+        #            identifying nodes belonging to it
         self.holes=[]
         # each hole is a 2-tuple with x- and y-coordinates of hole
         self.regions=[]
         # each region is a 4-tuple (x,y,number,areaconstraint)
+        # each region is a dictionary with the following keys
+        #   location = 2-tuple with x- and y-coordinates
+        #   maxh = maximum mesh parameter for the area.
+        #          (-1 == no constraint)
+        #   marker = string, name for the region. identifies
+        #            triangles belonging to it.
+        self.regionid={}
 
     def add_segment(self,vertices,marker=None):
         """Create a new boundary segment and append it to segment list."""
@@ -57,8 +53,16 @@ class GeometryPSLG2D(Geometry):
         """Add a hole."""
         self.holes.append(location)
 
-    def add_region(self,location,number=1,area=-1):
-        self.regions.append((location[0],location[1],number,area))
+    def add_region(self,location,marker=None,h=-1):
+        """Add a region."""
+        if marker==None:
+            marker='other'
+        newreg={}
+        newreg['location']=location
+        newreg['maxh']=h
+        newreg['marker']=marker
+        self.regionid[marker]=len(self.regions)+1
+        self.regions.append(newreg)
 
     def add_line(self,p1,p2,marker=None,nodes=np.array([0,1])):
         """Add a line.
@@ -73,6 +77,7 @@ class GeometryPSLG2D(Geometry):
         self.add_segment(np.vstack((xs,ys)),marker=marker)
 
     def add_rectangle(self,x=0,y=0,width=1,height=1,marker=None):
+        """Add a rectangle."""
         self.add_segment(np.array([[x,y],[x+width,y],[x+width,y+height],[x,y+height],[x,y]]).T,marker=marker)
 
     def add_circle(self,c=(0.0,0.0),r=1.0,nodes=np.linspace(0,2*np.pi,11),marker=None):
@@ -107,10 +112,16 @@ class GeometryPSLG2D(Geometry):
         plt.plot(xs,ys,'k')
         if markers:
             for itr in self.segments:
-                plt.text(itr['vertices'][0,0],itr['vertices'][1,0],itr['marker'],bbox=dict(facecolor='green', alpha=0.8))
+                plt.text(itr['vertices'][0,0],\
+                        itr['vertices'][1,0],\
+                        itr['marker'],\
+                        bbox=dict(facecolor='green', alpha=0.8))
         if regions:
             for itr in self.regions:
-                plt.text(itr[0],itr[1],str(itr[2]),bbox=dict(facecolor='red', alpha=0.8))
+                plt.text(itr['location'][0],\
+                        itr['location'][1],\
+                        itr['marker'],\
+                        bbox=dict(facecolor='red', alpha=0.8))
         if holes:
             for itr in self.holes:
                 plt.plot(itr[0],itr[1],'rx')
@@ -176,7 +187,16 @@ class GeometryPSLG2D(Geometry):
             else:
                 f.write('%d\n'%len(self.regions))
                 for itr in range(0,len(self.regions)):
-                    f.write('%d %f %f %d %f\n'%(itr,self.regions[itr][0],self.regions[itr][1],self.regions[itr][2],self.regions[itr][3]))
+                    if self.regions[itr]['maxh']==-1:
+                        areaconstr=-1
+                    else:
+                        areaconstr=self.regions[itr]['maxh']**2
+                    f.write('%d %f %f %d %f\n'\
+                            %(itr,\
+                            self.regions[itr]['location'][0],\
+                            self.regions[itr]['location'][1],\
+                            self.regionid[self.regions[itr]['marker']],\
+                            areaconstr))
 
             f.close()
         except:
@@ -189,7 +209,7 @@ class GeometryPSLG2D(Geometry):
             self.call_triangle("-q%f -Q -a -A -p"%minangle,inputfile=commfile)
 
         # load output of Triangle
-        mesh=self.load_triangle_mesh(inputfile=commfile,keepfiles=True)
+        mesh=self.load_triangle_mesh(inputfile=commfile)
 
         return mesh
 
@@ -225,171 +245,18 @@ class GeometryPSLG2D(Geometry):
         for key,value in self.markers.iteritems():
             indexsets[key]=np.nonzero(markers==value)[0]
 
-        return fem.mesh.MeshTri(p[1:3,:],t[1:4,:].astype(np.intp),fixmesh=True,markers=indexsets)
+        # extract index sets corresponding to regions (if exist)
+        if t.shape[0]==5:
+            tmarkers=t[4,:]
+            tindexsets=self.regionid.copy()
 
-class GeometryShapely2D(Geometry):
-    """Shapely geometry meshed using Triangle.
-
-    Geometry tuples are added to list and then
-    processed with Shapely. The resulting exterior
-    curve is fed to Triangle.
-
-    Tuple examples:
-      ('+','circle',<center x>,<center y>,<radius>,<resolution>)
-      ('-','polygon',<list of points as 2xN np.array>)
-      ('+','box',<min x>,<min y>,<max x>,<max y>)
-
-    Resolution is a natural number. Higher number gives more
-    refined boundary edges.
-    """
-
-    def __init__(self,glist,holes=None):
-        if opt_shapely:
-            self.glist=glist
-            self.holes=holes
+            for key,value in self.regionid.iteritems():
+                tindexsets[key]=np.nonzero(tmarkers==value)[0]
         else:
-            raise ImportError("GeometryShapely2D: Shapely not supported by the host system!")
-
-    def process(self):
-        if self.glist[0][0]!='+':
-            raise Exception("GeometryShapely2D: first geometry tuple must be ('+',...)!")
-        # resolve the first tuple and iterate over rest
-        self.g=self.resolve_gtuple(self.glist[0])
-        iterg=iter(self.glist)
-        next(iterg)
-        for itr in iterg:
-            if itr[0]=='+':
-                # '+' denotes union
-                self.g=self.g.union(self.resolve_gtuple(itr))
-            elif itr[0]=='-':
-                # '-' denotes set difference
-                self.g=self.g.difference(self.resolve_gtuple(itr))
-            else:
-                raise Exception("GeometryShapely2D: first item in each tuple must be '+' or '-'!")
+            tindexsets=None
 
 
-    def resolve_gtuple(self,gtuple):
-        if gtuple[1]=='circle':
-            return shgeom.Point(gtuple[2],gtuple[3]).buffer(gtuple[4],gtuple[5])
-        elif gtuple[1]=='polygon':
-            return shgeom.Polygon([tuple(i) for i in gtuple[2].T])
-        elif gtuple[1]=='box':
-            return shgeom.box(gtuple[2],gtuple[3],gtuple[4],gtuple[5])
-        else:
-            raise NotImplementedError("GeometryShapely2D.resolve_gtuple: given shape not implemented!")
-
-    def draw(self):
-        """Draw the boundary curves of the geometric object.
-
-        Run matplotlib plt.show() after this.
-        """
-        # if there is multiple boundaries
-        if isinstance(self.g.boundary,shgeom.multilinestring.MultiLineString):
-            # iterate over boundaries
-            plt.figure()
-            for itr in self.g.boundary:
-                xs=np.array([])
-                ys=np.array([])
-                for jtr in itr.coords:
-                    xs=np.append(xs,jtr[0])
-                    ys=np.append(ys,jtr[1])
-                plt.plot(xs,ys,'k-')
-        else:
-            # convert to numpy arrays and plot
-            xs=np.array([])
-            ys=np.array([])
-            for itr in self.g.boundary.coords:
-                xs=np.append(xs,itr[0])
-                ys=np.append(ys,itr[1])
-            plt.plot(xs,ys,'k-')
-
-    def mesh(self,hmax=1.0,minangle=20.0):
-        """Call Triangle to generate a mesh."""
-        # process the geometry list with Shapely
-        self.process()
-        # data arrays for boundary line segments
-        xs=np.array([])
-        ys=np.array([])
-        segstart=np.array([])
-        segend=np.array([])
-        itrn=0
-        # Shapely has different kind of data structure for multiboundary domains
-        # which must be handled differently
-        if isinstance(self.g.boundary,shgeom.multilinestring.MultiLineString):
-            # iterate over boundaries
-            for itr in self.g.boundary:
-                for jtr in itr.coords:
-                    xs=np.append(xs,jtr[0])
-                    ys=np.append(ys,jtr[1])
-                    segstart=np.append(segstart,itrn)
-                    segend=np.append(segend,itrn+1)
-                    itrn=itrn+1
-                segstart=segstart[0:-1]
-                segend=segend[0:-1]
-        # handle domains with a single boundary 
-        else:
-            for itr in self.g.boundary.coords:
-                xs=np.append(xs,itr[0])
-                ys=np.append(ys,itr[1])
-                segstart=np.append(segstart,itrn)
-                segend=np.append(segend,itrn+1)
-                itrn=itrn+1
-
-        # write the boundary segments to Triangle input format
-        try:
-            f=open('geom.poly','w') 
-            f.write('%d 2 0 0\n'%len(xs))
-            for itr in range(0,len(xs)):
-                f.write('%d %f %f\n'%(itr,xs[itr],ys[itr]))
-            f.write('%d 0\n'%len(segstart))
-            for itr in range(0,len(segstart)):
-                f.write('%d %d %d\n'%(itr,segstart[itr],segend[itr]))
-
-            # write hole markers
-            if self.holes is None:
-                f.write('0\n')
-            else:
-                f.write('%d\n'%len(self.holes))
-                itrn=0
-                for itr in self.holes:
-                    f.write('%d %f %f\n'%(itrn,itr[0],itr[1]))
-                    itrn=itrn+1
-
-            # TODO implement regional attributes
-            f.write('0')
-            f.close()
-        except:
-            raise Exception("GeometryShapely2D: Error when writing Triangle input file!")
-
-        # run Triangle (OS dependent)
-        if platform.system()=="Linux":
-            os.system("./fem/triangle/triangle -q%f -Q -a%f -p geom.poly"%(minangle,hmax**2))
-        elif platform.system()=="Windows":
-            os.system("fem\\triangle\\triangle.exe -q%f -Q -a%f -p geom.poly"%(minangle,hmax**2))
-        else:
-            raise NotImplementedError("GeometryShapely2D: Not implemented for your platform!")
-
-        # load output of Triangle
-        mesh=self.load_triangle("geom")
-
-        # remove communication files
-        try:
-            os.remove("geom.poly")
-            os.remove("geom.1.ele")
-            os.remove("geom.1.node")
-            os.remove("geom.1.poly")
-        except:
-            print "GeometryShapely2D: (WARNING) Error when removing Triangle output files!"
-
-        return mesh
-
-    def load_triangle(self,fname):
-        try:
-            t=np.loadtxt(open(fname+".1.ele","rb"),delimiter=None,comments="#",skiprows=1).T
-            p=np.loadtxt(open(fname+".1.node","rb"),delimiter=None,comments="#",skiprows=1).T
-        except:
-            raise Exception("GeometryShapely2D: A problem with meshing!")
-        return fem.mesh.MeshTri(p[1:3,:],t[1:,:].astype(np.intp),fixmesh=True)
+        return fem.mesh.MeshTri(p[1:3,:],t[1:4,:].astype(np.intp),fixmesh=True,markers=indexsets,tmarkers=tindexsets)
 
 class GeometryMeshTri(Geometry):
     """A geometry defined by a triangular mesh."""
