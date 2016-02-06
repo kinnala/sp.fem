@@ -227,6 +227,29 @@ class AssemblerTriPp(Assembler):
         
         return np.sqrt(uu+np.dot(uh,M.dot(uh))-2.*np.dot(uh,f))
         
+    def H1error(self,uh,exactdx,exactdy,intorder=None):
+        """Compute H1 seminorm error against exact solution."""
+        if intorder is None:
+            intorder=self.p
+            
+        X,W=get_quadrature("tri",intorder)
+            
+        # assemble some helper matrices
+        # the idea is to use the identity: (u-uh,u-uh)=(u,u)+(uh,uh)-2(u,uh)
+        def uv(du,dv):
+            return du[0]*dv[0]+du[1]*dv[1]
+    
+        def fv(dv,x):
+            return exactdx(x[0],x[1])*dv[0]+exactdy(x[0],x[1])*dv[1]
+            
+        M=self.iasm(uv)
+        f=self.iasm(fv)
+        
+        x=self.mapping.F(X)
+        uu=np.sum(np.dot(exactdx(x[0],x[1])**2+exactdy(x[0],x[1])**2,W)*np.abs(self.detA))
+        
+        return np.sqrt(uu+np.dot(uh,M.dot(uh))-2.*np.dot(uh,f))
+        
     def iasm(self,form,intorder=None):
         """Interior assembly with arbitrary polynomial degree."""
         nt=self.mesh.t.shape[1]
