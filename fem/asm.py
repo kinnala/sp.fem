@@ -1,3 +1,9 @@
+# -*- coding: utf-8 -*-
+"""
+Assembly of matrices related to linear and bilinear forms.
+
+@author: Tom Gustafsson
+"""
 import numpy as np
 import fem.mesh
 import fem.mapping
@@ -58,6 +64,183 @@ class Assembler:
 
         return newform
 
+class DofnumTri():
+    """Generate a global degree-of-freedom numbering for triangular mesh."""
+    def __init__(self,mesh,ndofs):
+        """
+        mesh - MeshTri object
+        ndofs - triplet (n_dof,f_dof,i_dof) where
+                   n_dof = number of dofs per each vertex (1 = one per vertex)
+                   f_dof = number of dofs per each facet (1 = one per facet)
+                   i_dof = number of dofs inside element (1 = e.g. one bubble)
+        """
+        self.n_dof=np.reshape(np.arange(ndofs[0]*mesh.p.shape[1],dtype=np.int64),(ndofs[0],mesh.p.shape[1]))
+        offset=ndofs[0]*mesh.p.shape[1]
+        self.f_dof=np.reshape(np.arange(ndofs[1]*mesh.facets.shape[1],dtype=np.int64),(ndofs[1],mesh.facets.shape[1]))+offset
+        offset=offset+ndofs[1]*mesh.facets.shape[1]
+        self.i_dof=np.reshape(np.arange(ndofs[2]*mesh.t.shape[1],dtype=np.int64),(ndofs[2],mesh.t.shape[1]))+offset
+        
+        # global numbering
+        self.t_dof=np.zeros((0,mesh.t.shape[1]),dtype=np.int64)
+        
+        self.t_dof=np.vstack((self.t_dof,self.n_dof[:,mesh.t[0,:]]))
+        self.t_dof=np.vstack((self.t_dof,self.n_dof[:,mesh.t[1,:]]))
+        self.t_dof=np.vstack((self.t_dof,self.n_dof[:,mesh.t[2,:]]))
+        
+        self.t_dof=np.vstack((self.t_dof,self.f_dof[:,mesh.t2f[0,:]]))
+        self.t_dof=np.vstack((self.t_dof,self.f_dof[:,mesh.t2f[1,:]]))
+        self.t_dof=np.vstack((self.t_dof,self.f_dof[:,mesh.t2f[2,:]]))
+        
+        self.t_dof=np.vstack((self.t_dof,self.i_dof))
+        
+        self.N=np.max(self.t_dof)+1
+        
+    def getdofs(self,N=None,F=None,T=None):
+        """Return global DOF numbers corresponding to each node(N), facet(F) and triangle(T)"""
+        dofs=np.zeros(0,dtype=np.int64)        
+        if N is not None:
+            dofs=np.hstack((dofs,self.n_dof[:,N].flatten()))
+        if F is not None:
+            dofs=np.hstack((dofs,self.f_dof[:,F].flatten()))
+        if T is not None:
+            dofs=np.hstack((dofs,self.i_dof[:,T].flatten()))
+        return dofs.flatten()
+
+class AssemblerTriPp(Assembler):
+    """A quasi-fast (bi)linear form assembler with triangular Pp Lagrange elements."""
+    # TODO add facet assembly
+    # TODO clean 'intlegpoly'
+    def __init__(self,mesh,p):
+        self.mapping=fem.mapping.MappingAffineTri(mesh)
+        self.A=self.mapping.A
+        self.b=self.mapping.b
+        self.detA=self.mapping.detA
+        self.invA=self.mapping.invA
+        self.detB=self.mapping.detB
+        self.mesh=mesh
+        self.p=p
+        if p<1:
+            raise NotImplementedError("AssemblerTriPp.init: Faulty polynomial degree value.")
+            
+        self.dofnum=DofnumTri(mesh,(1,np.max([p-1,0]),np.max([(p-1)*(p-2)/2,0])))            
+        
+    def intlegpoly(self,x,n):
+        """Generate integrated Legendre polynomials."""
+        x=x.flatten()
+        n=n+1
+        P=np.zeros((n+1,x.shape[0]))
+        
+        if n>0:
+            P[0,:]=np.ones(x.shape[0])
+        if n>1:
+            P[1,:]=x
+        
+        for i in range(1,n):
+            P[i+1,:]=((2*i-1)/i)*x*P[i,:]-((i-1)/i)*P[i-1,:]
+            
+        iP=np.zeros((n,x.shape[0]))
+        iP[0,:]=np.ones(x.shape[0])
+        if n>2:
+            iP[1,:]=x
+            
+        for i in range(1,n-1):
+            iP[i+1,:]=(P[i+1,:]-P[i-1,:])/(2*(i-1)+1)
+            
+        dP=np.vstack((np.zeros(x.shape[0]),P[0:-1,]))
+        
+        return iP,dP
+            
+        
+    def iasm(self,form,intorder=None):
+        """Interior assembly with arbitrary polynomial degree."""
+        nt=self.mesh.t.shape[1]
+        if intorder==None:
+            intorder=2*self.p
+        
+        # check and fix parameters of form
+        oldparams=inspect.getargspec(form).args
+        if 'u' in oldparams or 'du' in oldparams:
+            paramlist=['u','v','du','dv']
+            #paramlist=['u','v','du','dv','x','h']
+            bilinear=True
+        else:
+            paramlist=['v','dv']
+            #paramlist=['v','dv','x','h']
+            bilinear=False
+        fform=self.fillargs(form,paramlist)
+        
+        # TODO add support for assembling on a subset
+        
+        X,W=get_quadrature("tri",intorder)
+        
+        # local basis functions
+        phi={}
+        phi[0]=1.-X[0,:]-X[1,:]
+        phi[1]=X[0,:]
+        phi[2]=X[1,:]
+        
+        # local basis function gradients
+        gradphi={}
+        gradphi[0]=np.tile(np.array([-1.,-1.]),(X.shape[1],1)).T
+        gradphi[1]=np.tile(np.array([1.,0.]),(X.shape[1],1)).T
+        gradphi[2]=np.tile(np.array([0.,1.]),(X.shape[1],1)).T
+        
+        # use same ordering as in mesh
+        e=np.array([[0,1],[1,2],[0,2]]).T   
+        
+        # define edge basis functions
+        if(self.p>1):
+            offset=2
+            for i in range(3):
+                eta=phi[e[1,i]]-phi[e[0,i]]
+                deta=gradphi[e[1,i]]-gradphi[e[0,i]]
+                
+                # generate integrated Legendre polynomials
+                [P,dP]=self.intlegpoly(eta,self.p-2)
+                
+                for j in range(P.shape[0]):
+                    phi[offset+1]=phi[e[0,i]]*phi[e[1,i]]*P[j,:]
+                    gradphi[offset+1]=gradphi[e[0,i]]*(phi[e[1,i]]*P[j,:])+\
+                                      gradphi[e[1,i]]*(phi[e[0,i]]*P[j,:])+\
+                                      deta*(phi[e[0,i]]*phi[e[1,i]]*dP[j,:])
+                    offset=offset+1  
+    
+        if(self.p>2):
+            raise NotImplementedError("TODO: p>2 not implemented yet!")
+            
+        # bilinear form
+        if bilinear:
+            Nbfun=self.dofnum.t_dof.shape[0]
+            # initialize sparse matrix structures
+            data=np.zeros(Nbfun**2*nt)
+            rows=np.zeros(Nbfun**2*nt)
+            cols=np.zeros(Nbfun**2*nt)
+        
+            for j in range(Nbfun):
+                u=np.tile(phi[j],(nt,1))
+                du={}
+                du[0]=np.outer(self.invA[0][0],gradphi[j][0,:])+\
+                      np.outer(self.invA[1][0],gradphi[j][1,:])
+                du[1]=np.outer(self.invA[0][1],gradphi[j][0,:])+\
+                      np.outer(self.invA[1][1],gradphi[j][1,:])
+                for i in range(Nbfun):
+                    v=np.tile(phi[i],(nt,1))
+                    dv={}
+                    dv[0]=np.outer(self.invA[0][0],gradphi[i][0,:])+\
+                          np.outer(self.invA[1][0],gradphi[i][1,:])
+                    dv[1]=np.outer(self.invA[0][1],gradphi[i][0,:])+\
+                          np.outer(self.invA[1][1],gradphi[i][1,:])
+            
+                    # find correct location in data,rows,cols
+                    ixs=slice(nt*(Nbfun*j+i),nt*(Nbfun*j+i+1))
+                    
+                    # compute entries of local stiffness matrices
+                    data[ixs]=np.dot(fform(u,v,du,dv),W)*np.abs(self.detA)
+                    rows[ixs]=self.dofnum.t_dof[i,:]
+                    cols[ixs]=self.dofnum.t_dof[j,:]
+        
+            return coo_matrix((data,(rows,cols)),shape=(self.dofnum.N,self.dofnum.N)).tocsr()
+                
 
 class AssemblerTriP1(Assembler):
     """A fast (bi)linear form assembler with triangular P1 Lagrange elements."""

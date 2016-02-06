@@ -1,3 +1,9 @@
+# -*- coding: utf-8 -*-
+"""
+Tools for various finite element meshes.
+
+@author: Tom Gustafsson
+"""
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.tri as mtri
@@ -86,7 +92,11 @@ class MeshTri(Mesh):
 
     def boundary_nodes(self):
         """Return an array of boundary node indices."""
-        return np.unique(self.facets[:,np.nonzero(self.f2t[1,:]==-1)[0]])
+        return np.unique(self.facets[:,self.boundary_facets()])
+        
+    def boundary_facets(self):
+        """Return an array of boundary facet indices."""
+        return np.nonzero(self.f2t[1,:]==-1)[0]
 
     def interior_nodes(self):
         """Return an array of interior node indices."""
