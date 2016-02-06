@@ -38,15 +38,14 @@ class MeshTri(Mesh):
 
     def __init__(self,p,t,fixmesh=False,markers=None,tmarkers=None):
         self.p=p
-        self.t=t
-        self.t.sort(axis=0)
+        self.t=np.sort(t,axis=0)
         
         # if the mesh is not proper (duplicate points) then fix it
         if fixmesh:
             tmp=np.ascontiguousarray(self.p.T)
             tmp,ixa,ixb=np.unique(tmp.view([('',tmp.dtype)]*tmp.shape[1]),return_index=True,return_inverse=True)
             self.p=self.p[:,ixa]
-            self.t=ixb[self.t]
+            self.t=np.sort(ixb[self.t],axis=0)
             if markers is not None:
                 # fix markers
                 fixedmarkers={}
@@ -55,9 +54,9 @@ class MeshTri(Mesh):
                 markers=fixedmarkers
   
         # define facets
-        self.facets=np.vstack((self.t[0,:],self.t[1,:]))
-        self.facets=np.hstack((self.facets,np.vstack((self.t[1,:],self.t[2,:]))))
-        self.facets=np.hstack((self.facets,np.vstack((self.t[0,:],self.t[2,:]))))
+        self.facets=np.sort(np.vstack((self.t[0,:],self.t[1,:])),axis=0)
+        self.facets=np.hstack((self.facets,np.sort(np.vstack((self.t[1,:],self.t[2,:])),axis=0)))
+        self.facets=np.hstack((self.facets,np.sort(np.vstack((self.t[0,:],self.t[2,:])),axis=0)))
   
         # get unique facets and build triangle-to-facet mapping: 3 (edges) x Ntris
         tmp=np.ascontiguousarray(self.facets.T)

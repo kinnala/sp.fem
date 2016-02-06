@@ -74,11 +74,11 @@ class DofnumTri():
                    f_dof = number of dofs per each facet (1 = one per facet)
                    i_dof = number of dofs inside element (1 = e.g. one bubble)
         """
-        self.n_dof=np.reshape(np.arange(ndofs[0]*mesh.p.shape[1],dtype=np.int64),(ndofs[0],mesh.p.shape[1]))
+        self.n_dof=np.reshape(np.arange(ndofs[0]*mesh.p.shape[1],dtype=np.int64),(ndofs[0],mesh.p.shape[1]),order='F')
         offset=ndofs[0]*mesh.p.shape[1]
-        self.f_dof=np.reshape(np.arange(ndofs[1]*mesh.facets.shape[1],dtype=np.int64),(ndofs[1],mesh.facets.shape[1]))+offset
+        self.f_dof=np.reshape(np.arange(ndofs[1]*mesh.facets.shape[1],dtype=np.int64),(ndofs[1],mesh.facets.shape[1]),order='F')+offset
         offset=offset+ndofs[1]*mesh.facets.shape[1]
-        self.i_dof=np.reshape(np.arange(ndofs[2]*mesh.t.shape[1],dtype=np.int64),(ndofs[2],mesh.t.shape[1]))+offset
+        self.i_dof=np.reshape(np.arange(ndofs[2]*mesh.t.shape[1],dtype=np.int64),(ndofs[2],mesh.t.shape[1]),order='F')+offset
         
         # global numbering
         self.t_dof=np.zeros((0,mesh.t.shape[1]),dtype=np.int64)
@@ -128,52 +128,29 @@ class AssemblerTriPp(Assembler):
         """Generate integrated Legendre polynomials."""
         x=x.flatten()
         n=n+1
-        P=np.zeros((n+1,x.shape[0]))
         
-        if n>0:
-            P[0,:]=np.ones(x.shape[0])
+        P=np.zeros((n+1,x.shape[0]))        
+        P[0,:]=np.ones(x.shape[0])
         if n>1:
             P[1,:]=x
         
-        for i in range(1,n):
-            P[i+1,:]=((2*i-1)/i)*x*P[i,:]-((i-1)/i)*P[i-1,:]
+        for i in np.arange(1,n):
+            P[i+1,:]=((2.*i+1.)/(i+1.))*x*P[i,:]-(i/(i+1.))*P[i-1,:]
             
         iP=np.zeros((n,x.shape[0]))
         iP[0,:]=np.ones(x.shape[0])
-        if n>2:
+        if n>1:
             iP[1,:]=x
             
-        for i in range(1,n-1):
-            iP[i+1,:]=(P[i+1,:]-P[i-1,:])/(2*(i-1)+1)
+        for i in np.arange(1,n-1):
+            iP[i+1,:]=(P[i+1,:]-P[i-1,:])/(2.*i+1.)
             
         dP=np.vstack((np.zeros(x.shape[0]),P[0:-1,]))
         
         return iP,dP
-            
         
-    def iasm(self,form,intorder=None):
-        """Interior assembly with arbitrary polynomial degree."""
-        nt=self.mesh.t.shape[1]
-        if intorder==None:
-            intorder=2*self.p
-        
-        # check and fix parameters of form
-        oldparams=inspect.getargspec(form).args
-        if 'u' in oldparams or 'du' in oldparams:
-            paramlist=['u','v','du','dv']
-            #paramlist=['u','v','du','dv','x','h']
-            bilinear=True
-        else:
-            paramlist=['v','dv']
-            #paramlist=['v','dv','x','h']
-            bilinear=False
-        fform=self.fillargs(form,paramlist)
-        
-        # TODO add support for assembling on a subset
-        
-        X,W=get_quadrature("tri",intorder)
-        
-        # local basis functions
+    def Ppbasis(self,X,p):
+        """Evaluate Lagrange basis of order p."""        
         phi={}
         phi[0]=1.-X[0,:]-X[1,:]
         phi[1]=X[0,:]
@@ -186,31 +163,81 @@ class AssemblerTriPp(Assembler):
         gradphi[2]=np.tile(np.array([0.,1.]),(X.shape[1],1)).T
         
         # use same ordering as in mesh
-        e=np.array([[0,1],[1,2],[0,2]]).T   
+        e=np.array([[0,1],[1,2],[0,2]]).T
+        offset=3
         
         # define edge basis functions
-        if(self.p>1):
-            offset=2
+        if(p>1):
             for i in range(3):
                 eta=phi[e[1,i]]-phi[e[0,i]]
                 deta=gradphi[e[1,i]]-gradphi[e[0,i]]
                 
                 # generate integrated Legendre polynomials
-                [P,dP]=self.intlegpoly(eta,self.p-2)
+                [P,dP]=self.intlegpoly(eta,p-2)
                 
                 for j in range(P.shape[0]):
-                    phi[offset+1]=phi[e[0,i]]*phi[e[1,i]]*P[j,:]
-                    gradphi[offset+1]=gradphi[e[0,i]]*(phi[e[1,i]]*P[j,:])+\
-                                      gradphi[e[1,i]]*(phi[e[0,i]]*P[j,:])+\
-                                      deta*(phi[e[0,i]]*phi[e[1,i]]*dP[j,:])
+                    phi[offset]=phi[e[0,i]]*phi[e[1,i]]*P[j,:]
+                    gradphi[offset]=gradphi[e[0,i]]*(phi[e[1,i]]*P[j,:])+\
+                                    gradphi[e[1,i]]*(phi[e[0,i]]*P[j,:])+\
+                                    deta*(phi[e[0,i]]*phi[e[1,i]]*dP[j,:])
                     offset=offset+1  
-    
-        if(self.p>2):
-            raise NotImplementedError("TODO: p>2 not implemented yet!")
+        
+        # define interior basis functions
+        if(p>2):
+            if(p>3):
+                B,dB=self.Ppbasis(X,p-3)
+            else:
+                B={}
+                B[0]=np.ones((1,X.shape[1]))
+                dB={}
+                dB[0]=np.zeros((2,X.shape[1]))
+                
+            bubble=phi[0]*phi[1]*phi[2]
+            dbubble=gradphi[0]*(phi[1]*phi[2])+\
+                    gradphi[1]*(phi[2]*phi[0])+\
+                    gradphi[2]*(phi[0]*phi[1])
             
+            for i in range(len(B)):
+                phi[offset]=bubble*B[i]
+                gradphi[offset]=dbubble*B[i]+dB[i]*bubble
+                offset=offset+1
+            
+        return phi,gradphi
+            
+        
+    def iasm(self,form,intorder=None):
+        """Interior assembly with arbitrary polynomial degree."""
+        nt=self.mesh.t.shape[1]
+        if intorder==None:
+            intorder=2*self.p
+        
+        # check and fix parameters of form
+        oldparams=inspect.getargspec(form).args
+        if 'u' in oldparams or 'du' in oldparams:
+            paramlist=['u','v','du','dv','x']
+            #paramlist=['u','v','du','dv','x','h']
+            bilinear=True
+        else:
+            paramlist=['v','dv','x']
+            #paramlist=['v','dv','x','h']
+            bilinear=False
+        fform=self.fillargs(form,paramlist)
+        
+        # TODO add support for assembling on a subset
+        
+        X,W=get_quadrature("tri",intorder)
+        
+        # local basis functions
+        phi,gradphi=self.Ppbasis(X,self.p)
+        print phi[4]
+        
+        # global quadrature points
+        x=self.mapping.F(X)        
+        
+        Nbfun=self.dofnum.t_dof.shape[0]        
+        
         # bilinear form
         if bilinear:
-            Nbfun=self.dofnum.t_dof.shape[0]
             # initialize sparse matrix structures
             data=np.zeros(Nbfun**2*nt)
             rows=np.zeros(Nbfun**2*nt)
@@ -235,11 +262,35 @@ class AssemblerTriPp(Assembler):
                     ixs=slice(nt*(Nbfun*j+i),nt*(Nbfun*j+i+1))
                     
                     # compute entries of local stiffness matrices
-                    data[ixs]=np.dot(fform(u,v,du,dv),W)*np.abs(self.detA)
+                    data[ixs]=np.dot(fform(u,v,du,dv,x),W)*np.abs(self.detA)
                     rows[ixs]=self.dofnum.t_dof[i,:]
                     cols[ixs]=self.dofnum.t_dof[j,:]
         
             return coo_matrix((data,(rows,cols)),shape=(self.dofnum.N,self.dofnum.N)).tocsr()
+            
+        else:
+            # initialize sparse matrix structures
+            data=np.zeros(Nbfun*nt)
+            rows=np.zeros(Nbfun*nt)
+            cols=np.zeros(Nbfun*nt)
+            
+            for i in range(Nbfun):
+                v=np.tile(phi[i],(nt,1))
+                dv={}
+                dv[0]=np.outer(self.invA[0][0],gradphi[i][0,:])+\
+                      np.outer(self.invA[1][0],gradphi[i][1,:])
+                dv[1]=np.outer(self.invA[0][1],gradphi[i][0,:])+\
+                      np.outer(self.invA[1][1],gradphi[i][1,:])
+
+                # find correct location in data,rows,cols
+                ixs=slice(nt*i,nt*(i+1))
+                
+                # compute entries of local stiffness matrices
+                data[ixs]=np.dot(fform(v,dv,x),W)*np.abs(self.detA)
+                rows[ixs]=self.dofnum.t_dof[i,:]
+                cols[ixs]=np.zeros(nt)
+        
+            return coo_matrix((data,(rows,cols)),shape=(self.dofnum.N,1)).toarray().T[0]
                 
 
 class AssemblerTriP1(Assembler):
