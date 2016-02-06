@@ -204,6 +204,28 @@ class AssemblerTriPp(Assembler):
             
         return phi,gradphi
             
+    def L2error(self,uh,exact,intorder=None):
+        """Compute L2 error against exact solution."""
+        if intorder==None:
+            intorder=2*self.p
+            
+        X,W=get_quadrature("tri",intorder)
+            
+        # assemble some helper matrices
+        # the idea is to use the identity: (u-uh,u-uh)=(u,u)+(uh,uh)-2(u,uh)
+        def uv(u,v):
+            return u*v
+    
+        def fv(v,x):
+            return exact(x[0],x[1])*v
+            
+        M=self.iasm(uv)
+        f=self.iasm(fv)
+        
+        x=self.mapping.F(X)
+        uu=np.sum(np.dot(exact(x[0],x[1])**2,W)*np.abs(self.detA))
+        
+        return np.sqrt(uu+np.dot(uh,M.dot(uh))-2.*np.dot(uh,f))
         
     def iasm(self,form,intorder=None):
         """Interior assembly with arbitrary polynomial degree."""
@@ -229,7 +251,6 @@ class AssemblerTriPp(Assembler):
         
         # local basis functions
         phi,gradphi=self.Ppbasis(X,self.p)
-        print phi[4]
         
         # global quadrature points
         x=self.mapping.F(X)        
