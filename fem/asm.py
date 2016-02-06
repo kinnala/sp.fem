@@ -206,7 +206,7 @@ class AssemblerTriPp(Assembler):
             
     def L2error(self,uh,exact,intorder=None):
         """Compute L2 error against exact solution."""
-        if intorder==None:
+        if intorder is None:
             intorder=2*self.p
             
         X,W=get_quadrature("tri",intorder)
@@ -230,7 +230,7 @@ class AssemblerTriPp(Assembler):
     def iasm(self,form,intorder=None):
         """Interior assembly with arbitrary polynomial degree."""
         nt=self.mesh.t.shape[1]
-        if intorder==None:
+        if intorder is None:
             intorder=2*self.p
         
         # check and fix parameters of form
