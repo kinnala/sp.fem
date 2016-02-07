@@ -96,6 +96,16 @@ class MeshTri(Mesh):
     def boundary_facets(self):
         """Return an array of boundary facet indices."""
         return np.nonzero(self.f2t[1,:]==-1)[0]
+        
+    def nodes_satisfying(self,test):
+        """Return nodes that satisfy some condition."""
+        return np.nonzero(test(self.p[0,:],self.p[1,:]))[0]
+        
+    def facets_satisfying(self,test):
+        """Return facets whose midpoints satisfy some condition."""
+        mx=0.5*(self.p[0,self.facets[0,:]]+self.p[0,self.facets[1,:]])
+        my=0.5*(self.p[1,self.facets[0,:]]+self.p[1,self.facets[1,:]])
+        return np.nonzero(test(mx,my))[0]
 
     def interior_nodes(self):
         """Return an array of interior node indices."""

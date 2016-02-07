@@ -109,8 +109,7 @@ class DofnumTri():
 class AssemblerTriPp(Assembler):
     """A quasi-fast (bi)linear form assembler with triangular Pp Lagrange elements."""
     # TODO add facet assembly
-    # TODO clean 'intlegpoly'
-    def __init__(self,mesh,p):
+    def __init__(self,mesh,p1,p2=None):
         self.mapping=fem.mapping.MappingAffineTri(mesh)
         self.A=self.mapping.A
         self.b=self.mapping.b
@@ -118,11 +117,15 @@ class AssemblerTriPp(Assembler):
         self.invA=self.mapping.invA
         self.detB=self.mapping.detB
         self.mesh=mesh
-        self.p=p
-        if p<1:
-            raise NotImplementedError("AssemblerTriPp.init: Faulty polynomial degree value.")
+        
+        if p2 is None:
+            p2=p1
             
-        self.dofnum=DofnumTri(mesh,(1,np.max([p-1,0]),np.max([(p-1)*(p-2)/2,0])))            
+        self.p1=p1
+        self.p2=p2
+                 
+        self.dofnum1=DofnumTri(mesh,(1,np.max([p1-1,0]),np.max([(p1-1)*(p1-2)/2,0])))    
+        self.dofnum2=DofnumTri(mesh,(1,np.max([p2-1,0]),np.max([(p2-1)*(p2-2)/2,0])))         
         
     def intlegpoly(self,x,n):
         """Generate integrated Legendre polynomials."""
@@ -206,8 +209,10 @@ class AssemblerTriPp(Assembler):
             
     def L2error(self,uh,exact,intorder=None):
         """Compute L2 error against exact solution."""
+        if self.p1!=self.p2:
+            raise NotImplementedError("AssemblyTriPp.L2error: p1 must be p2 when computing errors!")
         if intorder is None:
-            intorder=2*self.p
+            intorder=2*self.p1
             
         X,W=get_quadrature("tri",intorder)
             
@@ -229,8 +234,10 @@ class AssemblerTriPp(Assembler):
         
     def H1error(self,uh,exactdx,exactdy,intorder=None):
         """Compute H1 seminorm error against exact solution."""
+        if self.p1!=self.p2:
+            raise NotImplementedError("AssemblyTriPp.H1error: p1 must be p2 when computing errors!")
         if intorder is None:
-            intorder=self.p
+            intorder=self.p1
             
         X,W=get_quadrature("tri",intorder)
             
@@ -254,7 +261,7 @@ class AssemblerTriPp(Assembler):
         """Interior assembly with arbitrary polynomial degree."""
         nt=self.mesh.t.shape[1]
         if intorder is None:
-            intorder=2*self.p
+            intorder=self.p1+self.p2
         
         # check and fix parameters of form
         oldparams=inspect.getargspec(form).args
@@ -273,68 +280,70 @@ class AssemblerTriPp(Assembler):
         X,W=get_quadrature("tri",intorder)
         
         # local basis functions
-        phi,gradphi=self.Ppbasis(X,self.p)
+        phi1,gradphi1=self.Ppbasis(X,self.p1)
+        phi2,gradphi2=self.Ppbasis(X,self.p2)
         
         # global quadrature points
         x=self.mapping.F(X)        
         
-        Nbfun=self.dofnum.t_dof.shape[0]        
+        Nbfun1=self.dofnum1.t_dof.shape[0]
+        Nbfun2=self.dofnum2.t_dof.shape[0]  
         
         # bilinear form
         if bilinear:
             # initialize sparse matrix structures
-            data=np.zeros(Nbfun**2*nt)
-            rows=np.zeros(Nbfun**2*nt)
-            cols=np.zeros(Nbfun**2*nt)
+            data=np.zeros(Nbfun1*Nbfun2*nt)
+            rows=np.zeros(Nbfun1*Nbfun2*nt)
+            cols=np.zeros(Nbfun1*Nbfun2*nt)
         
-            for j in range(Nbfun):
-                u=np.tile(phi[j],(nt,1))
+            for j in range(Nbfun1):
+                u=np.tile(phi1[j],(nt,1))
                 du={}
-                du[0]=np.outer(self.invA[0][0],gradphi[j][0,:])+\
-                      np.outer(self.invA[1][0],gradphi[j][1,:])
-                du[1]=np.outer(self.invA[0][1],gradphi[j][0,:])+\
-                      np.outer(self.invA[1][1],gradphi[j][1,:])
-                for i in range(Nbfun):
-                    v=np.tile(phi[i],(nt,1))
+                du[0]=np.outer(self.invA[0][0],gradphi1[j][0,:])+\
+                      np.outer(self.invA[1][0],gradphi1[j][1,:])
+                du[1]=np.outer(self.invA[0][1],gradphi1[j][0,:])+\
+                      np.outer(self.invA[1][1],gradphi1[j][1,:])
+                for i in range(Nbfun2):
+                    v=np.tile(phi2[i],(nt,1))
                     dv={}
-                    dv[0]=np.outer(self.invA[0][0],gradphi[i][0,:])+\
-                          np.outer(self.invA[1][0],gradphi[i][1,:])
-                    dv[1]=np.outer(self.invA[0][1],gradphi[i][0,:])+\
-                          np.outer(self.invA[1][1],gradphi[i][1,:])
+                    dv[0]=np.outer(self.invA[0][0],gradphi2[i][0,:])+\
+                          np.outer(self.invA[1][0],gradphi2[i][1,:])
+                    dv[1]=np.outer(self.invA[0][1],gradphi2[i][0,:])+\
+                          np.outer(self.invA[1][1],gradphi2[i][1,:])
             
                     # find correct location in data,rows,cols
-                    ixs=slice(nt*(Nbfun*j+i),nt*(Nbfun*j+i+1))
+                    ixs=slice(nt*(Nbfun2*j+i),nt*(Nbfun2*j+i+1))
                     
                     # compute entries of local stiffness matrices
                     data[ixs]=np.dot(fform(u,v,du,dv,x),W)*np.abs(self.detA)
-                    rows[ixs]=self.dofnum.t_dof[i,:]
-                    cols[ixs]=self.dofnum.t_dof[j,:]
+                    rows[ixs]=self.dofnum2.t_dof[i,:]
+                    cols[ixs]=self.dofnum1.t_dof[j,:]
         
-            return coo_matrix((data,(rows,cols)),shape=(self.dofnum.N,self.dofnum.N)).tocsr()
+            return coo_matrix((data,(rows,cols)),shape=(self.dofnum2.N,self.dofnum1.N)).tocsr()
             
         else:
             # initialize sparse matrix structures
-            data=np.zeros(Nbfun*nt)
-            rows=np.zeros(Nbfun*nt)
-            cols=np.zeros(Nbfun*nt)
+            data=np.zeros(Nbfun1*nt)
+            rows=np.zeros(Nbfun1*nt)
+            cols=np.zeros(Nbfun1*nt)
             
-            for i in range(Nbfun):
-                v=np.tile(phi[i],(nt,1))
+            for i in range(Nbfun1):
+                v=np.tile(phi1[i],(nt,1))
                 dv={}
-                dv[0]=np.outer(self.invA[0][0],gradphi[i][0,:])+\
-                      np.outer(self.invA[1][0],gradphi[i][1,:])
-                dv[1]=np.outer(self.invA[0][1],gradphi[i][0,:])+\
-                      np.outer(self.invA[1][1],gradphi[i][1,:])
+                dv[0]=np.outer(self.invA[0][0],gradphi1[i][0,:])+\
+                      np.outer(self.invA[1][0],gradphi1[i][1,:])
+                dv[1]=np.outer(self.invA[0][1],gradphi1[i][0,:])+\
+                      np.outer(self.invA[1][1],gradphi1[i][1,:])
 
                 # find correct location in data,rows,cols
                 ixs=slice(nt*i,nt*(i+1))
                 
                 # compute entries of local stiffness matrices
                 data[ixs]=np.dot(fform(v,dv,x),W)*np.abs(self.detA)
-                rows[ixs]=self.dofnum.t_dof[i,:]
+                rows[ixs]=self.dofnum1.t_dof[i,:]
                 cols[ixs]=np.zeros(nt)
         
-            return coo_matrix((data,(rows,cols)),shape=(self.dofnum.N,1)).toarray().T[0]
+            return coo_matrix((data,(rows,cols)),shape=(self.dofnum1.N,1)).toarray().T[0]
                 
 
 class AssemblerTriP1(Assembler):
