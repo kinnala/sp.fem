@@ -1,5 +1,6 @@
 import numpy as np
 import fem.mesh
+import copy
 
 class Mapping:
     """
@@ -12,22 +13,25 @@ class Mapping:
     def __init__(self,mesh):
         raise NotImplementedError("Mapping constructor not implemented!")
 
-    def F(self,X):
+    def F(self,X,tind):
         """
         Element local to global.
         """
         raise NotImplementedError("Mapping.F() not implemented!")
 
-    def invF(self,x):
+    def invF(self,x,tind):
         raise NotImplementedError("Mapping.invF() not implemented!")
 
-    def DF(self,X):
+    def DF(self,X,tind):
         raise NotImplementedError("Mapping.DF() not implemented!")
 
-    def detDF(self,X):
+    def invDF(self,X,tind):
+        raise NotImplementedError("Mapping.invDF() not implemented!")
+
+    def detDF(self,X,tind):
         raise NotImplementedError("Mapping.detDF() not implemented!")
 
-    def G(self,X):
+    def G(self,X,find):
         """
         Boundary local to global.
         """
@@ -76,7 +80,7 @@ class MappingAffineTri(Mapping):
 
         self.detB=np.sqrt(self.B[0]**2+self.B[1]**2)
 
-    def F(self,X):
+    def F(self,X,tind=None):
         """
         Affine map F(X)=AX+b.
 
@@ -86,8 +90,12 @@ class MappingAffineTri(Mapping):
         Both D[0] and D[1] are Nelems x Npoints.
         """
         y={}
-        y[0]=np.outer(self.A[0][0],X[0,:]).T+np.outer(self.A[0][1],X[1,:]).T+self.b[0]
-        y[1]=np.outer(self.A[1][0],X[0,:]).T+np.outer(self.A[1][1],X[1,:]).T+self.b[1]
+        if tind is None:
+            y[0]=np.outer(self.A[0][0],X[0,:]).T+np.outer(self.A[0][1],X[1,:]).T+self.b[0]
+            y[1]=np.outer(self.A[1][0],X[0,:]).T+np.outer(self.A[1][1],X[1,:]).T+self.b[1]
+        else: # TODO check this could have error
+            y[0]=np.outer(self.A[0][0][tind],X[0,:]).T+np.outer(self.A[0][1][tind],X[1,:]).T+self.b[0][tind]
+            y[1]=np.outer(self.A[1][0][tind],X[0,:]).T+np.outer(self.A[1][1][tind],X[1,:]).T+self.b[1][tind]
         y[0]=y[0].T
         y[1]=y[1].T
         return y
@@ -126,6 +134,28 @@ class MappingAffineTri(Mapping):
         y[0]=y[0].T
         y[1]=y[1].T
         return y
+        
+    def detDF(self,X,tind=None):
+        if tind is None:
+            detDF=self.detA
+        else:
+            detDF=self.detA[tind]
+        return np.tile(detDF,(X.shape[1],1)).T  
+        
+    def invDF(self,X,tind=None):
+        invA=copy.deepcopy(self.invA)
+        
+        if tind is None: # TODO did not test
+            invA[0][0]=np.tile(invA[0][0],(X.shape[1],1)).T
+            invA[0][1]=np.tile(invA[0][1],(X.shape[1],1)).T
+            invA[1][0]=np.tile(invA[1][0],(X.shape[1],1)).T
+            invA[1][1]=np.tile(invA[1][1],(X.shape[1],1)).T
+        else:
+            invA[0][0]=np.tile(invA[0][0][tind],(X.shape[1],1)).T
+            invA[0][1]=np.tile(invA[0][1][tind],(X.shape[1],1)).T
+            invA[1][0]=np.tile(invA[1][0][tind],(X.shape[1],1)).T
+            invA[1][1]=np.tile(invA[1][1][tind],(X.shape[1],1)).T
+        return invA
 
 
         

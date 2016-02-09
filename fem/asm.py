@@ -64,6 +64,279 @@ class Assembler:
 
         return newform
 
+class AssemblerElement(Assembler):
+    """A quasi-fast assembler for arbitrary element/mesh/mapping."""
+    def __init__(self,mesh,mapping,e1,e2=None):
+        """Duplicate if e2 is None."""
+
+        # TODO check consistency
+
+        self.mapping=mapping(mesh)
+        self.mesh=mesh
+
+        self.e1=e1
+        self.dofnum1=Dofnum(mesh,e1)
+
+        if e2 is None:
+            self.e2=e1
+            self.dofnum2=self.dofnum1
+        else:
+            self.e2=e2
+            self.dofnum2=Dofnum(mesh,e2)
+
+       #self.A=self.mapping.A
+       #self.b=self.mapping.b
+       #self.detA=self.mapping.detA
+       #self.invA=self.mapping.invA
+       #self.detB=self.mapping.detB
+       #self.mesh=mesh
+       #
+       #if p2 is None:
+       #    p2=p1
+       #    
+       #self.p1=p1
+       #self.p2=p2
+       #         
+       #self.dofnum1=DofnumTri(mesh,(1,np.max([p1-1,0]),np.max([(p1-1)*(p1-2)/2,0])))    
+       #self.dofnum2=DofnumTri(mesh,(1,np.max([p2-1,0]),np.max([(p2-1)*(p2-2)/2,0])))         
+    def iasm(self,form,intorder=2,tind=None):
+        """Interior assembly."""
+        nt=self.mesh.t.shape[1]
+        if tind is None:
+            # Assemble on all elements by default
+            tind=range(nt)
+        # TODO arbitrary integration order
+        
+        # check and fix parameters of form
+        oldparams=inspect.getargspec(form).args
+        if 'u' in oldparams or 'du' in oldparams:
+            # TODO get these from element (maybe): L2 elems have only u,v etc.
+            paramlist=['u','v','du','dv','ddu','ddv','x']
+            #paramlist=['u','v','du','dv','x','h']
+            bilinear=True
+        else:
+            paramlist=['v','dv','ddv','x']
+            #paramlist=['v','dv','x','h']
+            bilinear=False
+        fform=self.fillargs(form,paramlist)
+        
+        # TODO add support for assembling on a subset
+        
+        # TODO make this take arbitrary mesh type. pass object type to get_quadrature
+        X,W=get_quadrature("tri",intorder)
+        
+        # global quadrature points
+        x=self.mapping.F(X,tind)
+
+        # jacobian at quadrature points
+        detDF=self.mapping.detDF(X,tind)
+        
+        Nbfun1=self.dofnum1.t_dof.shape[0]
+        Nbfun2=self.dofnum2.t_dof.shape[0]  
+
+        #TODO think about precomputing [u,du,ddu] in inner loop
+        
+        # bilinear form
+        if bilinear:
+            # initialize sparse matrix structures
+            data=np.zeros(Nbfun1*Nbfun2*nt)
+            rows=np.zeros(Nbfun1*Nbfun2*nt)
+            cols=np.zeros(Nbfun1*Nbfun2*nt)
+        
+            for j in range(Nbfun1):
+                u,du,ddu=self.e1.gbasis(self.mapping,X,j,tind)
+                for i in range(Nbfun2):
+                    v,dv,ddv=self.e2.gbasis(self.mapping,X,i,tind)
+            
+                    # find correct location in data,rows,cols
+                    ixs=slice(nt*(Nbfun2*j+i),nt*(Nbfun2*j+i+1))
+                    
+                    # compute entries of local stiffness matrices
+                    data[ixs]=np.dot(fform(u,v,du,dv,ddu,ddv,x)*np.abs(detDF),W)
+                    rows[ixs]=self.dofnum2.t_dof[i,:]
+                    cols[ixs]=self.dofnum1.t_dof[j,:]
+        
+            return coo_matrix((data,(rows,cols)),shape=(self.dofnum2.N,self.dofnum1.N)).tocsr()
+            
+        else:
+            # initialize sparse matrix structures
+            data=np.zeros(Nbfun1*nt)
+            rows=np.zeros(Nbfun1*nt)
+            cols=np.zeros(Nbfun1*nt)
+            
+            for i in range(Nbfun1):
+                v,dv,ddv=self.e2.gbasis(self.mapping,X,i,tind)
+
+                # find correct location in data,rows,cols
+                ixs=slice(nt*i,nt*(i+1))
+                
+                # compute entries of local stiffness matrices
+                data[ixs]=np.dot(fform(v,dv,x)*np.abs(self.detDF),W)
+                rows[ixs]=self.dofnum1.t_dof[i,:]
+                cols[ixs]=np.zeros(nt)
+        
+            return coo_matrix((data,(rows,cols)),shape=(self.dofnum1.N,1)).toarray().T[0]
+            
+    def fasm(self,form,find=None,intorder=2): # TODO whole thing
+        """Facet assembly on all exterior facets.
+        """
+        if find is None:
+            find=np.nonzero(self.mesh.f2t[1,:]==-1)[0]
+        nv=self.mesh.p.shape[1]
+        nt=self.mesh.t.shape[1]
+        ne=find.shape[0]
+
+        # check and fix parameters of form
+        oldparams=inspect.getargspec(form).args
+        if 'u' in oldparams or 'du' in oldparams:
+            paramlist=['u','v','du','dv','x','h','n','w']
+            bilinear=True
+        else:
+            paramlist=['v','dv','x','h','n','w']
+            bilinear=False
+        fform=self.fillargs(form,paramlist)
+
+        X,W=get_quadrature("line",intorder)#TODO arb dom
+        
+        # boundary element indices
+        tind=self.mesh.f2t[0,find]
+        #h=np.tile(np.sqrt(np.abs(self.detB[tind,None])),(1,W.shape[0]))
+
+        # mappings
+        x=self.mapping.G(X,find=find) # reference face to global face
+        Y=self.mapping.invF(x,tind=tind) # global triangle to reference triangle
+        
+        # tangent vectors
+        t={}
+        t[0]=self.mesh.p[0,self.mesh.facets[0,find]]-self.mesh.p[0,self.mesh.facets[1,find]]
+        t[1]=self.mesh.p[1,self.mesh.facets[0,find]]-self.mesh.p[1,self.mesh.facets[1,find]]
+        
+        # normalize tangent vectors
+        tlen=np.sqrt(t[0]**2+t[1]**2)
+        t[0]/=tlen
+        t[1]/=tlen
+        
+        # normal vectors
+        n={}
+        n[0]=-t[1]
+        n[1]=t[0]
+
+        # map normal vectors to reference coords to correct sign (outward normals wanted)
+        n_ref={}
+        n_ref[0]=self.invA[0][0][tind]*n[0]+self.invA[1][0][tind]*n[1]
+        n_ref[1]=self.invA[0][1][tind]*n[0]+self.invA[1][1][tind]*n[1]
+        
+        # change the sign of the following normal vectors
+        meps=np.finfo(float).eps
+        csgn=np.nonzero((n_ref[0]<0)*(n_ref[1]<0)+\
+                        (n_ref[0]>0)*(n_ref[1]<meps)*(n_ref[1]>-meps)+\
+                        (n_ref[0]<meps)*(n_ref[0]>-meps)*(n_ref[1]>0))[0]
+        n[0][csgn]=(-1.)*(n[0][csgn])
+        n[1][csgn]=(-1.)*(n[1][csgn])
+        
+        n[0]=np.tile(n[0][:,None],(1,W.shape[0]))
+        n[1]=np.tile(n[1][:,None],(1,W.shape[0]))
+
+        if w is not None:
+            w1=phi[0](Y[0],Y[1])*w[self.mesh.t[0,tind][:,None]]+\
+               phi[1](Y[0],Y[1])*w[self.mesh.t[1,tind][:,None]]+\
+               phi[2](Y[0],Y[1])*w[self.mesh.t[2,tind][:,None]]
+        else:
+            w1=None
+
+        # bilinear form
+        if bilinear:
+            # initialize sparse matrix structures
+            data=np.zeros(9*ne)
+            rows=np.zeros(9*ne)
+            cols=np.zeros(9*ne)
+
+            for j in [0,1,2]:
+                u=phi[j](Y[0],Y[1])
+                du={}
+                du[0]=self.invA[0][0][tind,None]*gradphi_x[j](Y[0],Y[1])+\
+                      self.invA[1][0][tind,None]*gradphi_y[j](Y[0],Y[1])
+                du[1]=self.invA[0][1][tind,None]*gradphi_x[j](Y[0],Y[1])+\
+                      self.invA[1][1][tind,None]*gradphi_y[j](Y[0],Y[1])
+                for i in [0,1,2]:
+                    v=phi[i](Y[0],Y[1])
+                    dv={}
+                    dv[0]=self.invA[0][0][tind,None]*gradphi_x[i](Y[0],Y[1])+\
+                          self.invA[1][0][tind,None]*gradphi_y[i](Y[0],Y[1])
+                    dv[1]=self.invA[0][1][tind,None]*gradphi_x[i](Y[0],Y[1])+\
+                          self.invA[1][1][tind,None]*gradphi_y[i](Y[0],Y[1])
+           
+                    # find correct location in data,rows,cols
+                    ixs=slice(ne*(3*j+i),ne*(3*j+i+1))
+                    
+                    # compute entries of local stiffness matrices
+                    data[ixs]=np.dot(fform(u,v,du,dv,x,h,n,w1),W)*np.abs(self.detB[find])
+                    rows[ixs]=self.mesh.t[i,tind]
+                    cols[ixs]=self.mesh.t[j,tind]
+        
+            return coo_matrix((data,(rows,cols)),shape=(nv,nv)).tocsr()
+        # linear form
+        else:
+            # initialize sparse matrix structures
+            data=np.zeros(3*ne)
+            rows=np.zeros(3*ne)
+            cols=np.zeros(3*ne)
+
+            for i in [0,1,2]:
+                v=phi[i](Y[0],Y[1])
+                dv={}
+                dv[0]=self.invA[0][0][tind,None]*gradphi_x[i](Y[0],Y[1])+\
+                      self.invA[1][0][tind,None]*gradphi_y[i](Y[0],Y[1])
+                dv[1]=self.invA[0][1][tind,None]*gradphi_x[i](Y[0],Y[1])+\
+                      self.invA[1][1][tind,None]*gradphi_y[i](Y[0],Y[1])
+        
+                # find correct location in data,rows,cols
+                ixs=slice(ne*i,ne*(i+1))
+                
+                # compute entries of local stiffness matrices
+                data[ixs]=np.dot(fform(v,dv,x,h,n,w1),W)*np.abs(self.detB[find])
+                rows[ixs]=self.mesh.t[i,tind]
+                cols[ixs]=np.zeros(ne)
+        
+            return coo_matrix((data,(rows,cols)),shape=(nv,1)).toarray().T[0]
+
+class Dofnum():
+    """Generate a global degree-of-freedom numbering for arbitrary mesh."""
+    def __init__(self,mesh,element):
+        
+        # TODO support other than triangular mesh
+        self.n_dof=np.reshape(np.arange(element.n_dofs*mesh.p.shape[1],dtype=np.int64),(element.n_dofs,mesh.p.shape[1]),order='F')
+        offset=element.n_dofs*mesh.p.shape[1]
+        self.f_dof=np.reshape(np.arange(element.f_dofs*mesh.facets.shape[1],dtype=np.int64),(element.f_dofs,mesh.facets.shape[1]),order='F')+offset
+        offset=offset+element.f_dofs*mesh.facets.shape[1]
+        self.i_dof=np.reshape(np.arange(element.i_dofs*mesh.t.shape[1],dtype=np.int64),(element.i_dofs,mesh.t.shape[1]),order='F')+offset
+        
+        # global numbering
+        self.t_dof=np.zeros((0,mesh.t.shape[1]),dtype=np.int64)
+        
+        self.t_dof=np.vstack((self.t_dof,self.n_dof[:,mesh.t[0,:]]))
+        self.t_dof=np.vstack((self.t_dof,self.n_dof[:,mesh.t[1,:]]))
+        self.t_dof=np.vstack((self.t_dof,self.n_dof[:,mesh.t[2,:]]))
+        
+        self.t_dof=np.vstack((self.t_dof,self.f_dof[:,mesh.t2f[0,:]]))
+        self.t_dof=np.vstack((self.t_dof,self.f_dof[:,mesh.t2f[1,:]]))
+        self.t_dof=np.vstack((self.t_dof,self.f_dof[:,mesh.t2f[2,:]]))
+        
+        self.t_dof=np.vstack((self.t_dof,self.i_dof))
+        
+        self.N=np.max(self.t_dof)+1
+        
+    def getdofs(self,N=None,F=None,T=None):
+        """Return global DOF numbers corresponding to each node(N), facet(F) and triangle(T)"""
+        dofs=np.zeros(0,dtype=np.int64)        
+        if N is not None:
+            dofs=np.hstack((dofs,self.n_dof[:,N].flatten()))
+        if F is not None:
+            dofs=np.hstack((dofs,self.f_dof[:,F].flatten()))
+        if T is not None:
+            dofs=np.hstack((dofs,self.i_dof[:,T].flatten()))
+        return dofs.flatten()
+
 class DofnumTri():
     """Generate a global degree-of-freedom numbering for triangular mesh."""
     def __init__(self,mesh,ndofs):
