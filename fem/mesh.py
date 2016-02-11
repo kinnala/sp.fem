@@ -2,6 +2,10 @@
 """
 Tools for various finite element meshes.
 
+Try the following subclasses of Mesh:
+    * MeshTri
+    * MeshTet
+
 @author: Tom Gustafsson
 """
 import numpy as np
@@ -27,9 +31,52 @@ class Mesh:
     def plot(self):
         raise NotImplementedError("Mesh.plot() not implemented!")
 
+class MeshTet(Mesh):
+    """Tetrahedral mesh."""
+    p=np.empty([3,0],dtype=np.float_)
+    t=np.empty([4,0],dtype=np.intp)
+    facets=np.empty([3,0],dtype=np.intp)
+    edges=np.empty([2,0],dtype=np.intp)
+    t2f=np.empty([4,0],dtype=np.intp)
+    f2t=np.empty([2,0],dtype=np.intp)
+    t2e=np.empty([6,0],dtype=np.intp)
+    f2e=np.empty([3,0],dtype=np.intp)
+
+    def __init__(self,p,t):
+        self.p=p
+        self.t=np.sort(t,axis=0)
+
+        # define edges
+        self.edges=np.sort(np.vstack((self.t[0,:],self.t[1,:])),axis=0)
+        e=np.array([1,2, 0,2, 0,3, 1,3, 2,3])
+        for i in range(5):
+            self.edges=np.hstack((self.edges,np.sort(np.vstack((self.t[e[2*i],:],self.t[e[2*i+1],:])),axis=0)))
+
+        # unique edges
+        tmp=np.ascontiguousarray(self.edges.T)
+        tmp,ixa,ixb=np.unique(tmp.view([('',tmp.dtype)]*tmp.shape[1]),return_index=True,return_inverse=True)
+        self.edges=self.edges[:,ixa]
+        self.t2e=ixb.reshape((6,self.t.shape[1]))
+
+        # define facets
+        self.facets=np.sort(np.vstack((self.t[0,:],self.t[1,:],self.t[2,:])),axis=0)
+        f=np.array([0,1,3, 0,2,3, 1,2,3])
+        for i in range(3):
+            self.facets=np.hstack((self.facets,np.sort(np.vstack((self.t[f[2*i],:],self.t[f[2*i+1],:],self.t[f[2*i+2]])),axis=0)))
+
+        # unique facets
+        tmp=np.ascontiguousarray(self.facets.T)
+        tmp,ixa,ixb=np.unique(tmp.view([('',tmp.dtype)]*tmp.shape[1]),return_index=True,return_inverse=True)
+        self.facets=self.facets[:,ixa]
+        self.t2f=ixb.reshape((4,self.t.shape[1]))
+        #   self.edges=np.hstack((self.edges,np.sort(np.vstack((self.t[1,:],self.t[2,:])),axis=0)))
+        #   self.edges=np.hstack((self.edges,np.sort(np.vstack((self.t[0,:],self.t[2,:])),axis=0)))
+        #   self.edges=np.hstack((self.edges,np.sort(np.vstack((self.t[0,:],self.t[3,:])),axis=0)))
+        #   self.edges=np.hstack((self.edges,np.sort(np.vstack((self.t[1,:],self.t[3,:])),axis=0)))
+        #   self.edges=np.hstack((self.edges,np.sort(np.vstack((self.t[2,:],self.t[3,:])),axis=0)))
+
 class MeshTri(Mesh):
     """Triangular mesh."""
-
     p=np.empty([2,0],dtype=np.float_)
     t=np.empty([3,0],dtype=np.intp)
     facets=np.empty([2,0],dtype=np.intp)
