@@ -42,11 +42,17 @@ class MeshTet(Mesh):
     t2e=np.empty([6,0],dtype=np.intp)
     f2e=np.empty([3,0],dtype=np.intp)
 
-    def __init__(self,p,t):
+    def __init__(self,p=np.array([[0,0,0],[0,0,1],[0,1,0],[1,0,0],[0,1,1],[1,0,1],[1,1,0],[1,1,1]]).T,\
+                      t=np.array([[0,1,2,3],[3,5,1,7],[2,3,6,7],[2,3,1,7],[1,2,4,7]]).T):
         self.p=p
         self.t=np.sort(t,axis=0)
 
-        # define edges
+        self.build_mappings()
+
+    def build_mappings(self):
+        """Build element-to-facet, element-to-edges, etc. mappings."""
+
+        # define edges: in the order (0,1) (1,2) (0,2) (0,3) (1,3) (2,3)
         self.edges=np.sort(np.vstack((self.t[0,:],self.t[1,:])),axis=0)
         e=np.array([1,2, 0,2, 0,3, 1,3, 2,3])
         for i in range(5):
@@ -69,11 +75,82 @@ class MeshTet(Mesh):
         tmp,ixa,ixb=np.unique(tmp.view([('',tmp.dtype)]*tmp.shape[1]),return_index=True,return_inverse=True)
         self.facets=self.facets[:,ixa]
         self.t2f=ixb.reshape((4,self.t.shape[1]))
-        #   self.edges=np.hstack((self.edges,np.sort(np.vstack((self.t[1,:],self.t[2,:])),axis=0)))
-        #   self.edges=np.hstack((self.edges,np.sort(np.vstack((self.t[0,:],self.t[2,:])),axis=0)))
-        #   self.edges=np.hstack((self.edges,np.sort(np.vstack((self.t[0,:],self.t[3,:])),axis=0)))
-        #   self.edges=np.hstack((self.edges,np.sort(np.vstack((self.t[1,:],self.t[3,:])),axis=0)))
-        #   self.edges=np.hstack((self.edges,np.sort(np.vstack((self.t[2,:],self.t[3,:])),axis=0)))
+
+    def refine(self,N=1):
+        """Perform one or more refines on the mesh."""
+        for itr in range(N):
+            self.single_refine()
+
+    def single_refine(self):
+        """Perform a single mesh refine."""
+        # rename variables
+        t=self.t
+        p=self.p
+        e=self.edges
+        sz=p.shape[1]
+        t2e=self.t2e+sz
+        # new vertices are the midpoints of edges
+        newp=0.5*np.vstack((p[0,e[0,:]]+p[0,e[1,:]],\
+                            p[1,e[0,:]]+p[1,e[1,:]],\
+                            p[2,e[0,:]]+p[2,e[1,:]]))
+        newp=np.hstack((p,newp))
+        # new tets
+        newt=np.vstack((t[0,:],t2e[0,:],t2e[2,:],t2e[3,:]))
+        newt=np.hstack((newt,np.vstack((t[1,:],t2e[0,:],t2e[1,:],t2e[4,:]))))
+        newt=np.hstack((newt,np.vstack((t[2,:],t2e[1,:],t2e[2,:],t2e[5,:]))))
+        newt=np.hstack((newt,np.vstack((t[3,:],t2e[3,:],t2e[4,:],t2e[5,:]))))
+        # 5 = (0,1) = 0
+        # 6 = (0,2) = 2
+        # 7 = (0,3) = 3
+        # 8 = (1,2) = 1
+        # 9 = (1,3) = 4
+        #10 = (2,3) = 5
+        #
+        # 5 6 8 9
+        newt=np.hstack((newt,np.vstack((t2e[0,:],t2e[2,:],t2e[1,:],t2e[4,:]))))
+        # 5 6 7 9
+        newt=np.hstack((newt,np.vstack((t2e[0,:],t2e[2,:],t2e[3,:],t2e[4,:]))))
+        # 6 7 9 10
+        newt=np.hstack((newt,np.vstack((t2e[2,:],t2e[3,:],t2e[4,:],t2e[5,:]))))
+        # 6 8 9 10
+        newt=np.hstack((newt,np.vstack((t2e[2,:],t2e[1,:],t2e[4,:],t2e[5,:]))))
+        # update fields
+        self.p=newp
+        self.t=newt
+
+        self.build_mappings()
+
+    def draw_vertices(self):
+        """Draw all vertices using mplot3d."""
+        fig=plt.figure()
+        ax=fig.add_subplot(111,projection='3d')
+        ax.scatter(self.p[0,:],self.p[1,:],self.p[2,:])
+        return fig
+
+    def draw_edges(self):
+        # use mayavi
+        if opt_mayavi:
+            #mlab.triangular_mesh(self.p[0,:],self.p[1,:],self.p[2,:],self.facets.T)
+            mlab.triangular_mesh(self.p[0,:],self.p[1,:],self.p[2,:],self.facets.T,representation='wireframe',color=(0,0,0))
+        else:
+            raise ImportError("MeshTet: Mayavi not supported by the host system!")
+
+    def draw_facets(self,test=None):
+        """Draw _all_ facets."""
+        if test is not None:
+            xs=1./3.*(self.p[0,self.facets[0,:]]+self.p[0,self.facets[1,:]]+self.p[0,self.facets[2,:]])
+            ys=1./3.*(self.p[1,self.facets[0,:]]+self.p[1,self.facets[1,:]]+self.p[1,self.facets[2,:]])
+            zs=1./3.*(self.p[2,self.facets[0,:]]+self.p[2,self.facets[1,:]]+self.p[2,self.facets[2,:]])
+            fset=np.nonzero(test(xs,ys,zs))[0]
+        else:
+            fset=range(self.facets.shape[1])
+
+        # use mayavi
+        if opt_mayavi:
+            mlab.triangular_mesh(self.p[0,:],self.p[1,:],self.p[2,:],self.facets[:,fset].T)
+            mlab.triangular_mesh(self.p[0,:],self.p[1,:],self.p[2,:],self.facets[:,fset].T,representation='wireframe',color=(0,0,0))
+        else:
+            raise ImportError("MeshTet: Mayavi not supported by the host system!")
 
 class MeshTri(Mesh):
     """Triangular mesh."""
@@ -100,7 +177,7 @@ class MeshTri(Mesh):
                     fixedmarkers[key]=ixb[value]
                 markers=fixedmarkers
   
-        # define facets
+        # define facets: in the order (0,1) (1,2) (0,2)
         self.facets=np.sort(np.vstack((self.t[0,:],self.t[1,:])),axis=0)
         self.facets=np.hstack((self.facets,np.sort(np.vstack((self.t[1,:],self.t[2,:])),axis=0)))
         self.facets=np.hstack((self.facets,np.sort(np.vstack((self.t[0,:],self.t[2,:])),axis=0)))
