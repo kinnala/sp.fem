@@ -37,3 +37,9 @@ Usually it suffices to write
 or
 ```python -m unittest discover -v ./fem```
 in the base directory.
+
+## iPython usage in Windows
+Mayavi does not work under windows without
+```export QT_API=pyqt```
+and iPython lags without
+```ipython --pylab```

@@ -282,7 +282,7 @@ class GeometryMeshTri(Geometry):
         # rename variables
         t=mesh.t
         p=mesh.p
-        e=mesh.edges
+        e=mesh.facets
         t2f=mesh.t2f
         # new vertices are the midpoints of edges
         newp=0.5*np.vstack((p[0,e[0,:]]+p[0,e[1,:]],p[1,e[0,:]]+p[1,e[1,:]]))

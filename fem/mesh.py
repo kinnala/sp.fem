@@ -41,6 +41,7 @@ class MeshTet(Mesh):
     f2t=np.empty([2,0],dtype=np.intp)
     t2e=np.empty([6,0],dtype=np.intp)
     f2e=np.empty([3,0],dtype=np.intp)
+    refdom="tet"
 
     def __init__(self,p=np.array([[0,0,0],[0,0,1],[0,1,0],[1,0,0],[0,1,1],[1,0,1],[1,1,0],[1,1,1]]).T,\
                       t=np.array([[0,1,2,3],[3,5,1,7],[2,3,6,7],[2,3,1,7],[1,2,4,7]]).T):
@@ -75,6 +76,22 @@ class MeshTet(Mesh):
         tmp,ixa,ixb=np.unique(tmp.view([('',tmp.dtype)]*tmp.shape[1]),return_index=True,return_inverse=True)
         self.facets=self.facets[:,ixa]
         self.t2f=ixb.reshape((4,self.t.shape[1]))
+        
+        # build facet-to-tetra mapping: 2 (tets) x Nfacets
+        e_tmp=np.hstack((self.t2f[0,:],self.t2f[1,:],self.t2f[2,:],self.t2f[3,:]))
+        t_tmp=np.tile(np.arange(self.t.shape[1]),(1,4))[0]
+  
+        e_first,ix_first=np.unique(e_tmp,return_index=True)
+        # this emulates matlab unique(e_tmp,'last')
+        e_last,ix_last=np.unique(e_tmp[::-1],return_index=True)
+        ix_last=e_tmp.shape[0]-ix_last-1
+
+        self.f2t=np.zeros((2,self.facets.shape[1]),dtype=np.int64)
+        self.f2t[0,e_first]=t_tmp[ix_first]
+        self.f2t[1,e_last]=t_tmp[ix_last]
+
+        # second row to zero if repeated (i.e., on boundary)
+        self.f2t[1,np.nonzero(self.f2t[0,:]==self.f2t[1,:])[0]]=-1
 
     def refine(self,N=1):
         """Perform one or more refines on the mesh."""
@@ -152,6 +169,44 @@ class MeshTet(Mesh):
         else:
             raise ImportError("MeshTet: Mayavi not supported by the host system!")
 
+    def draw(self,test=None,u=None):
+        """Draw tetrahedra."""
+        if test is not None:
+            xs=1./4.*(self.p[0,self.t[0,:]]+\
+                      self.p[0,self.t[1,:]]+\
+                      self.p[0,self.t[2,:]]+\
+                      self.p[0,self.t[3,:]])
+            ys=1./4.*(self.p[1,self.t[0,:]]+\
+                      self.p[1,self.t[1,:]]+\
+                      self.p[1,self.t[2,:]]+\
+                      self.p[1,self.t[3,:]])
+            zs=1./4.*(self.p[2,self.t[0,:]]+\
+                      self.p[2,self.t[1,:]]+\
+                      self.p[2,self.t[2,:]]+\
+                      self.p[2,self.t[3,:]])
+            tset=np.nonzero(test(xs,ys,zs))[0]
+        else:
+            tset=range(self.t.shape[1])
+
+        fset=np.unique(self.t2f[:,tset].flatten())
+
+        if u is None:
+            u=self.p[2,:]
+
+        if opt_mayavi:
+            mlab.triangular_mesh(self.p[0,:],self.p[1,:],self.p[2,:],self.facets[:,fset].T,scalars=u)
+            mlab.triangular_mesh(self.p[0,:],self.p[1,:],self.p[2,:],self.facets[:,fset].T,representation='wireframe',color=(0,0,0))
+        else:
+            raise ImportError("MeshTet: Mayavi not supported by the host system!")
+            
+    def boundary_nodes(self):
+        """Return an array of boundary node indices."""
+        return np.unique(self.facets[:,self.boundary_facets()])
+        
+    def boundary_facets(self):
+        """Return an array of boundary facet indices."""
+        return np.nonzero(self.f2t[1,:]==-1)[0]
+
 class MeshTri(Mesh):
     """Triangular mesh."""
     p=np.empty([2,0],dtype=np.float_)
@@ -159,6 +214,7 @@ class MeshTri(Mesh):
     facets=np.empty([2,0],dtype=np.intp)
     t2f=np.empty([3,0],dtype=np.intp)
     f2t=np.empty([2,0],dtype=np.intp)
+    refdom="tri"
 
     def __init__(self,p,t,fixmesh=False,markers=None,tmarkers=None):
         self.p=p

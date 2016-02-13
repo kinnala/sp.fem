@@ -123,7 +123,7 @@ class AssemblerElement(Assembler):
         # TODO add support for assembling on a subset
         
         # TODO make this take arbitrary mesh type. pass object type to get_quadrature
-        X,W=get_quadrature("tri",intorder)
+        X,W=get_quadrature(self.mesh.refdom,intorder)
         
         # global quadrature points
         x=self.mapping.F(X,tind)
@@ -134,7 +134,7 @@ class AssemblerElement(Assembler):
         Nbfun1=self.dofnum1.t_dof.shape[0]
         Nbfun2=self.dofnum2.t_dof.shape[0]  
 
-        #TODO think about precomputing [u,du,ddu] in inner loop
+        #TODO think about precomputing [u,du,ddu] in inner loop MAKE OPTIONAL FLAG FOR OPTIMIZATION
         
         # bilinear form
         if bilinear:
@@ -165,13 +165,13 @@ class AssemblerElement(Assembler):
             cols=np.zeros(Nbfun1*nt)
             
             for i in range(Nbfun1):
-                v,dv,ddv=self.e2.gbasis(self.mapping,X,i,tind)
+                v,dv,ddv=self.e1.gbasis(self.mapping,X,i,tind)
 
                 # find correct location in data,rows,cols
                 ixs=slice(nt*i,nt*(i+1))
                 
                 # compute entries of local stiffness matrices
-                data[ixs]=np.dot(fform(v,dv,x)*np.abs(self.detDF),W)
+                data[ixs]=np.dot(fform(v,dv,ddv,x)*np.abs(detDF),W)
                 rows[ixs]=self.dofnum1.t_dof[i,:]
                 cols[ixs]=np.zeros(nt)
         
@@ -299,12 +299,72 @@ class AssemblerElement(Assembler):
                 cols[ixs]=np.zeros(ne)
         
             return coo_matrix((data,(rows,cols)),shape=(nv,1)).toarray().T[0]
+            
+    def L2error(self,uh,exact,intorder=None):
+        """Compute L2 error against exact solution."""
+        if self.e1.maxdeg!=self.e2.maxdeg:
+            raise NotImplementedError("AssemblyElement.L2error: e1.maxdeg must be e2.maxdeg when computing errors!")
+        if intorder is None:
+            intorder=2*self.e1.maxdeg
+            
+        X,W=get_quadrature(self.mesh.refdom,intorder)
+            
+        # assemble some helper matrices
+        # the idea is to use the identity: (u-uh,u-uh)=(u,u)+(uh,uh)-2(u,uh)
+        def uv(u,v):
+            return u*v
+    
+        def fv(v,x):
+            if len(x)==2:
+                return exact(x[0],x[1])*v
+            elif len(x)==3:
+                return exact(x[0],x[1],x[2])*v
+            else:
+                raise NotImplementedError("AssemblyElement.L2error: not implemented for the given dimension!")
+            
+        M=self.iasm(uv)
+        f=self.iasm(fv)
+        
+        detDF=self.mapping.detDF(X)
+        x=self.mapping.F(X)
+        
+        if len(x)==2:
+            uu=np.sum(np.dot(exact(x[0],x[1])**2*np.abs(detDF),W))
+        elif len(x)==3:
+            uu=np.sum(np.dot(exact(x[0],x[1],x[2])**2*np.abs(detDF),W))
+        else:
+            raise NotImplementedError("AssemblyElement.L2error: not implemented for the given dimension!")
+        
+        return np.sqrt(uu+np.dot(uh,M.dot(uh))-2.*np.dot(uh,f))
+        
+    def H1error(self,uh,exactdx,exactdy,intorder=None):
+        """Compute H1 seminorm error against exact solution."""
+        if self.e1.maxdeg!=self.e2.maxdeg: # TODO THIS IS NOT WORKING YET
+            raise NotImplementedError("AssemblyElement.H1error: e1.maxdeg must be e2.maxdeg when computing errors!")
+        if intorder is None:
+            intorder=2*self.e1.maxdeg
+            
+        X,W=get_quadrature(self.mesh.refdom,intorder)
+            
+        # assemble some helper matrices
+        # the idea is to use the identity: (u-uh,u-uh)=(u,u)+(uh,uh)-2(u,uh)
+        def uv(du,dv):
+            return du[0]*dv[0]+du[1]*dv[1]
+    
+        def fv(dv,x):
+            return exactdx(x[0],x[1])*dv[0]+exactdy(x[0],x[1])*dv[1]
+            
+        M=self.iasm(uv)
+        f=self.iasm(fv)
+        
+        x=self.mapping.F(X)
+        uu=np.sum(np.dot(exactdx(x[0],x[1])**2+exactdy(x[0],x[1])**2,W)*np.abs(self.detA))
+        
+        return np.sqrt(uu+np.dot(uh,M.dot(uh))-2.*np.dot(uh,f))
 
 class Dofnum():
     """Generate a global degree-of-freedom numbering for arbitrary mesh."""
     def __init__(self,mesh,element):
-        
-        # TODO support other than triangular mesh
         self.n_dof=np.reshape(np.arange(element.n_dofs*mesh.p.shape[1],dtype=np.int64),(element.n_dofs,mesh.p.shape[1]),order='F')
         offset=element.n_dofs*mesh.p.shape[1]
         self.f_dof=np.reshape(np.arange(element.f_dofs*mesh.facets.shape[1],dtype=np.int64),(element.f_dofs,mesh.facets.shape[1]),order='F')+offset
@@ -314,13 +374,11 @@ class Dofnum():
         # global numbering
         self.t_dof=np.zeros((0,mesh.t.shape[1]),dtype=np.int64)
         
-        self.t_dof=np.vstack((self.t_dof,self.n_dof[:,mesh.t[0,:]]))
-        self.t_dof=np.vstack((self.t_dof,self.n_dof[:,mesh.t[1,:]]))
-        self.t_dof=np.vstack((self.t_dof,self.n_dof[:,mesh.t[2,:]]))
+        for itr in range(mesh.t.shape[0]):
+            self.t_dof=np.vstack((self.t_dof,self.n_dof[:,mesh.t[itr,:]]))
         
-        self.t_dof=np.vstack((self.t_dof,self.f_dof[:,mesh.t2f[0,:]]))
-        self.t_dof=np.vstack((self.t_dof,self.f_dof[:,mesh.t2f[1,:]]))
-        self.t_dof=np.vstack((self.t_dof,self.f_dof[:,mesh.t2f[2,:]]))
+        for itr in range(mesh.t2f.shape[0]):
+            self.t_dof=np.vstack((self.t_dof,self.f_dof[:,mesh.t2f[itr,:]]))
         
         self.t_dof=np.vstack((self.t_dof,self.i_dof))
         
@@ -340,8 +398,8 @@ class Dofnum():
 class DofnumTri():
     """Generate a global degree-of-freedom numbering for triangular mesh."""
     def __init__(self,mesh,ndofs):
-        """
-        mesh - MeshTri object
+        """mesh - MeshTri object
+        
         ndofs - triplet (n_dof,f_dof,i_dof) where
                    n_dof = number of dofs per each vertex (1 = one per vertex)
                    f_dof = number of dofs per each facet (1 = one per facet)
