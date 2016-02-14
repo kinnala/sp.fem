@@ -176,14 +176,16 @@ class AssemblerElement(Assembler):
         # check and fix parameters of form
         oldparams=inspect.getargspec(form).args
         if 'u' in oldparams or 'du' in oldparams:
-            paramlist=['u','v','du','dv','x','h','n','w']
+            paramlist=['u','v','du','dv','x']
+            #paramlist=['u','v','du','dv','x','h','n','w']
             bilinear=True
         else:
-            paramlist=['v','dv','x','h','n','w']
+            paramlist=['v','dv','x']
+            #paramlist=['v','dv','x','h','n','w']
             bilinear=False
         fform=self.fillargs(form,paramlist)
 
-        X,W=get_quadrature("line",intorder)#TODO arb dom
+        X,W=get_quadrature(self.mesh.brefdom,intorder)
         
         # boundary element indices
         tind=self.mesh.f2t[0,find]
@@ -193,43 +195,43 @@ class AssemblerElement(Assembler):
         x=self.mapping.G(X,find=find) # reference face to global face
         Y=self.mapping.invF(x,tind=tind) # global triangle to reference triangle
         
-        # tangent vectors
-        t={}
-        t[0]=self.mesh.p[0,self.mesh.facets[0,find]]-self.mesh.p[0,self.mesh.facets[1,find]]
-        t[1]=self.mesh.p[1,self.mesh.facets[0,find]]-self.mesh.p[1,self.mesh.facets[1,find]]
-        
-        # normalize tangent vectors
-        tlen=np.sqrt(t[0]**2+t[1]**2)
-        t[0]/=tlen
-        t[1]/=tlen
-        
-        # normal vectors
-        n={}
-        n[0]=-t[1]
-        n[1]=t[0]
-
-        # map normal vectors to reference coords to correct sign (outward normals wanted)
-        n_ref={}
-        n_ref[0]=self.invA[0][0][tind]*n[0]+self.invA[1][0][tind]*n[1]
-        n_ref[1]=self.invA[0][1][tind]*n[0]+self.invA[1][1][tind]*n[1]
-        
-        # change the sign of the following normal vectors
-        meps=np.finfo(float).eps
-        csgn=np.nonzero((n_ref[0]<0)*(n_ref[1]<0)+\
-                        (n_ref[0]>0)*(n_ref[1]<meps)*(n_ref[1]>-meps)+\
-                        (n_ref[0]<meps)*(n_ref[0]>-meps)*(n_ref[1]>0))[0]
-        n[0][csgn]=(-1.)*(n[0][csgn])
-        n[1][csgn]=(-1.)*(n[1][csgn])
-        
-        n[0]=np.tile(n[0][:,None],(1,W.shape[0]))
-        n[1]=np.tile(n[1][:,None],(1,W.shape[0]))
-
-        if w is not None:
-            w1=phi[0](Y[0],Y[1])*w[self.mesh.t[0,tind][:,None]]+\
-               phi[1](Y[0],Y[1])*w[self.mesh.t[1,tind][:,None]]+\
-               phi[2](Y[0],Y[1])*w[self.mesh.t[2,tind][:,None]]
-        else:
-            w1=None
+#        # tangent vectors
+#        t={}
+#        t[0]=self.mesh.p[0,self.mesh.facets[0,find]]-self.mesh.p[0,self.mesh.facets[1,find]]
+#        t[1]=self.mesh.p[1,self.mesh.facets[0,find]]-self.mesh.p[1,self.mesh.facets[1,find]]
+#        
+#        # normalize tangent vectors
+#        tlen=np.sqrt(t[0]**2+t[1]**2)
+#        t[0]/=tlen
+#        t[1]/=tlen
+#        
+#        # normal vectors
+#        n={}
+#        n[0]=-t[1]
+#        n[1]=t[0]
+#
+#        # map normal vectors to reference coords to correct sign (outward normals wanted)
+#        n_ref={}
+#        n_ref[0]=self.invA[0][0][tind]*n[0]+self.invA[1][0][tind]*n[1]
+#        n_ref[1]=self.invA[0][1][tind]*n[0]+self.invA[1][1][tind]*n[1]
+#        
+#        # change the sign of the following normal vectors
+#        meps=np.finfo(float).eps
+#        csgn=np.nonzero((n_ref[0]<0)*(n_ref[1]<0)+\
+#                        (n_ref[0]>0)*(n_ref[1]<meps)*(n_ref[1]>-meps)+\
+#                        (n_ref[0]<meps)*(n_ref[0]>-meps)*(n_ref[1]>0))[0]
+#        n[0][csgn]=(-1.)*(n[0][csgn])
+#        n[1][csgn]=(-1.)*(n[1][csgn])
+#        
+#        n[0]=np.tile(n[0][:,None],(1,W.shape[0]))
+#        n[1]=np.tile(n[1][:,None],(1,W.shape[0]))
+#
+#        if w is not None:
+#            w1=phi[0](Y[0],Y[1])*w[self.mesh.t[0,tind][:,None]]+\
+#               phi[1](Y[0],Y[1])*w[self.mesh.t[1,tind][:,None]]+\
+#               phi[2](Y[0],Y[1])*w[self.mesh.t[2,tind][:,None]]
+#        else:
+#            w1=None
 
         # bilinear form
         if bilinear:

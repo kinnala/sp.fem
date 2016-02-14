@@ -42,6 +42,7 @@ class MeshTet(Mesh):
     t2e=np.empty([6,0],dtype=np.intp)
     f2e=np.empty([3,0],dtype=np.intp)
     refdom="tet"
+    brefdom="tri"
 
     def __init__(self,p=np.array([[0,0,0],[0,0,1],[0,1,0],[1,0,0],[0,1,1],[1,0,1],[1,1,0],[1,1,1]]).T,\
                       t=np.array([[0,1,2,3],[3,5,1,7],[2,3,6,7],[2,3,1,7],[1,2,4,7]]).T):
@@ -219,6 +220,7 @@ class MeshTri(Mesh):
     t2f=np.empty([3,0],dtype=np.intp)
     f2t=np.empty([2,0],dtype=np.intp)
     refdom="tri"
+    brefdom="line"
 
     def __init__(self,p,t,fixmesh=False,markers=None,tmarkers=None):
         self.p=p

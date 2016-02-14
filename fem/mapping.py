@@ -34,7 +34,7 @@ class Mapping:
         raise NotImplementedError("Mapping.G() not implemented!")
 
 class MappingAffine(Mapping):
-    """Affine mappings for triangular mesh."""
+    """Affine mappings for simplex (=line,tri,tet) mesh."""
     def __init__(self,mesh):
         if isinstance(mesh,fem.mesh.MeshTri):
             self.dim=2            
