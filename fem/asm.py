@@ -192,8 +192,8 @@ class AssemblerElement(Assembler):
         #h=np.tile(np.sqrt(np.abs(self.detB[tind,None])),(1,W.shape[0]))
 
         # mappings
-        x=self.mapping.G(X,find=find) # reference face to global face
-        Y=self.mapping.invF(x,tind=tind) # global triangle to reference triangle
+        x=self.mapping.G(X,find=find) # reference facet to global facet
+        Y=self.mapping.invF(x,tind=tind) # global facet to reference element
         
 #        # tangent vectors
 #        t={}

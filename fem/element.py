@@ -1,7 +1,7 @@
 import numpy as np
 
 class Element:
-    """Superclass for all finite elements."""
+    """Finite element."""
 
     maxdeg=0 # maximum polynomial degree; for determining quadrature
     dim=0 # spatial dimension
@@ -29,7 +29,7 @@ class Element:
         raise NotImplementedError("Element.gbasis: local basis (lbasis) not implemented!")
 
 class ElementH1(Element):
-    """Superclass for H1 conforming finite elements."""
+    """H1 conforming finite element."""
 
     def gbasis(self,mapping,X,i,tind):
         [phi,dphi]=self.lbasis(X,i)
@@ -49,7 +49,9 @@ class ElementH1(Element):
         ddu=None
 
         return u,du,ddu
-        # TODO implement for 1 dim
+
+    def gbasis_facet(self,mapping,X,i,tind):
+        [phi,dphi]=
 
 class ElementP1(ElementH1):
     

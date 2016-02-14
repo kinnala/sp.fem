@@ -110,18 +110,28 @@ class MappingAffine(Mapping):
             self.invA[1][2]=( self.A[0][2]*self.A[1][0]-self.A[0][0]*self.A[1][2])/self.detA
             self.invA[2][2]=(-self.A[0][1]*self.A[1][0]+self.A[0][0]*self.A[1][1])/self.detA
     
-            # TODO Matrices and vectors for boundary mappings: G(X)=BX+c
-            self.B={}
+            # Matrices and vectors for boundary mappings: G(X)=BX+c
+            self.B={0:{},1:{},2:{}}
     
-            self.B[0]=mesh.p[0,mesh.facets[1,:]]-mesh.p[0,mesh.facets[0,:]]
-            self.B[1]=mesh.p[1,mesh.facets[1,:]]-mesh.p[1,mesh.facets[0,:]]
+            self.B[0][0]=mesh.p[0,mesh.facets[1,:]]-mesh.p[0,mesh.facets[0,:]]
+            self.B[0][1]=mesh.p[0,mesh.facets[2,:]]-mesh.p[0,mesh.facets[0,:]]
+            self.B[1][0]=mesh.p[1,mesh.facets[1,:]]-mesh.p[1,mesh.facets[0,:]]
+            self.B[1][1]=mesh.p[1,mesh.facets[2,:]]-mesh.p[1,mesh.facets[0,:]]
+            self.B[2][0]=mesh.p[2,mesh.facets[1,:]]-mesh.p[2,mesh.facets[0,:]]
+            self.B[2][1]=mesh.p[2,mesh.facets[2,:]]-mesh.p[2,mesh.facets[0,:]]
     
             self.c={}
     
             self.c[0]=mesh.p[0,mesh.facets[0,:]]
             self.c[1]=mesh.p[1,mesh.facets[0,:]]
+            self.c[2]=mesh.p[2,mesh.facets[0,:]]
     
-            self.detB=np.sqrt(self.B[0]**2+self.B[1]**2)
+            crossp={}
+            crossp[0]= self.B[1][0]*self.B[2][1]-self.B[2][0]*self.B[1][1]
+            crossp[1]=-self.B[0][0]*self.B[2][1]+self.B[2][0]*self.B[0][1]
+            crossp[2]= self.B[0][0]*self.B[1][1]-self.B[1][0]*self.B[0][1]
+    
+            self.detB=np.sqrt(crossp[0]**2+crossp[1]**2+crossp[2]**2)
             
         else:
             raise TypeError("MappingAffine initialized with an incompatible mesh type!")
@@ -168,37 +178,75 @@ class MappingAffine(Mapping):
             y[0]=y[0].T
             y[1]=y[1].T
             y[2]=y[2].T
+        else:
+             raise NotImplementedError("MappingAffine.F: given dimension not implemented yet!")
         return y
 
     def invF(self,x,tind=None):
         """Inverse map F^{-1}(x)=A^{-1}(x-b)."""
         Y={}
         y={}
-        if tind is None:
-            Y[0]=x[0].T-self.b[0]
-            Y[1]=x[1].T-self.b[1]
-            y[0]=self.invA[0][0]*Y[0]+self.invA[0][1]*Y[1]
-            y[1]=self.invA[1][0]*Y[0]+self.invA[1][1]*Y[1]
+        if self.dim==2:
+            if tind is None:
+                Y[0]=x[0].T-self.b[0]
+                Y[1]=x[1].T-self.b[1]
+                y[0]=self.invA[0][0]*Y[0]+self.invA[0][1]*Y[1]
+                y[1]=self.invA[1][0]*Y[0]+self.invA[1][1]*Y[1]
+            else:
+                Y[0]=x[0].T-self.b[0][tind]
+                Y[1]=x[1].T-self.b[1][tind]
+                y[0]=self.invA[0][0][tind]*Y[0]+self.invA[0][1][tind]*Y[1]
+                y[1]=self.invA[1][0][tind]*Y[0]+self.invA[1][1][tind]*Y[1]
+            y[0]=y[0].T
+            y[1]=y[1].T
+        elif self.dim==3:
+            if tind is None:
+                Y[0]=x[0].T-self.b[0]
+                Y[1]=x[1].T-self.b[1]
+                Y[2]=x[2].T-self.b[2]
+                y[0]=self.invA[0][0]*Y[0]+self.invA[0][1]*Y[1]+self.invA[0][2]*Y[2]
+                y[1]=self.invA[1][0]*Y[0]+self.invA[1][1]*Y[1]+self.invA[1][2]*Y[2]
+                y[2]=self.invA[2][0]*Y[0]+self.invA[2][1]*Y[1]+self.invA[2][2]*Y[2]
+            else:
+                Y[0]=x[0].T-self.b[0][tind]
+                Y[1]=x[1].T-self.b[1][tind]
+                Y[2]=x[2].T-self.b[2][tind]
+                y[0]=self.invA[0][0][tind]*Y[0]+self.invA[0][1][tind]*Y[1]+self.invA[0][2][tind]*Y[2]
+                y[1]=self.invA[1][0][tind]*Y[0]+self.invA[1][1][tind]*Y[1]+self.invA[1][2][tind]*Y[2]
+                y[2]=self.invA[2][0][tind]*Y[0]+self.invA[2][1][tind]*Y[1]+self.invA[2][2][tind]*Y[2]
+            y[0]=y[0].T
+            y[1]=y[1].T
+            y[2]=y[2].T
         else:
-            Y[0]=x[0].T-self.b[0][tind]
-            Y[1]=x[1].T-self.b[1][tind]
-            y[0]=self.invA[0][0][tind]*Y[0]+self.invA[0][1][tind]*Y[1]
-            y[1]=self.invA[1][0][tind]*Y[0]+self.invA[1][1][tind]*Y[1]
-        y[0]=y[0].T
-        y[1]=y[1].T
+             raise NotImplementedError("MappingAffine.F: given dimension not implemented yet!")
         return y
 
     def G(self,X,find=None):
         """Boundary mapping G(X)=Bx+c."""
         y={}
-        if find is None:
-            y[0]=np.outer(self.B[0],X).T+self.c[0]
-            y[1]=np.outer(self.B[1],X).T+self.c[1]
+        if self.dim==2:
+            if find is None:
+                y[0]=np.outer(self.B[0],X).T+self.c[0]
+                y[1]=np.outer(self.B[1],X).T+self.c[1]
+            else:
+                y[0]=np.outer(self.B[0][find],X).T+self.c[0][find]
+                y[1]=np.outer(self.B[1][find],X).T+self.c[1][find]
+            y[0]=y[0].T
+            y[1]=y[1].T
+        elif self.dim==3:
+            if find is None:
+                y[0]=np.outer(self.B[0][0],X[0,:]).T+np.outer(self.B[0][1],X[1,:]).T+self.c[0]
+                y[1]=np.outer(self.B[1][0],X[0,:]).T+np.outer(self.B[1][1],X[1,:]).T+self.c[1]
+                y[2]=np.outer(self.B[2][0],X[0,:]).T+np.outer(self.B[2][1],X[1,:]).T+self.c[2]
+            else:
+                y[0]=np.outer(self.B[0][0][find],X[0,:]).T+np.outer(self.B[0][1][find],X[1,:]).T+self.c[0][find]
+                y[1]=np.outer(self.B[1][0][find],X[0,:]).T+np.outer(self.B[1][1][find],X[1,:]).T+self.c[1][find]
+                y[2]=np.outer(self.B[2][0][find],X[0,:]).T+np.outer(self.B[2][1][find],X[1,:]).T+self.c[2][find]
+            y[0]=y[0].T
+            y[1]=y[1].T
+            y[2]=y[2].T
         else:
-            y[0]=np.outer(self.B[0][find],X).T+self.c[0][find]
-            y[1]=np.outer(self.B[1][find],X).T+self.c[1][find]
-        y[0]=y[0].T
-        y[1]=y[1].T
+            raise NotImplementedError("MappingAffine.G: given dimension not implemented yet!")
         return y
         
     def detDF(self,X,tind=None):
