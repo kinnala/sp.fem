@@ -32,6 +32,9 @@ class Mapping:
     def G(self,X,find):
         """Boundary local to global."""
         raise NotImplementedError("Mapping.G() not implemented!")
+        
+    def detDG(self,X,find):
+        raise NotImplementedError("Mapping.detDG() not implemented!")
 
 class MappingAffine(Mapping):
     """Affine mappings for simplex (=line,tri,tet) mesh."""
@@ -256,41 +259,53 @@ class MappingAffine(Mapping):
             detDF=self.detA[tind]
         return np.tile(detDF,(X.shape[1],1)).T  
         
+    def detDG(self,X,find=None):
+        if find is None:
+            detDG=self.detB
+        else:
+            detDG=self.detB[find]
+        return np.tile(detDG,(X.shape[1],1)).T
+        
     def invDF(self,X,tind=None):
         invA=copy.deepcopy(self.invA)
         
+        if isinstance(X,dict):
+            N=X[0].shape[1]
+        else:
+            N=X.shape[1]
+        
         if self.dim==2:
             if tind is None: # TODO did not test
-                invA[0][0]=np.tile(invA[0][0],(X.shape[1],1)).T
-                invA[0][1]=np.tile(invA[0][1],(X.shape[1],1)).T
-                invA[1][0]=np.tile(invA[1][0],(X.shape[1],1)).T
-                invA[1][1]=np.tile(invA[1][1],(X.shape[1],1)).T
+                invA[0][0]=np.tile(invA[0][0],(N,1)).T
+                invA[0][1]=np.tile(invA[0][1],(N,1)).T
+                invA[1][0]=np.tile(invA[1][0],(N,1)).T
+                invA[1][1]=np.tile(invA[1][1],(N,1)).T
             else:
-                invA[0][0]=np.tile(invA[0][0][tind],(X.shape[1],1)).T
-                invA[0][1]=np.tile(invA[0][1][tind],(X.shape[1],1)).T
-                invA[1][0]=np.tile(invA[1][0][tind],(X.shape[1],1)).T
-                invA[1][1]=np.tile(invA[1][1][tind],(X.shape[1],1)).T
+                invA[0][0]=np.tile(invA[0][0][tind],(N,1)).T
+                invA[0][1]=np.tile(invA[0][1][tind],(N,1)).T
+                invA[1][0]=np.tile(invA[1][0][tind],(N,1)).T
+                invA[1][1]=np.tile(invA[1][1][tind],(N,1)).T
         if self.dim==3:
             if tind is None: # TODO did not test
-                invA[0][0]=np.tile(invA[0][0],(X.shape[1],1)).T
-                invA[0][1]=np.tile(invA[0][1],(X.shape[1],1)).T
-                invA[0][2]=np.tile(invA[0][2],(X.shape[1],1)).T
-                invA[1][0]=np.tile(invA[1][0],(X.shape[1],1)).T
-                invA[1][1]=np.tile(invA[1][1],(X.shape[1],1)).T
-                invA[1][2]=np.tile(invA[1][2],(X.shape[1],1)).T
-                invA[2][0]=np.tile(invA[2][0],(X.shape[1],1)).T
-                invA[2][1]=np.tile(invA[2][1],(X.shape[1],1)).T
-                invA[2][2]=np.tile(invA[2][2],(X.shape[1],1)).T
+                invA[0][0]=np.tile(invA[0][0],(N,1)).T
+                invA[0][1]=np.tile(invA[0][1],(N,1)).T
+                invA[0][2]=np.tile(invA[0][2],(N,1)).T
+                invA[1][0]=np.tile(invA[1][0],(N,1)).T
+                invA[1][1]=np.tile(invA[1][1],(N,1)).T
+                invA[1][2]=np.tile(invA[1][2],(N,1)).T
+                invA[2][0]=np.tile(invA[2][0],(N,1)).T
+                invA[2][1]=np.tile(invA[2][1],(N,1)).T
+                invA[2][2]=np.tile(invA[2][2],(N,1)).T
             else:
-                invA[0][0]=np.tile(invA[0][0][tind],(X.shape[1],1)).T
-                invA[0][1]=np.tile(invA[0][1][tind],(X.shape[1],1)).T
-                invA[0][2]=np.tile(invA[0][2][tind],(X.shape[1],1)).T
-                invA[1][0]=np.tile(invA[1][0][tind],(X.shape[1],1)).T
-                invA[1][1]=np.tile(invA[1][1][tind],(X.shape[1],1)).T
-                invA[1][2]=np.tile(invA[1][2][tind],(X.shape[1],1)).T
-                invA[2][0]=np.tile(invA[2][0][tind],(X.shape[1],1)).T
-                invA[2][1]=np.tile(invA[2][1][tind],(X.shape[1],1)).T
-                invA[2][2]=np.tile(invA[2][2][tind],(X.shape[1],1)).T           
+                invA[0][0]=np.tile(invA[0][0][tind],(N,1)).T
+                invA[0][1]=np.tile(invA[0][1][tind],(N,1)).T
+                invA[0][2]=np.tile(invA[0][2][tind],(N,1)).T
+                invA[1][0]=np.tile(invA[1][0][tind],(N,1)).T
+                invA[1][1]=np.tile(invA[1][1][tind],(N,1)).T
+                invA[1][2]=np.tile(invA[1][2][tind],(N,1)).T
+                invA[2][0]=np.tile(invA[2][0][tind],(N,1)).T
+                invA[2][1]=np.tile(invA[2][1][tind],(N,1)).T
+                invA[2][2]=np.tile(invA[2][2][tind],(N,1)).T           
                 
         return invA
 

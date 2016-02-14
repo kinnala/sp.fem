@@ -32,60 +32,84 @@ class ElementH1(Element):
     """H1 conforming finite element."""
 
     def gbasis(self,mapping,X,i,tind):
-        [phi,dphi]=self.lbasis(X,i)
-        u=np.tile(phi,(len(tind),1))
-        du={}
-        invDF=mapping.invDF(X,tind)
-        
-        if X.shape[0]==2:
-            du[0]=invDF[0][0]*dphi[0]+invDF[1][0]*dphi[1]
-            du[1]=invDF[0][1]*dphi[0]+invDF[1][1]*dphi[1]
-        elif X.shape[0]==3:
-            du[0]=invDF[0][0]*dphi[0]+invDF[1][0]*dphi[1]+invDF[2][0]*dphi[2]
-            du[1]=invDF[0][1]*dphi[0]+invDF[1][1]*dphi[1]+invDF[2][1]*dphi[2]
-            du[2]=invDF[0][2]*dphi[0]+invDF[1][2]*dphi[1]+invDF[2][2]*dphi[2]
+        if isinstance(X,dict):
+            [phi,dphi]=self.lbasis(X,i)
+            u=phi
+            du={}
+            invDF=mapping.invDF(X,tind)
+            
+            if mapping.dim==2:
+                du[0]=invDF[0][0]*dphi[0]+invDF[1][0]*dphi[1]
+                du[1]=invDF[0][1]*dphi[0]+invDF[1][1]*dphi[1]
+            elif mapping.dim==3:
+                du[0]=invDF[0][0]*dphi[0]+invDF[1][0]*dphi[1]+invDF[2][0]*dphi[2]
+                du[1]=invDF[0][1]*dphi[0]+invDF[1][1]*dphi[1]+invDF[2][1]*dphi[2]
+                du[2]=invDF[0][2]*dphi[0]+invDF[1][2]*dphi[1]+invDF[2][2]*dphi[2]
+            else:
+                raise NotImplementedError("ElementH1.gbasis: not implemented for the given dim.")
+            ddu=None # TODO fix ddu (for H1 element, Laplacian?)
+            
         else:
-            raise NotImplementedError("ElementH1.gbasis: not implemented for the given X.shape[0].")
-        ddu=None
+            x={}
+            x[0]=X[0,:]
+            if mapping.dim>=2:
+                x[1]=X[1,:]
+            if mapping.dim>=3:
+                x[2]=X[2,:]
+            [phi,dphi]=self.lbasis(x,i)
+            u=np.tile(phi,(len(tind),1))
+            du={}
+            invDF=mapping.invDF(X,tind)
+            
+            if mapping.dim==2:
+                du[0]=invDF[0][0]*dphi[0]+invDF[1][0]*dphi[1]
+                du[1]=invDF[0][1]*dphi[0]+invDF[1][1]*dphi[1]
+            elif mapping.dim==3:
+                du[0]=invDF[0][0]*dphi[0]+invDF[1][0]*dphi[1]+invDF[2][0]*dphi[2]
+                du[1]=invDF[0][1]*dphi[0]+invDF[1][1]*dphi[1]+invDF[2][1]*dphi[2]
+                du[2]=invDF[0][2]*dphi[0]+invDF[1][2]*dphi[1]+invDF[2][2]*dphi[2]
+            else:
+                raise NotImplementedError("ElementH1.gbasis: not implemented for the given dim.")
+            ddu=None # TODO fix ddu (for H1 element, Laplacian?)
 
         return u,du,ddu
-
-    def gbasis_facet(self,mapping,X,i,tind):
-        [phi,dphi]=
 
 class ElementP1(ElementH1):
     
     n_dofs=1
     maxdeg=1
+    
+    def __init__(self,dim):
+        self.dim=dim
 
     def lbasis(self,X,i):
-        # TODO implement for higher dimension
+        # TODO implement for 1D
 
-        if X.shape[0]==2:
+        if self.dim==2:
             phi={
                 0:lambda x,y: 1-x-y,
                 1:lambda x,y: x,
                 2:lambda x,y: y
-                }[i](X[0,:],X[1,:])
+                }[i](X[0],X[1])
     
             dphi={}
             dphi[0]={
                     0:lambda x,y: -1+0*x,
                     1:lambda x,y: 1+0*x,
                     2:lambda x,y: 0*x
-                    }[i](X[0,:],X[1,:])
+                    }[i](X[0],X[1])
             dphi[1]={
                     0:lambda x,y: -1+0*x,
                     1:lambda x,y: 0*x,
                     2:lambda x,y: 1+0*x
-                    }[i](X[0,:],X[1,:])
-        elif X.shape[0]==3:
+                    }[i](X[0],X[1])
+        elif self.dim==3:
             phi={
                 0:lambda x,y,z: 1-x-y-z,
                 1:lambda x,y,z: x,
                 2:lambda x,y,z: y,
                 3:lambda x,y,z: z,
-                }[i](X[0,:],X[1,:],X[2,:])
+                }[i](X[0],X[1],X[2])
     
             dphi={}
             dphi[0]={
@@ -93,19 +117,19 @@ class ElementP1(ElementH1):
                     1:lambda x,y,z: 1+0*x,
                     2:lambda x,y,z: 0*x,
                     3:lambda x,y,z: 0*x
-                    }[i](X[0,:],X[1,:],X[2,:])
+                    }[i](X[0],X[1],X[2])
             dphi[1]={
                     0:lambda x,y,z: -1+0*x,
                     1:lambda x,y,z: 0*x,
                     2:lambda x,y,z: 1+0*x,
                     3:lambda x,y,z: 0*x
-                    }[i](X[0,:],X[1,:],X[2,:])
+                    }[i](X[0],X[1],X[2])
             dphi[2]={
                     0:lambda x,y,z: -1+0*x,
                     1:lambda x,y,z: 0*x,
                     2:lambda x,y,z: 0*x,
                     3:lambda x,y,z: 1+0*x
-                    }[i](X[0,:],X[1,:],X[2,:])
+                    }[i](X[0],X[1],X[2])
         else:
             raise NotImplementedError("ElementP1.lbasis: not implemented for the given X.shape[0].")
 

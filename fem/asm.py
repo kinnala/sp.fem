@@ -195,6 +195,11 @@ class AssemblerElement(Assembler):
         x=self.mapping.G(X,find=find) # reference facet to global facet
         Y=self.mapping.invF(x,tind=tind) # global facet to reference element
         
+        Nbfun_u=self.dofnum_u.t_dof.shape[0]
+        Nbfun_v=self.dofnum_v.t_dof.shape[0] 
+
+        detDG=self.mapping.detDG(X,find)        
+        
 #        # tangent vectors
 #        t={}
 #        t[0]=self.mesh.p[0,self.mesh.facets[0,find]]-self.mesh.p[0,self.mesh.facets[1,find]]
@@ -236,58 +241,43 @@ class AssemblerElement(Assembler):
         # bilinear form
         if bilinear:
             # initialize sparse matrix structures
-            data=np.zeros(9*ne)
-            rows=np.zeros(9*ne)
-            cols=np.zeros(9*ne)
+            data=np.zeros(Nbfun_u*Nbfun_v*ne)
+            rows=np.zeros(Nbfun_u*Nbfun_v*ne)
+            cols=np.zeros(Nbfun_u*Nbfun_v*ne)
 
-            for j in [0,1,2]:
-                u=phi[j](Y[0],Y[1])
-                du={}
-                du[0]=self.invA[0][0][tind,None]*gradphi_x[j](Y[0],Y[1])+\
-                      self.invA[1][0][tind,None]*gradphi_y[j](Y[0],Y[1])
-                du[1]=self.invA[0][1][tind,None]*gradphi_x[j](Y[0],Y[1])+\
-                      self.invA[1][1][tind,None]*gradphi_y[j](Y[0],Y[1])
-                for i in [0,1,2]:
-                    v=phi[i](Y[0],Y[1])
-                    dv={}
-                    dv[0]=self.invA[0][0][tind,None]*gradphi_x[i](Y[0],Y[1])+\
-                          self.invA[1][0][tind,None]*gradphi_y[i](Y[0],Y[1])
-                    dv[1]=self.invA[0][1][tind,None]*gradphi_x[i](Y[0],Y[1])+\
-                          self.invA[1][1][tind,None]*gradphi_y[i](Y[0],Y[1])
+            for j in range(Nbfun_u):
+                u,du,_=self.elem_u.gbasis(self.mapping,Y,j,tind)
+                for i in range(Nbfun_v):
+                    v,dv,_=self.elem_v.gbasis(self.mapping,Y,i,tind)
            
                     # find correct location in data,rows,cols
-                    ixs=slice(ne*(3*j+i),ne*(3*j+i+1))
+                    ixs=slice(ne*(Nbfun_v*j+i),ne*(Nbfun_v*j+i+1))
                     
                     # compute entries of local stiffness matrices
-                    data[ixs]=np.dot(fform(u,v,du,dv,x,h,n,w1),W)*np.abs(self.detB[find])
+                    data[ixs]=np.dot(fform(u,v,du,dv,x)*np.abs(detDG),W)
                     rows[ixs]=self.mesh.t[i,tind]
                     cols[ixs]=self.mesh.t[j,tind]
         
-            return coo_matrix((data,(rows,cols)),shape=(nv,nv)).tocsr()
+            return coo_matrix((data,(rows,cols)),shape=(self.dofnum_v.N,self.dofnum_u.N)).tocsr()
         # linear form
         else:
             # initialize sparse matrix structures
-            data=np.zeros(3*ne)
-            rows=np.zeros(3*ne)
-            cols=np.zeros(3*ne)
+            data=np.zeros(Nbfun_v*ne)
+            rows=np.zeros(Nbfun_v*ne)
+            cols=np.zeros(Nbfun_v*ne)
 
-            for i in [0,1,2]:
-                v=phi[i](Y[0],Y[1])
-                dv={}
-                dv[0]=self.invA[0][0][tind,None]*gradphi_x[i](Y[0],Y[1])+\
-                      self.invA[1][0][tind,None]*gradphi_y[i](Y[0],Y[1])
-                dv[1]=self.invA[0][1][tind,None]*gradphi_x[i](Y[0],Y[1])+\
-                      self.invA[1][1][tind,None]*gradphi_y[i](Y[0],Y[1])
+            for i in range(Nbfun_v):
+                v,dv,_=self.elem_v.gbasis(self.mapping,Y,i,tind)
         
                 # find correct location in data,rows,cols
                 ixs=slice(ne*i,ne*(i+1))
                 
                 # compute entries of local stiffness matrices
-                data[ixs]=np.dot(fform(v,dv,x,h,n,w1),W)*np.abs(self.detB[find])
+                data[ixs]=np.dot(fform(v,dv,x)*np.abs(detDG),W)
                 rows[ixs]=self.mesh.t[i,tind]
                 cols[ixs]=np.zeros(ne)
         
-            return coo_matrix((data,(rows,cols)),shape=(nv,1)).toarray().T[0]
+            return coo_matrix((data,(rows,cols)),shape=(self.dofnum_v.N,1)).toarray().T[0]
             
     def L2error(self,uh,exact,intorder=None):
         """Compute L2 error against exact solution."""
@@ -670,7 +660,7 @@ class AssemblerTriPp(Assembler):
 class AssemblerTriP1(Assembler):
     """A fast (bi)linear form assembler with triangular P1 Lagrange elements."""
     def __init__(self,mesh):
-        self.mapping=fem.mapping.MappingAffineTri(mesh)
+        self.mapping=fem.mapping.MappingAffine(mesh)
         self.A=self.mapping.A
         self.b=self.mapping.b
         self.detA=self.mapping.detA
