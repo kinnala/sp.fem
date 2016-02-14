@@ -66,46 +66,32 @@ class Assembler:
 
 class AssemblerElement(Assembler):
     """A quasi-fast assembler for arbitrary element/mesh/mapping."""
-    def __init__(self,mesh,mapping,e1,e2=None):
+    def __init__(self,mesh,mapping,elem_u,elem_v=None):
         """Duplicate if e2 is None."""
 
-        # TODO check consistency
+        # TODO check consistency between (mesh,mapping,elem)
 
         self.mapping=mapping(mesh)
         self.mesh=mesh
 
-        self.e1=e1
-        self.dofnum1=Dofnum(mesh,e1)
+        self.elem_u=elem_u
+        self.dofnum_u=Dofnum(mesh,elem_u)
 
-        if e2 is None:
-            self.e2=e1
-            self.dofnum2=self.dofnum1
+        if elem_v is None:
+            self.elem_v=elem_u
+            self.dofnum_v=self.dofnum_u
         else:
-            self.e2=e2
-            self.dofnum2=Dofnum(mesh,e2)
-
-       #self.A=self.mapping.A
-       #self.b=self.mapping.b
-       #self.detA=self.mapping.detA
-       #self.invA=self.mapping.invA
-       #self.detB=self.mapping.detB
-       #self.mesh=mesh
-       #
-       #if p2 is None:
-       #    p2=p1
-       #    
-       #self.p1=p1
-       #self.p2=p2
-       #         
-       #self.dofnum1=DofnumTri(mesh,(1,np.max([p1-1,0]),np.max([(p1-1)*(p1-2)/2,0])))    
-       #self.dofnum2=DofnumTri(mesh,(1,np.max([p2-1,0]),np.max([(p2-1)*(p2-2)/2,0])))         
-    def iasm(self,form,intorder=2,tind=None):
+            self.elem_v=elem_v
+            self.dofnum_v=Dofnum(mesh,elem_v)
+     
+    def iasm(self,form,intorder=None,tind=None):
         """Interior assembly."""
         nt=self.mesh.t.shape[1]
         if tind is None:
             # Assemble on all elements by default
             tind=range(nt)
-        # TODO arbitrary integration order
+        if intorder is None:
+            intorder=self.elem_u.maxdeg+self.elem_v.maxdeg
         
         # check and fix parameters of form
         oldparams=inspect.getargspec(form).args
@@ -122,7 +108,6 @@ class AssemblerElement(Assembler):
         
         # TODO add support for assembling on a subset
         
-        # TODO make this take arbitrary mesh type. pass object type to get_quadrature
         X,W=get_quadrature(self.mesh.refdom,intorder)
         
         # global quadrature points
@@ -131,57 +116,59 @@ class AssemblerElement(Assembler):
         # jacobian at quadrature points
         detDF=self.mapping.detDF(X,tind)
         
-        Nbfun1=self.dofnum1.t_dof.shape[0]
-        Nbfun2=self.dofnum2.t_dof.shape[0]  
+        Nbfun_u=self.dofnum_u.t_dof.shape[0]
+        Nbfun_v=self.dofnum_v.t_dof.shape[0]  
 
         #TODO think about precomputing [u,du,ddu] in inner loop MAKE OPTIONAL FLAG FOR OPTIMIZATION
         
         # bilinear form
         if bilinear:
             # initialize sparse matrix structures
-            data=np.zeros(Nbfun1*Nbfun2*nt)
-            rows=np.zeros(Nbfun1*Nbfun2*nt)
-            cols=np.zeros(Nbfun1*Nbfun2*nt)
+            data=np.zeros(Nbfun_u*Nbfun_v*nt)
+            rows=np.zeros(Nbfun_u*Nbfun_v*nt)
+            cols=np.zeros(Nbfun_u*Nbfun_v*nt)
         
-            for j in range(Nbfun1):
-                u,du,ddu=self.e1.gbasis(self.mapping,X,j,tind)
-                for i in range(Nbfun2):
-                    v,dv,ddv=self.e2.gbasis(self.mapping,X,i,tind)
+            for j in range(Nbfun_u):
+                u,du,ddu=self.elem_u.gbasis(self.mapping,X,j,tind)
+                for i in range(Nbfun_v):
+                    v,dv,ddv=self.elem_v.gbasis(self.mapping,X,i,tind)
             
                     # find correct location in data,rows,cols
-                    ixs=slice(nt*(Nbfun2*j+i),nt*(Nbfun2*j+i+1))
+                    ixs=slice(nt*(Nbfun_v*j+i),nt*(Nbfun_v*j+i+1))
                     
                     # compute entries of local stiffness matrices
                     data[ixs]=np.dot(fform(u,v,du,dv,ddu,ddv,x)*np.abs(detDF),W)
-                    rows[ixs]=self.dofnum2.t_dof[i,:]
-                    cols[ixs]=self.dofnum1.t_dof[j,:]
+                    rows[ixs]=self.dofnum_v.t_dof[i,:]
+                    cols[ixs]=self.dofnum_u.t_dof[j,:]
         
-            return coo_matrix((data,(rows,cols)),shape=(self.dofnum2.N,self.dofnum1.N)).tocsr()
+            return coo_matrix((data,(rows,cols)),shape=(self.dofnum_v.N,self.dofnum_u.N)).tocsr()
             
         else:
             # initialize sparse matrix structures
-            data=np.zeros(Nbfun1*nt)
-            rows=np.zeros(Nbfun1*nt)
-            cols=np.zeros(Nbfun1*nt)
+            data=np.zeros(Nbfun_v*nt)
+            rows=np.zeros(Nbfun_v*nt)
+            cols=np.zeros(Nbfun_v*nt)
             
-            for i in range(Nbfun1):
-                v,dv,ddv=self.e1.gbasis(self.mapping,X,i,tind)
+            for i in range(Nbfun_v):
+                v,dv,ddv=self.elem_v.gbasis(self.mapping,X,i,tind)
 
                 # find correct location in data,rows,cols
                 ixs=slice(nt*i,nt*(i+1))
                 
                 # compute entries of local stiffness matrices
                 data[ixs]=np.dot(fform(v,dv,ddv,x)*np.abs(detDF),W)
-                rows[ixs]=self.dofnum1.t_dof[i,:]
+                rows[ixs]=self.dofnum_v.t_dof[i,:]
                 cols[ixs]=np.zeros(nt)
         
-            return coo_matrix((data,(rows,cols)),shape=(self.dofnum1.N,1)).toarray().T[0]
+            return coo_matrix((data,(rows,cols)),shape=(self.dofnum_v.N,1)).toarray().T[0]
             
-    def fasm(self,form,find=None,intorder=2): # TODO whole thing
-        """Facet assembly on all exterior facets.
-        """
+    def fasm(self,form,find=None,intorder=None): # TODO fix and test
+        """Facet assembly on all exterior facets."""
         if find is None:
-            find=np.nonzero(self.mesh.f2t[1,:]==-1)[0]
+            find=self.mesh.boundary_facets()
+        if intorder is None:
+            intorder=self.elem_u.maxdeg+self.elem_v.maxdeg            
+            
         nv=self.mesh.p.shape[1]
         nt=self.mesh.t.shape[1]
         ne=find.shape[0]
@@ -302,10 +289,10 @@ class AssemblerElement(Assembler):
             
     def L2error(self,uh,exact,intorder=None):
         """Compute L2 error against exact solution."""
-        if self.e1.maxdeg!=self.e2.maxdeg:
-            raise NotImplementedError("AssemblyElement.L2error: e1.maxdeg must be e2.maxdeg when computing errors!")
+        if self.elem_u.maxdeg!=self.elem_v.maxdeg:
+            raise NotImplementedError("AssemblyElement.L2error: elem_u.maxdeg must be elem_v.maxdeg when computing errors!")
         if intorder is None:
-            intorder=2*self.e1.maxdeg
+            intorder=2*self.elem_u.maxdeg
             
         X,W=get_quadrature(self.mesh.refdom,intorder)
             
@@ -315,12 +302,7 @@ class AssemblerElement(Assembler):
             return u*v
     
         def fv(v,x):
-            if len(x)==2:
-                return exact(x[0],x[1])*v
-            elif len(x)==3:
-                return exact(x[0],x[1],x[2])*v
-            else:
-                raise NotImplementedError("AssemblyElement.L2error: not implemented for the given dimension!")
+            return exact(x)*v
             
         M=self.iasm(uv)
         f=self.iasm(fv)
@@ -328,37 +310,43 @@ class AssemblerElement(Assembler):
         detDF=self.mapping.detDF(X)
         x=self.mapping.F(X)
         
-        if len(x)==2:
-            uu=np.sum(np.dot(exact(x[0],x[1])**2*np.abs(detDF),W))
-        elif len(x)==3:
-            uu=np.sum(np.dot(exact(x[0],x[1],x[2])**2*np.abs(detDF),W))
-        else:
-            raise NotImplementedError("AssemblyElement.L2error: not implemented for the given dimension!")
+        uu=np.sum(np.dot(exact(x)**2*np.abs(detDF),W))
         
         return np.sqrt(uu+np.dot(uh,M.dot(uh))-2.*np.dot(uh,f))
         
-    def H1error(self,uh,exactdx,exactdy,intorder=None):
+    def H1error(self,uh,dexact,intorder=None):
         """Compute H1 seminorm error against exact solution."""
-        if self.e1.maxdeg!=self.e2.maxdeg: # TODO THIS IS NOT WORKING YET
-            raise NotImplementedError("AssemblyElement.H1error: e1.maxdeg must be e2.maxdeg when computing errors!")
+        if self.elem_u.maxdeg!=self.elem_v.maxdeg:
+            raise NotImplementedError("AssemblyElement.H1error: elem_u.maxdeg must be elem_v.maxdeg when computing errors!")
         if intorder is None:
-            intorder=2*self.e1.maxdeg
+            intorder=2*self.elem_u.maxdeg
             
         X,W=get_quadrature(self.mesh.refdom,intorder)
             
         # assemble some helper matrices
         # the idea is to use the identity: (u-uh,u-uh)=(u,u)+(uh,uh)-2(u,uh)
         def uv(du,dv):
-            return du[0]*dv[0]+du[1]*dv[1]
+            return {
+                2: du[0]*dv[0]+du[1]*dv[1],
+                3: du[0]*dv[0]+du[1]*dv[1]+du[2]*dv[2],
+            }[len(du)]
     
         def fv(dv,x):
-            return exactdx(x[0],x[1])*dv[0]+exactdy(x[0],x[1])*dv[1]
+            return {
+                2: dexact[0](x)*dv[0]+dexact[1](x)*dv[1],
+                3: dexact[0](x)*dv[0]+dexact[1](x)*dv[1]+dexact[2](x)*dv[2],
+            }[len(x)]
             
         M=self.iasm(uv)
         f=self.iasm(fv)
         
+        detDF=self.mapping.detDF(X)
         x=self.mapping.F(X)
-        uu=np.sum(np.dot(exactdx(x[0],x[1])**2+exactdy(x[0],x[1])**2,W)*np.abs(self.detA))
+        
+        uu={
+            2:np.sum(np.dot((dexact[0](x)**2+dexact[1](x)**2)*np.abs(detDF),W)),
+            3:np.sum(np.dot((dexact[0](x)**2+dexact[1](x)**2+dexact[2](x)**2)*np.abs(detDF),W)),
+        }[len(dexact)]
         
         return np.sqrt(uu+np.dot(uh,M.dot(uh))-2.*np.dot(uh,f))
 

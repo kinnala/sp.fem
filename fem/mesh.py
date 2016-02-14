@@ -206,6 +206,10 @@ class MeshTet(Mesh):
     def boundary_facets(self):
         """Return an array of boundary facet indices."""
         return np.nonzero(self.f2t[1,:]==-1)[0]
+        
+    def param(self):
+        """Return mesh parameter."""
+        return np.max(np.sqrt(np.sum((self.p[:,self.edges[0,:]]-self.p[:,self.edges[1,:]])**2,axis=0)))
 
 class MeshTri(Mesh):
     """Triangular mesh."""
