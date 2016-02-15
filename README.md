@@ -11,7 +11,7 @@ The code is initially (c) Tom Gustafsson but the license will change in the futu
 * Scipy
 * Matplotlib
 * Triangle (recommended; for 2D meshing)
-* Mayavi (optional; for gl plots)
+* Mayavi (optional; for 3D mesh plots)
 
 ## Intallation: Linux
 
@@ -26,17 +26,18 @@ The code is initially (c) Tom Gustafsson but the license will change in the futu
 ## TODO list
 
 * Interpolation in AssemblerTriP1.fasm
-* AssemblerTetP1 and MeshTet and GeometryMeshTet
-* AssemblerLineP1, MeshLine?
-* AssemblerElement (and Element classes)
+* Tests for AssemblerElement (both interior and facet assembly)
+* Tests for MeshTet
+* Implement ElementHDiv (mostly to check consistency of Element and Mapping interfaces for arbitrary elements)
+* Documentation with Doxygen
 
 ## Running tests
 
 Usually it suffices to write
-```ipython2 -m unittest discover ./fem```
+```ipython2 --gui=wx --pylab=wx -m unittest discover ./fem```
 or
 ```python -m unittest discover -v ./fem```
-in the base directory.
+in the base directory. Note that newer Mayavi versions might crash if ```--gui=wx --pylab==wx``` is omitted.
 
 ## iPython usage in Linux
 Run iPython using
