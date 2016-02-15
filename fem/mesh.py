@@ -20,7 +20,7 @@ except:
 from mpl_toolkits.mplot3d import Axes3D
 
 class Mesh:
-    """Superclass for all meshes."""
+    """Finite element mesh."""
 
     p=np.empty([0,0],dtype=np.float_)
     t=np.empty([0,0],dtype=np.intp)
@@ -146,6 +146,7 @@ class MeshTet(Mesh):
         return fig
 
     def draw_edges(self):
+        """Draw all edges in a wireframe representation."""
         # use mayavi
         if opt_mayavi:
             #mlab.triangular_mesh(self.p[0,:],self.p[1,:],self.p[2,:],self.facets.T)
@@ -154,7 +155,7 @@ class MeshTet(Mesh):
             raise ImportError("MeshTet: Mayavi not supported by the host system!")
 
     def draw_facets(self,test=None):
-        """Draw _all_ facets."""
+        """Draw all facets."""
         if test is not None:
             xs=1./3.*(self.p[0,self.facets[0,:]]+self.p[0,self.facets[1,:]]+self.p[0,self.facets[2,:]])
             ys=1./3.*(self.p[1,self.facets[0,:]]+self.p[1,self.facets[1,:]]+self.p[1,self.facets[2,:]])
@@ -171,7 +172,7 @@ class MeshTet(Mesh):
             raise ImportError("MeshTet: Mayavi not supported by the host system!")
 
     def draw(self,test=None,u=None):
-        """Draw tetrahedra."""
+        """Draw all tetrahedra."""
         if test is not None:
             xs=1./4.*(self.p[0,self.t[0,:]]+\
                       self.p[0,self.t[1,:]]+\
@@ -352,7 +353,7 @@ class MeshTri(Mesh):
             if opt_mayavi:
                 mlab.triangular_mesh(self.p[0,:],self.p[1,:],z,self.t.T)
             else:
-                raise ImportError("Mayavi not supported by the host system!")
+                raise ImportError("MeshTri: Mayavi not supported by the host system!")
         else:
             # use matplotlib
             ax=fig.gca(projection='3d')

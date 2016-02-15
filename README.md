@@ -41,5 +41,6 @@ in the base directory.
 ## iPython usage in Windows
 Mayavi does not work under windows without
 ```export QT_API=pyqt```
+```(export ETS_TOOLKIT=qt4)```
 and iPython lags without
 ```ipython --pylab```
