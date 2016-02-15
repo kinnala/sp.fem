@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 import time
 
 class Assembler:
-    """Superclass for assemblers."""
+    """Finite element assembler."""
     def __init__(self):
         raise NotImplementedError("Assembler: constructor not implemented!")
 
@@ -67,8 +67,6 @@ class Assembler:
 class AssemblerElement(Assembler):
     """A quasi-fast assembler for arbitrary element/mesh/mapping."""
     def __init__(self,mesh,mapping,elem_u,elem_v=None):
-        """Duplicate if e2 is None."""
-
         # TODO check consistency between (mesh,mapping,elem)
 
         self.mapping=mapping(mesh)
