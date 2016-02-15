@@ -28,7 +28,10 @@ The code is initially (c) Tom Gustafsson but the license will change in the futu
 * Interpolation in AssemblerTriP1.fasm
 * Tests for AssemblerElement (both interior and facet assembly)
 * Tests for MeshTet
-* Implement ElementHDiv (mostly to check consistency of Element and Mapping interfaces for arbitrary elements)
+* Implement ElementHdiv (mostly to check consistency of Element and Mapping interfaces for arbitrary elements)
+* MeshLine and some 1D element. For example, Euler-Bernoulli beam element and ElementH2 (or ElementGlobal)
+* Geometry for extrusion of 2D meshes to 3D meshes (mesh with TetGen maybe?)
+* Geometry for rotation of 2D meshes/geometries to 3D meshes
 * Documentation with Doxygen
 
 ## Running tests
