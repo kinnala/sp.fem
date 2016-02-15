@@ -6,7 +6,7 @@ import os
 import matplotlib.pyplot as plt
 
 class Geometry:
-    """Superclass for all geometries."""
+    """Geometry contains metadata and outputs meshes."""
 
     def __init__(self):
         raise NotImplementedError("Geometry constructor not implemented!")
@@ -255,50 +255,27 @@ class GeometryPSLG2D(Geometry):
         else:
             tindexsets=None
 
+        # markers etc. are kept in Geometry instead of Mesh
+        self.markers=indexsets
+        self.tmarkers=tindexsets
 
-        return fem.mesh.MeshTri(p[1:3,:],t[1:4,:].astype(np.intp),fixmesh=True,markers=indexsets,tmarkers=tindexsets)
+        p=p[1:3,:]
+        t=t[1:4,:].astype(np.intp)
+        # triangle might output duplicate points. mesh does not like it. remove them.
+        tmp=np.ascontiguousarray(p.T)
+        tmp,ixa,ixb=np.unique(tmp.view([('',tmp.dtype)]*tmp.shape[1]),return_index=True,return_inverse=True)
+        p=p[:,ixa]
+        t=np.sort(ixb[t],axis=0)
 
-class GeometryMeshTri(Geometry):
-    """A geometry defined by a triangular mesh."""
+        # fix markers related to removed points
+        fixedmarkers={}
+        for key,value in self.markers.iteritems():
+            fixedmarkers[key]=ixb[value]
+        self.markers=fixedmarkers
 
-    p=np.empty([2,0],dtype=np.float_)
-    t=np.empty([3,0],dtype=np.intp)
+        return fem.mesh.MeshTri(p,t)
 
-    def __init__(self,p=np.array([[0,1,0,1],[0,0,1,1]],dtype=np.float_),t=np.array([[0,1,2],[1,2,3]],dtype=np.intp).T):
-        self.p=p
-        self.t=t
-
-    def mesh(self):
-        return fem.mesh.MeshTri(self.p,self.t)
-
-    def refine(self,N=1):
-        """Perform one or more refines on the mesh."""
-        for itr in range(N):
-            self.single_refine()
-
-    def single_refine(self):
-        """Perform a single mesh refine."""
-        mesh=fem.mesh.MeshTri(self.p,self.t)
-        # rename variables
-        t=mesh.t
-        p=mesh.p
-        e=mesh.facets
-        t2f=mesh.t2f
-        # new vertices are the midpoints of edges
-        newp=0.5*np.vstack((p[0,e[0,:]]+p[0,e[1,:]],p[1,e[0,:]]+p[1,e[1,:]]))
-        newp=np.hstack((p,newp))
-        # build new triangle definitions
-        sz=p.shape[1]
-        newt=np.vstack((t[0,:],t2f[0,:]+sz,t2f[2,:]+sz))
-        newt=np.hstack((newt,np.vstack((t[1,:],t2f[0,:]+sz,t2f[1,:]+sz))))
-        newt=np.hstack((newt,np.vstack((t[2,:],t2f[2,:]+sz,t2f[1,:]+sz))))
-        newt=np.hstack((newt,np.vstack((t2f[0,:]+sz,t2f[1,:]+sz,t2f[2,:]+sz))))
-        # update fields
-        self.p=newp
-        self.t=newt
-
-
-class GeometryMeshTriComsol(GeometryMeshTri):
+class GeometryMeshTriComsol(Geometry):
     """A geometry defined by a triangular mesh in COMSOL *.mphtext format."""
 
     p=np.empty([2,0],dtype=np.float_)

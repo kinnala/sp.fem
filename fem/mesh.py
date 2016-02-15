@@ -149,7 +149,6 @@ class MeshTet(Mesh):
         """Draw all edges in a wireframe representation."""
         # use mayavi
         if opt_mayavi:
-            #mlab.triangular_mesh(self.p[0,:],self.p[1,:],self.p[2,:],self.facets.T)
             mlab.triangular_mesh(self.p[0,:],self.p[1,:],self.p[2,:],self.facets.T,representation='wireframe',color=(0,0,0))
         else:
             raise ImportError("MeshTet: Mayavi not supported by the host system!")
@@ -223,23 +222,13 @@ class MeshTri(Mesh):
     refdom="tri"
     brefdom="line"
 
-    def __init__(self,p,t,fixmesh=False,markers=None,tmarkers=None):
+    def __init__(self,p=np.array([[0,1,0,1],[0,0,1,1]],dtype=np.float_),\
+                      t=np.array([[0,1,2],[1,2,3]],dtype=np.intp).T):
         self.p=p
         self.t=np.sort(t,axis=0)
-        
-        # if the mesh is not proper (duplicate points) then fix it
-        if fixmesh:
-            tmp=np.ascontiguousarray(self.p.T)
-            tmp,ixa,ixb=np.unique(tmp.view([('',tmp.dtype)]*tmp.shape[1]),return_index=True,return_inverse=True)
-            self.p=self.p[:,ixa]
-            self.t=np.sort(ixb[self.t],axis=0)
-            if markers is not None:
-                # fix markers
-                fixedmarkers={}
-                for key,value in markers.iteritems():
-                    fixedmarkers[key]=ixb[value]
-                markers=fixedmarkers
+        self.build_mappings()
   
+    def build_mappings(self):
         # define facets: in the order (0,1) (1,2) (0,2)
         self.facets=np.sort(np.vstack((self.t[0,:],self.t[1,:])),axis=0)
         self.facets=np.hstack((self.facets,np.sort(np.vstack((self.t[1,:],self.t[2,:])),axis=0)))
@@ -266,15 +255,6 @@ class MeshTri(Mesh):
 
         # second row to zero if repeated (i.e., on boundary)
         self.f2t[1,np.nonzero(self.f2t[0,:]==self.f2t[1,:])[0]]=-1
-        
-        if markers is None:
-            self.markers={}
-            self.markers['boundary']=self.boundary_nodes()
-            self.markers['interior']=self.interior_nodes()
-        else:
-            self.markers=markers
-
-        self.tmarkers=tmarkers
 
     def boundary_nodes(self):
         """Return an array of boundary node indices."""
@@ -366,6 +346,33 @@ class MeshTri(Mesh):
             mlab.show()
         else:
             plt.show()
+
+    def refine(self,N=1):
+        """Perform one or more refines on the mesh."""
+        for itr in range(N):
+            self.single_refine()
+
+    def single_refine(self):
+        """Perform a single mesh refine."""
+        # rename variables
+        t=self.t
+        p=self.p
+        e=self.facets
+        sz=p.shape[1]
+        t2f=self.t2f+sz
+        # new vertices are the midpoints of edges
+        newp=0.5*np.vstack((p[0,e[0,:]]+p[0,e[1,:]],p[1,e[0,:]]+p[1,e[1,:]]))
+        newp=np.hstack((p,newp))
+        # build new triangle definitions
+        newt=np.vstack((t[0,:],t2f[0,:],t2f[2,:]))
+        newt=np.hstack((newt,np.vstack((t[1,:],t2f[0,:],t2f[1,:]))))
+        newt=np.hstack((newt,np.vstack((t[2,:],t2f[2,:],t2f[1,:]))))
+        newt=np.hstack((newt,np.vstack((t2f[0,:],t2f[1,:],t2f[2,:]))))
+        # update fields
+        self.p=newp
+        self.t=newt
+
+        self.build_mappings()
 
 
 

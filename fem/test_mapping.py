@@ -6,9 +6,8 @@ import numpy as np
 
 class MappingAffineBasicTest(unittest.TestCase):
     def setUp(self):
-        self.geom=fem.geometry.GeometryMeshTri()
-        self.geom.refine()
-        self.mesh=self.geom.mesh()
+        self.mesh=fem.mesh.MeshTri()
+        self.mesh.refine()
 
 class MappingAffineFinvF(MappingAffineBasicTest):
     """Check that F(invF(x))===x"""

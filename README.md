@@ -38,9 +38,12 @@ or
 ```python -m unittest discover -v ./fem```
 in the base directory.
 
+## iPython usage in Linux
+Run iPython using
+```ipython --gui=wx --pylab=wx```
+
 ## iPython usage in Windows
 Mayavi does not work under windows without
 ```export QT_API=pyqt```
-```(export ETS_TOOLKIT=qt4)```
 and iPython lags without
 ```ipython --pylab```

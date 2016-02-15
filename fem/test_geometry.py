@@ -61,10 +61,10 @@ class GeometryPSLG2DTriangleMarkerTest(unittest.TestCase):
         #mesh.draw_nodes('br',mark='ro')
         #mesh.show() 
 
-        nt=np.union1d(np.union1d(np.union1d(mesh.tmarkers['circ1'],\
-                          mesh.tmarkers['circ2']),\
-                          mesh.tmarkers['circ3']),\
-                          mesh.tmarkers['rest'])
+        nt=np.union1d(np.union1d(np.union1d(g.tmarkers['circ1'],\
+                                            g.tmarkers['circ2']),\
+                                            g.tmarkers['circ3']),\
+                                            g.tmarkers['rest'])
 
 
         self.assertTrue(nt.shape[0]==mesh.t.shape[1])
