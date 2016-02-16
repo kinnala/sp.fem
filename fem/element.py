@@ -83,28 +83,33 @@ class ElementTriPp(ElementH1):
         self.f_dofs=np.max([p-1,0])
         self.i_dofs=np.max([(p-1)*(p-2)/2,0])
 
+        self.nbfun=3*self.n_dofs+3*self.f_dofs+self.i_dofs
+
     def intlegpoly(self,x,n):
         """Generate integrated Legendre polynomials."""
         x=x.flatten()
         n=n+1
         
-        P=np.zeros((n+1,x.shape[0]))        
-        P[0,:]=np.ones(x.shape[0])
+        P={}
+        P[0]=np.ones(x.shape)
         if n>1:
-            P[1,:]=x
+            P[1]=x
         
         for i in np.arange(1,n):
-            P[i+1,:]=((2.*i+1.)/(i+1.))*x*P[i,:]-(i/(i+1.))*P[i-1,:]
+            P[i+1]=((2.*i+1.)/(i+1.))*x*P[i]-(i/(i+1.))*P[i-1]
             
-        iP=np.zeros((n,x.shape[0]))
-        iP[0,:]=np.ones(x.shape[0])
+        iP={}
+        iP[0]=np.ones(x.shape)
         if n>1:
-            iP[1,:]=x
+            iP[1]=x
             
         for i in np.arange(1,n-1):
-            iP[i+1,:]=(P[i+1,:]-P[i-1,:])/(2.*i+1.)
+            iP[i+1]=(P[i+1]-P[i-1])/(2.*i+1.)
             
-        dP=np.vstack((np.zeros(x.shape[0]),P[0:-1,]))
+        dP={}
+        dP[0]=np.zeros(x.shape)
+        for i in np.arange(1,n):
+            dP[i]=P[i]
         
         return iP,dP
         
@@ -121,11 +126,23 @@ class ElementTriPp(ElementH1):
         phi[2]=X[1]
         
         # local basis function gradients TODO fix these somehow
-        gradphi={}
-        gradphi[0]=np.tile(np.array([-1.,-1.]),(X.shape[1],1)).T
-        gradphi[1]=np.tile(np.array([1.,0.]),(X.shape[1],1)).T
-        gradphi[2]=np.tile(np.array([0.,1.]),(X.shape[1],1)).T
+        gradphi_x={}
+        gradphi_x[0]=-1.*np.ones(X[0].shape)
+        gradphi_x[1]=1.*np.ones(X[0].shape)
+        gradphi_x[2]=np.zeros(X[0].shape)
         
+        gradphi_y={}
+        gradphi_y[0]=-1.*np.ones(X[0].shape)
+        gradphi_y[1]=np.zeros(X[0].shape)
+        gradphi_y[2]=1.*np.ones(X[0].shape)
+
+        if i<=2:
+            # return first three
+            dphi={}
+            dphi[0]=gradphi_x[i]
+            dphi[1]=gradphi_y[i]
+            return phi[i],dphi
+
         # use same ordering as in mesh
         e=np.array([[0,1],[1,2],[0,2]]).T
         offset=3
@@ -134,46 +151,71 @@ class ElementTriPp(ElementH1):
         if(p>1):
             for i in range(3):
                 eta=phi[e[1,i]]-phi[e[0,i]]
-                deta=gradphi[e[1,i]]-gradphi[e[0,i]]
+                deta_x=gradphi_x[e[1,i]]-gradphi_x[e[0,i]]
+                deta_y=gradphi_y[e[1,i]]-gradphi_y[e[0,i]]
                 
                 # generate integrated Legendre polynomials
                 [P,dP]=self.intlegpoly(eta,p-2)
                 
-                for j in range(P.shape[0]):
-                    phi[offset]=phi[e[0,i]]*phi[e[1,i]]*P[j,:]
-                    gradphi[offset]=gradphi[e[0,i]]*(phi[e[1,i]]*P[j,:])+\
-                                    gradphi[e[1,i]]*(phi[e[0,i]]*P[j,:])+\
-                                    deta*(phi[e[0,i]]*phi[e[1,i]]*dP[j,:])
+                for j in len(P):
+                    phi[offset]=phi[e[0,i]]*phi[e[1,i]]*P[j]
+                    gradphi_x[offset]=gradphi_x[e[0,i]]*phi[e[1,i]]*P[j]+\
+                                      gradphi_x[e[1,i]]*phi[e[0,i]]*P[j]+\
+                                      deta_x*phi[e[0,i]]*phi[e[1,i]]*dP_x[j]
+                    gradphi_y[offset]=gradphi_y[e[0,i]]*phi[e[1,i]]*P[j]+\
+                                      gradphi_y[e[1,i]]*phi[e[0,i]]*P[j]+\
+                                      deta_y*phi[e[0,i]]*phi[e[1,i]]*dP_y[j]
+                    if offset==i:
+                        # return if computed
+                        dphi={}
+                        dphi[0]=gradphi_x[i]
+                        dphi[1]=gradphi_y[i]
+                        return phi[i],dphi
                     offset=offset+1  
         
         # define interior basis functions
         if(p>2):
+            B={}
+            dB_x={}
+            dB_y={}
             if(p>3):
-                B,dB=self.Ppbasis(X,p-3)
+                pm3=ElementTriPp(p-3)
+                for itr in range(pm3.nbdofs):
+                    pphi,pdphi=self.lbasis(X,itr)
+                    B[itr]=pphi
+                    dB_x[itr]=pdphi[0]
+                    dB_y[itr]=pdphi[1]
             else:
-                B={}
-                B[0]=np.ones((1,X.shape[1]))
-                dB={}
-                dB[0]=np.zeros((2,X.shape[1]))
+                B[0]=np.ones(X[0].shape)
+                dB_x[0]=np.zeros(X[0].shape)
+                dB_y[0]=np.zeros(X[0].shape)
                 
             bubble=phi[0]*phi[1]*phi[2]
-            dbubble=gradphi[0]*(phi[1]*phi[2])+\
-                    gradphi[1]*(phi[2]*phi[0])+\
-                    gradphi[2]*(phi[0]*phi[1])
+            dbubble_x=gradphi_x[0]*phi[1]*phi[2]+\
+                      gradphi_x[1]*phi[2]*phi[0]+\
+                      gradphi_x[2]*phi[0]*phi[1]
+            dbubble_y=gradphi_y[0]*phi[1]*phi[2]+\
+                      gradphi_y[1]*phi[2]*phi[0]+\
+                      gradphi_y[2]*phi[0]*phi[1]
             
-            for i in range(len(B)):
+            for i in range(pm3.nbdofs):
                 phi[offset]=bubble*B[i]
-                gradphi[offset]=dbubble*B[i]+dB[i]*bubble
+                gradphi_x[offset]=dbubble_x*B[i]+dB_x[i]*bubble
+                gradphi_y[offset]=dbubble_y*B[i]+dB_y[i]*bubble
+                if offset==i:
+                    # return if computed
+                    dphi={}
+                    dphi[0]=gradphi_x[i]
+                    dphi[1]=gradphi_y[i]
+                    return phi[i],dphi
                 offset=offset+1
-            
-        return phi,gradphi
 
 class ElementP1(ElementH1):
     
     n_dofs=1
     maxdeg=1
     
-    def __init__(self,dim):
+    def __init__(self,dim=1):
         self.dim=dim
 
     def lbasis(self,X,i):

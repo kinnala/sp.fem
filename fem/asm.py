@@ -316,16 +316,20 @@ class AssemblerElement(Assembler):
         # assemble some helper matrices
         # the idea is to use the identity: (u-uh,u-uh)=(u,u)+(uh,uh)-2(u,uh)
         def uv(du,dv):
-            return {
-                2: du[0]*dv[0]+du[1]*dv[1],
-                3: du[0]*dv[0]+du[1]*dv[1]+du[2]*dv[2],
-            }[len(du)]
+            if len(du)==2:
+                return du[0]*dv[0]+du[1]*dv[1]
+            elif len(du)==3:
+                return du[0]*dv[0]+du[1]*dv[1]+du[2]*dv[2]
+            else:
+                raise NotImplementedError("AssemblerElement.H1error: not implemented for current domain dimension!")
     
         def fv(dv,x):
-            return {
-                2: dexact[0](x)*dv[0]+dexact[1](x)*dv[1],
-                3: dexact[0](x)*dv[0]+dexact[1](x)*dv[1]+dexact[2](x)*dv[2],
-            }[len(x)]
+            if len(x)==2:
+                return dexact[0](x)*dv[0]+dexact[1](x)*dv[1]
+            elif len(x)==3:
+                return dexact[0](x)*dv[0]+dexact[1](x)*dv[1]+dexact[2](x)*dv[2]
+            else:
+                raise NotImplementedError("AssemblerElement.H1error: not implemented for current domain dimension!")
             
         M=self.iasm(uv)
         f=self.iasm(fv)
@@ -333,10 +337,12 @@ class AssemblerElement(Assembler):
         detDF=self.mapping.detDF(X)
         x=self.mapping.F(X)
         
-        uu={
-            2:np.sum(np.dot((dexact[0](x)**2+dexact[1](x)**2)*np.abs(detDF),W)),
-            3:np.sum(np.dot((dexact[0](x)**2+dexact[1](x)**2+dexact[2](x)**2)*np.abs(detDF),W)),
-        }[len(dexact)]
+        if len(x)==2:
+            uu=np.sum(np.dot((dexact[0](x)**2+dexact[1](x)**2)*np.abs(detDF),W))
+        elif len(x)==3:
+            uu=np.sum(np.dot((dexact[0](x)**2+dexact[1](x)**2+dexact[2](x)**2)*np.abs(detDF),W))
+        else:
+            raise NotImplementedError("AssemblerElement.H1error: not implemented for current domain dimension!")
         
         return np.sqrt(uu+np.dot(uh,M.dot(uh))-2.*np.dot(uh,f))
 
