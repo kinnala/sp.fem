@@ -74,8 +74,20 @@ class ElementH1(Element):
 
         return u,du,ddu
 
-class ElementTriPp(ElementH1):
+class ElementTriPpFast(ElementH1):
+    def __init__(self,p):
+        self.p=p
+        self.maxdeg=p
+        self.n_dofs=1
+        self.f_dofs=np.max([p-1,0])
+        self.i_dofs=np.max([(p-1)*(p-2)/2,0])
 
+        self.nbdofs=3*self.n_dofs+3*self.f_dofs+self.i_dofs
+        # TODO build bfuns using e.g. sympy and make handles of those.
+
+
+class ElementTriPp(ElementH1):
+    """A somewhat slow implementation of p-refinements for triangular mesh."""
     def __init__(self,p):
         self.p=p
         self.maxdeg=p
