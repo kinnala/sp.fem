@@ -223,12 +223,15 @@ class MeshTri(Mesh):
     brefdom="line"
 
     def __init__(self,p=np.array([[0,1,0,1],[0,0,1,1]],dtype=np.float_),\
-                      t=np.array([[0,1,2],[1,2,3]],dtype=np.intp).T):
+                      t=np.array([[0,1,2],[1,3,2]],dtype=np.intp).T):
         self.p=p
-        self.t=np.sort(t,axis=0)
+        self.t=t
         self.build_mappings()
   
     def build_mappings(self):
+        # sort to preserve orientations etc.
+        self.t=np.sort(self.t,axis=0)
+
         # define facets: in the order (0,1) (1,2) (0,2)
         self.facets=np.sort(np.vstack((self.t[0,:],self.t[1,:])),axis=0)
         self.facets=np.hstack((self.facets,np.sort(np.vstack((self.t[1,:],self.t[2,:])),axis=0)))

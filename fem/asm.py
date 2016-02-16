@@ -425,7 +425,7 @@ class AssemblerTriPp(Assembler):
     """A quasi-fast (bi)linear form assembler with triangular Pp Lagrange elements."""
     # TODO add facet assembly
     def __init__(self,mesh,p1,p2=None):
-        self.mapping=fem.mapping.MappingAffineTri(mesh)
+        self.mapping=fem.mapping.MappingAffine(mesh)
         self.A=self.mapping.A
         self.b=self.mapping.b
         self.detA=self.mapping.detA
@@ -492,6 +492,8 @@ class AssemblerTriPp(Assembler):
                 
                 # generate integrated Legendre polynomials
                 [P,dP]=self.intlegpoly(eta,p-2)
+                print P.shape
+                print dP.shape
                 
                 for j in range(P.shape[0]):
                     phi[offset]=phi[e[0,i]]*phi[e[1,i]]*P[j,:]
@@ -537,17 +539,17 @@ class AssemblerTriPp(Assembler):
             return u*v
     
         def fv(v,x):
-            return exact(x[0],x[1])*v
+            return exact(x)*v
             
         M=self.iasm(uv)
         f=self.iasm(fv)
         
         x=self.mapping.F(X)
-        uu=np.sum(np.dot(exact(x[0],x[1])**2,W)*np.abs(self.detA))
+        uu=np.sum(np.dot(exact(x)**2,W)*np.abs(self.detA))
         
         return np.sqrt(uu+np.dot(uh,M.dot(uh))-2.*np.dot(uh,f))
         
-    def H1error(self,uh,exactdx,exactdy,intorder=None):
+    def H1error(self,uh,dexact,intorder=None):
         """Compute H1 seminorm error against exact solution."""
         if self.p1!=self.p2:
             raise NotImplementedError("AssemblyTriPp.H1error: p1 must be p2 when computing errors!")
@@ -562,13 +564,13 @@ class AssemblerTriPp(Assembler):
             return du[0]*dv[0]+du[1]*dv[1]
     
         def fv(dv,x):
-            return exactdx(x[0],x[1])*dv[0]+exactdy(x[0],x[1])*dv[1]
+            return dexact[0](x)*dv[0]+dexact[1](x)*dv[1]
             
         M=self.iasm(uv)
         f=self.iasm(fv)
         
         x=self.mapping.F(X)
-        uu=np.sum(np.dot(exactdx(x[0],x[1])**2+exactdy(x[0],x[1])**2,W)*np.abs(self.detA))
+        uu=np.sum(np.dot(dexact[0](x)**2+dexact[1](x)**2,W)*np.abs(self.detA))
         
         return np.sqrt(uu+np.dot(uh,M.dot(uh))-2.*np.dot(uh,f))
         

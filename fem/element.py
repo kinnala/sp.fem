@@ -83,11 +83,10 @@ class ElementTriPp(ElementH1):
         self.f_dofs=np.max([p-1,0])
         self.i_dofs=np.max([(p-1)*(p-2)/2,0])
 
-        self.nbfun=3*self.n_dofs+3*self.f_dofs+self.i_dofs
+        self.nbdofs=3*self.n_dofs+3*self.f_dofs+self.i_dofs
 
     def intlegpoly(self,x,n):
         """Generate integrated Legendre polynomials."""
-        x=x.flatten()
         n=n+1
         
         P={}
@@ -109,12 +108,12 @@ class ElementTriPp(ElementH1):
         dP={}
         dP[0]=np.zeros(x.shape)
         for i in np.arange(1,n):
-            dP[i]=P[i]
+            dP[i]=P[i-1]
         
         return iP,dP
         
-    def lbasis(self,X,i):
-        """Evaluate Lagrange basis of order self.p."""        
+    def lbasis(self,X,n):
+        """Evaluate n'th Lagrange basis of order self.p."""        
         p=self.p
 
         if len(X)!=2:
@@ -136,12 +135,12 @@ class ElementTriPp(ElementH1):
         gradphi_y[1]=np.zeros(X[0].shape)
         gradphi_y[2]=1.*np.ones(X[0].shape)
 
-        if i<=2:
+        if n<=2:
             # return first three
             dphi={}
-            dphi[0]=gradphi_x[i]
-            dphi[1]=gradphi_y[i]
-            return phi[i],dphi
+            dphi[0]=gradphi_x[n]
+            dphi[1]=gradphi_y[n]
+            return phi[n],dphi
 
         # use same ordering as in mesh
         e=np.array([[0,1],[1,2],[0,2]]).T
@@ -156,21 +155,23 @@ class ElementTriPp(ElementH1):
                 
                 # generate integrated Legendre polynomials
                 [P,dP]=self.intlegpoly(eta,p-2)
+                   #print len(P)
+                   #print len(dP)
                 
-                for j in len(P):
+                for j in range(len(P)):
                     phi[offset]=phi[e[0,i]]*phi[e[1,i]]*P[j]
                     gradphi_x[offset]=gradphi_x[e[0,i]]*phi[e[1,i]]*P[j]+\
                                       gradphi_x[e[1,i]]*phi[e[0,i]]*P[j]+\
-                                      deta_x*phi[e[0,i]]*phi[e[1,i]]*dP_x[j]
+                                      deta_x*phi[e[0,i]]*phi[e[1,i]]*dP[j]
                     gradphi_y[offset]=gradphi_y[e[0,i]]*phi[e[1,i]]*P[j]+\
                                       gradphi_y[e[1,i]]*phi[e[0,i]]*P[j]+\
-                                      deta_y*phi[e[0,i]]*phi[e[1,i]]*dP_y[j]
-                    if offset==i:
+                                      deta_y*phi[e[0,i]]*phi[e[1,i]]*dP[j]
+                    if offset==n:
                         # return if computed
                         dphi={}
-                        dphi[0]=gradphi_x[i]
-                        dphi[1]=gradphi_y[i]
-                        return phi[i],dphi
+                        dphi[0]=gradphi_x[n]
+                        dphi[1]=gradphi_y[n]
+                        return phi[n],dphi
                     offset=offset+1  
         
         # define interior basis functions
@@ -185,10 +186,12 @@ class ElementTriPp(ElementH1):
                     B[itr]=pphi
                     dB_x[itr]=pdphi[0]
                     dB_y[itr]=pdphi[1]
+                N=pm3.nbdofs
             else:
                 B[0]=np.ones(X[0].shape)
                 dB_x[0]=np.zeros(X[0].shape)
                 dB_y[0]=np.zeros(X[0].shape)
+                N=1
                 
             bubble=phi[0]*phi[1]*phi[2]
             dbubble_x=gradphi_x[0]*phi[1]*phi[2]+\
@@ -198,17 +201,19 @@ class ElementTriPp(ElementH1):
                       gradphi_y[1]*phi[2]*phi[0]+\
                       gradphi_y[2]*phi[0]*phi[1]
             
-            for i in range(pm3.nbdofs):
+            for i in range(N):
                 phi[offset]=bubble*B[i]
                 gradphi_x[offset]=dbubble_x*B[i]+dB_x[i]*bubble
                 gradphi_y[offset]=dbubble_y*B[i]+dB_y[i]*bubble
-                if offset==i:
+                if offset==n:
                     # return if computed
                     dphi={}
-                    dphi[0]=gradphi_x[i]
-                    dphi[1]=gradphi_y[i]
-                    return phi[i],dphi
+                    dphi[0]=gradphi_x[n]
+                    dphi[1]=gradphi_y[n]
+                    return phi[n],dphi
                 offset=offset+1
+
+        raise IndexError("ElementTriPp.lbasis: reached end of lbasis without returning anything.")
 
 class ElementP1(ElementH1):
     
