@@ -227,6 +227,58 @@ class ElementTriPp(ElementH1):
 
         raise IndexError("ElementTriPp.lbasis: reached end of lbasis without returning anything.")
 
+class ElementTriLagrangePp(ElementH1):
+
+    def __init__(self,p=1):
+        self.p=p
+        self.maxdeg=p
+
+        ndofs=int((p+1)*(p+2)/2.)
+
+        V=np.zeros((ndofs,ndofs))
+
+        nx=np.zeros(ndofs)
+        ny=np.zeros(ndofs)
+
+        ps={}
+
+        ktr=0
+        ltr=0
+        for itr in np.linspace(0.0,1.0,p+1):
+            for jtr in np.linspace(0.0,1.0-itr,p+1-ktr):
+                nx[ltr]=itr
+                ny[ltr]=jtr
+                ltr=ltr+1
+            ktr=ktr+1
+
+        print nx
+        print ny
+
+        ktr=0
+        for itr in range(p+1):
+            for jtr in range(p+1):
+                if itr+jtr<=p:
+                    poly=lambda x,y: (x**itr)*(y**jtr)
+                    V[ktr,:]=poly(nx,ny)
+                    ps[ktr]=(itr,jtr)
+                    print ps[ktr]
+                    ktr=ktr+1
+
+
+        c=np.zeros((ndofs,ndofs))
+        V=np.linalg.inv(V)
+
+        bfuns={}
+
+        for itr in range(ndofs):
+            bfuns[itr]=np.zeros((ndofs,ndofs))
+            for jtr in range(ndofs):
+                bfuns[itr][ps[jtr][0],ps[jtr][1]]=V[itr,jtr]
+        #print V.T
+        for itr in range(ndofs):
+            print bfuns[itr]
+
+
 class ElementP1(ElementH1):
     
     n_dofs=1
