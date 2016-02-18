@@ -76,7 +76,7 @@ class ElementH1(Element):
         return u,du,ddu
 
 class ElementTriPp(ElementH1):
-    """A somewhat slow implementation of p-refinements for triangular mesh."""
+    """A somewhat slow implementation of hierarchical p-basis for triangular mesh."""
     def __init__(self,p):
         self.p=p
         self.maxdeg=p
@@ -219,6 +219,11 @@ class ElementTriPp(ElementH1):
 class ElementTriLagrangePp(ElementH1):
 
     def __init__(self,p=1):
+        # TODO this does not work yet
+        #
+        # order of bfuns is the following: n1 n2 n3 e1->2 e2->3 e1->3 i
+        # e1->2 in the first part must be in same order as e2->3 in the second
+        #
         self.p=p
         self.maxdeg=p
         
@@ -236,10 +241,12 @@ class ElementTriLagrangePp(ElementH1):
 
         self.nodaldofs=np.array([])
         self.edgedofs=np.array([])
+        self.edgedoforder={}
         self.intdofs=np.array([])
 
         ktr=0
         ltr=0
+        mtr=0
         for itr in np.linspace(0.0,1.0,p+1):
             for jtr in np.linspace(0.0,1.0-itr,p+1-ktr):
                 nx[ltr]=itr
@@ -252,6 +259,7 @@ class ElementTriLagrangePp(ElementH1):
                     self.nodaldofs=np.append(self.nodaldofs,ltr)
                 elif jtr==0.0:
                     self.edgedofs=np.append(self.edgedofs,ltr)
+                    self.edgedoforder[0]
                 elif itr+jtr==1.0:
                     self.edgedofs=np.append(self.edgedofs,ltr)
                 elif itr==0.0:
