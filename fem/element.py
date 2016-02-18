@@ -1,4 +1,5 @@
 import numpy as np
+from numpy.polynomial.polynomial import polyder,polyval2d
 
 class Element:
     """Finite element."""
@@ -73,18 +74,6 @@ class ElementH1(Element):
             ddu=None # TODO fix ddu (for H1 element, Laplacian?)
 
         return u,du,ddu
-
-class ElementTriPpFast(ElementH1):
-    def __init__(self,p):
-        self.p=p
-        self.maxdeg=p
-        self.n_dofs=1
-        self.f_dofs=np.max([p-1,0])
-        self.i_dofs=np.max([(p-1)*(p-2)/2,0])
-
-        self.nbdofs=3*self.n_dofs+3*self.f_dofs+self.i_dofs
-        # TODO build bfuns using e.g. sympy and make handles of those.
-
 
 class ElementTriPp(ElementH1):
     """A somewhat slow implementation of p-refinements for triangular mesh."""
@@ -232,15 +221,22 @@ class ElementTriLagrangePp(ElementH1):
     def __init__(self,p=1):
         self.p=p
         self.maxdeg=p
+        
+        self.n_dofs=1
+        self.f_dofs=np.max([p-1,0])
+        self.i_dofs=np.max([(p-1)*(p-2)/2,0])
 
         ndofs=int((p+1)*(p+2)/2.)
 
         V=np.zeros((ndofs,ndofs))
 
+        # generate nodes
         nx=np.zeros(ndofs)
         ny=np.zeros(ndofs)
 
-        ps={}
+        self.nodaldofs=np.array([])
+        self.edgedofs=np.array([])
+        self.intdofs=np.array([])
 
         ktr=0
         ltr=0
@@ -248,12 +244,31 @@ class ElementTriLagrangePp(ElementH1):
             for jtr in np.linspace(0.0,1.0-itr,p+1-ktr):
                 nx[ltr]=itr
                 ny[ltr]=jtr
+                if itr==0.0 and jtr==0.0:
+                    self.nodaldofs=np.append(self.nodaldofs,ltr)
+                elif itr==0.0 and jtr==1.0:
+                    self.nodaldofs=np.append(self.nodaldofs,ltr)
+                elif itr==1.0 and jtr==0.0:
+                    self.nodaldofs=np.append(self.nodaldofs,ltr)
+                elif jtr==0.0:
+                    self.edgedofs=np.append(self.edgedofs,ltr)
+                elif itr+jtr==1.0:
+                    self.edgedofs=np.append(self.edgedofs,ltr)
+                elif itr==0.0:
+                    self.edgedofs=np.append(self.edgedofs,ltr)
+                else:
+                    self.intdofs=np.append(self.intdofs,ltr)
                 ltr=ltr+1
             ktr=ktr+1
 
-        print nx
-        print ny
+        #print self.nodaldofs
+        #print self.edgedofs
+        #print self.intdofs
+        #print nx
+        #print ny
 
+        # build Vandermonde matrix
+        ps={}
         ktr=0
         for itr in range(p+1):
             for jtr in range(p+1):
@@ -261,22 +276,49 @@ class ElementTriLagrangePp(ElementH1):
                     poly=lambda x,y: (x**itr)*(y**jtr)
                     V[ktr,:]=poly(nx,ny)
                     ps[ktr]=(itr,jtr)
-                    print ps[ktr]
+                    #print ps[ktr]
                     ktr=ktr+1
 
-
-        c=np.zeros((ndofs,ndofs))
         V=np.linalg.inv(V)
+        I1,I2=np.nonzero(np.abs(V)<=1e-5)
+        V[I1,I2]=0
 
-        bfuns={}
+        self.bfuns={}
+        self.bfunsdx={}
+        self.bfunsdy={}
 
         for itr in range(ndofs):
-            bfuns[itr]=np.zeros((ndofs,ndofs))
+            self.bfuns[itr]=np.zeros((ndofs,ndofs))
             for jtr in range(ndofs):
-                bfuns[itr][ps[jtr][0],ps[jtr][1]]=V[itr,jtr]
-        #print V.T
+                self.bfuns[itr][ps[jtr][0],ps[jtr][1]]=V[itr,jtr]
+        print V
+        print self.bfuns[self.nodaldofs[0]]
+        print self.bfuns[self.nodaldofs[1]]
+        print self.bfuns[self.nodaldofs[2]]
+        print polyval2d(np.array([0,0,1]),np.array([0,1,0]),self.bfuns[self.nodaldofs[0]])
+        print polyval2d(np.array([0,0,1]),np.array([0,1,0]),self.bfuns[self.nodaldofs[1]])
+        print polyval2d(np.array([0,0,1]),np.array([0,1,0]),self.bfuns[self.nodaldofs[2]])
         for itr in range(ndofs):
-            print bfuns[itr]
+            self.bfunsdx[itr]=polyder(self.bfuns[itr],axis=1)
+            self.bfunsdy[itr]=polyder(self.bfuns[itr],axis=0)
+        
+    def lbasis(self,X,i):
+        dphi={}
+        if i<=2:
+            phi=polyval2d(X[0],X[1],self.bfuns[self.nodaldofs[i]])
+            dphi[0]=polyval2d(X[0],X[1],self.bfunsdx[self.nodaldofs[i]])
+            dphi[1]=polyval2d(X[0],X[1],self.bfunsdy[self.nodaldofs[i]])
+        elif i<=3+3*np.max([self.p-1,0]):
+            phi=polyval2d(X[0],X[1],self.bfuns[self.edgedofs[i-3]])
+            dphi[0]=polyval2d(X[0],X[1],self.bfunsdx[self.edgedofs[i-3]])
+            dphi[1]=polyval2d(X[0],X[1],self.bfunsdy[self.edgedofs[i-3]])
+        else:
+            phi=polyval2d(X[0],X[1],self.bfuns[self.intdofs[i-3-3*np.max([self.p-1,0])]])
+            dphi[0]=polyval2d(X[0],X[1],self.bfunsdx[self.intdofs[i-3-3*np.max([self.p-1,0])]])
+            dphi[1]=polyval2d(X[0],X[1],self.bfunsdy[self.intdofs[i-3-3*np.max([self.p-1,0])]])
+        return phi,dphi
+            
+        
 
 
 class ElementP1(ElementH1):
