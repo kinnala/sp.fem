@@ -63,6 +63,5 @@ def get_quadrature_tri(norder):
 
 def get_quadrature_line(norder):
     """Return a nth order accurate quadrature rule for line [0,1]."""
-    return {
-            2:(np.array([1.127016653792584e-1,5.0000000000000000e-1,8.872983346207417e-1]),np.array([2.777777777777779e-1,4.4444444444444444e-1,2.777777777777778e-1]))
-    }[norder]
+    X,W=np.polynomial.legendre.leggauss(np.ceil((norder+1.0)/2.0))
+    return np.array([0.5*X+0.5]),W/2.0

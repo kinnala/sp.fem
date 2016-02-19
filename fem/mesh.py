@@ -47,7 +47,9 @@ class MeshTet(Mesh):
     def __init__(self,p=np.array([[0,0,0],[0,0,1],[0,1,0],[1,0,0],[0,1,1],[1,0,1],[1,1,0],[1,1,1]]).T,\
                       t=np.array([[0,1,2,3],[3,5,1,7],[2,3,6,7],[2,3,1,7],[1,2,4,7]]).T):
         self.p=p
-        self.t=np.sort(t,axis=0)
+        # no sorting to get RED refinement
+        # self.t=np.sort(t,axis=0)
+        self.t=t
 
         self.build_mappings()
 

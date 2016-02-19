@@ -5,6 +5,161 @@ import fem.mesh as fmsh
 import numpy as np
 import scipy.sparse.linalg
 import scipy.sparse as spsp
+import fem.asm as fasm
+import fem.mapping as fmap
+import fem.element as felem
+import matplotlib.pyplot as plt
+
+class AssemblerElementTriPpTest(unittest.TestCase):
+    """Test triangular h-refinement with various p.
+    Also test facet assembly."""
+    def runTest(self):
+
+        def U(x):
+            return 1+x[0]-x[0]**2*x[1]**2
+
+        def dUdx(x):
+            return 1-2*x[0]*x[1]**2
+
+        def dUdy(x):
+            return -2*x[0]**2*x[1]
+
+        def dudv(du,dv):
+            return du[0]*dv[0]+du[1]*dv[1]
+
+        def uv(u,v):
+            return u*v
+
+        def F(x,y):
+            return 2*x**2+2*y**2
+
+        def fv(v,x):
+            return F(x[0],x[1])*v
+
+        def G(x,y):
+            return (x==1)*(3-3*y**2)+\
+                    (x==0)*(0)+\
+                    (y==1)*(1+x-3*x**2)+\
+                    (y==0)*(1+x)
+
+        def gv(v,x):
+            return G(x[0],x[1])*v
+
+        dexact={}
+        dexact[0]=dUdx
+        dexact[1]=dUdy
+
+        hs={}
+        H1errs={}
+        L2errs={}
+
+        for p in range(1,4):
+            mesh=fmsh.MeshTri()
+            mesh.refine(2)
+            hs[p-1]=np.array([])
+            H1errs[p-1]=np.array([])
+            L2errs[p-1]=np.array([])
+
+            for itr in range(4):
+                mesh.refine()
+
+                a=fasm.AssemblerElement(mesh,fmap.MappingAffine,felem.ElementTriPp(p))
+
+                A=a.iasm(dudv)
+                f=a.iasm(fv)
+
+                B=a.fasm(uv)
+                g=a.fasm(gv)
+
+                u=np.zeros(a.dofnum_u.N)
+                u=scipy.sparse.linalg.spsolve(A+B,f+g)
+
+                hs[p-1]=np.append(hs[p-1],mesh.param())
+                L2errs[p-1]=np.append(L2errs[p-1],a.L2error(u,U))
+                H1errs[p-1]=np.append(H1errs[p-1],a.H1error(u,dexact))
+
+            pfit=np.polyfit(np.log10(hs[p-1]),np.log10(H1errs[p-1]),1)
+
+            self.assertTrue(pfit[0]>=0.95*p)
+
+class AssemblerElementTetP1Test(unittest.TestCase):
+    """Test down tetrahedral refinements with P1 elements.
+    Also tests assembly on tetrahedral facets."""
+    # TODO make tutorial out of this
+    def runTest(self):
+        def U(x):
+            return 1+x[0]-x[0]**2*x[1]**2+x[0]*x[1]*x[2]**3
+            
+        def dUdx(x):
+            return 1-2*x[0]*x[1]**2+x[1]*x[2]**3
+            
+        def dUdy(x):
+            return -2*x[0]**2*x[1]+x[0]*x[2]**3
+            
+        def dUdz(x):
+            return 3*x[0]*x[1]*x[2]**2
+
+        def dudv(du,dv):
+            return du[0]*dv[0]+du[1]*dv[1]+du[2]*dv[2]
+
+        def uv(u,v):
+            return u*v
+
+        def F(x,y,z):
+            return 2*x**2+2*y**2-6*x*y*z
+
+        def fv(v,x):
+            return F(x[0],x[1],x[2])*v
+
+        def G(x,y,z):
+            return (x==1)*(3-3*y**2+2*y*z**3)+\
+                   (x==0)*(-y*z**3)+\
+                   (y==1)*(1+x-3*x**2+2*x*z**3)+\
+                   (y==0)*(1+x-x*z**3)+\
+                   (z==1)*(1+x+4*x*y-x**2*y**2)+\
+                   (z==0)*(1+x-x**2*y**2)
+
+        def gv(v,x):
+            return G(x[0],x[1],x[2])*v
+
+        dexact={}
+        dexact[0]=dUdx
+        dexact[1]=dUdy
+        dexact[2]=dUdz
+
+        hs=np.array([])
+        H1err=np.array([])
+        L2err=np.array([])
+
+        for itr in range(2,5):
+            mesh=fmsh.MeshTet()
+            mesh.refine(itr)
+
+            a=fasm.AssemblerElement(mesh,fmap.MappingAffine,felem.ElementP1(3))
+
+            A=a.iasm(dudv)
+            f=a.iasm(fv)
+
+            B=a.fasm(uv)
+            g=a.fasm(gv)
+
+            u=np.zeros(a.dofnum_u.N)
+
+            u=scipy.sparse.linalg.spsolve(A+B,f+g)
+
+            p={}
+            p[0]=mesh.p[0,:]
+            p[1]=mesh.p[1,:]
+            p[2]=mesh.p[2,:]
+
+            hs=np.append(hs,mesh.param())
+            L2err=np.append(L2err,a.L2error(u,U))
+            H1err=np.append(H1err,a.H1error(u,dexact))
+
+        pfit=np.polyfit(np.log10(hs),np.log10(np.sqrt(L2err**2+H1err**2)),1)
+
+        # check that the convergence rate matches theory
+        self.assertTrue(pfit[0]>=1)
 
 class AssemblerTriP1BasicTest(unittest.TestCase):
     def setUp(self):

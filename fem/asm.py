@@ -253,8 +253,10 @@ class AssemblerElement(Assembler):
                     
                     # compute entries of local stiffness matrices
                     data[ixs]=np.dot(fform(u,v,du,dv,x)*np.abs(detDG),W)
-                    rows[ixs]=self.mesh.t[i,tind]
-                    cols[ixs]=self.mesh.t[j,tind]
+                    rows[ixs]=self.dofnum_v.t_dof[i,tind]
+                    cols[ixs]=self.dofnum_u.t_dof[j,tind]
+                    #rows[ixs]=self.mesh.t[i,tind]
+                    #cols[ixs]=self.mesh.t[j,tind]
         
             return coo_matrix((data,(rows,cols)),shape=(self.dofnum_v.N,self.dofnum_u.N)).tocsr()
         # linear form
@@ -272,7 +274,8 @@ class AssemblerElement(Assembler):
                 
                 # compute entries of local stiffness matrices
                 data[ixs]=np.dot(fform(v,dv,x)*np.abs(detDG),W)
-                rows[ixs]=self.mesh.t[i,tind]
+                rows[ixs]=self.dofnum_v.t_dof[i,tind]
+                #rows[ixs]=self.mesh.t[i,tind]
                 cols[ixs]=np.zeros(ne)
         
             return coo_matrix((data,(rows,cols)),shape=(self.dofnum_v.N,1)).toarray().T[0]
