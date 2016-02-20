@@ -74,6 +74,35 @@ class ElementH1(Element):
             ddu=None # TODO fix ddu (for H1 element, Laplacian?)
 
         return u,du,ddu
+        
+class ElementQ1(ElementH1):
+    """Simplest quadrilateral element."""
+    
+    def __init__(self):
+        self.maxdeg=2
+        self.n_dofs=1
+        
+    def lbasis(self,X,i):
+        phi={
+            0:lambda x,y: 0.25*(1-x)*(1-y),
+            1:lambda x,y: 0.25*(1+x)*(1-y),
+            2:lambda x,y: 0.25*(1+x)*(1+y),
+            3:lambda x,y: 0.25*(1-x)*(1+y)
+            }[i](X[0],X[1])
+        dphi={}
+        dphi[0]={
+            0:lambda x,y: 0.25*(-1+y),
+            1:lambda x,y: 0.25*(1-y),
+            2:lambda x,y: 0.25*(1+y),
+            3:lambda x,y: 0.25*(-1-y)
+            }[i](X[0],X[1])
+        dphi[1]={
+            0:lambda x,y: 0.25*(-1+x),
+            1:lambda x,y: 0.25*(-1-x),
+            2:lambda x,y: 0.25*(1+x),
+            3:lambda x,y: 0.25*(1-x)
+            }[i](X[0],X[1])
+        return phi,dphi
 
 class ElementTriPp(ElementH1):
     """A somewhat slow implementation of hierarchical p-basis for triangular mesh."""

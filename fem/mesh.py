@@ -31,6 +31,140 @@ class Mesh:
     def plot(self):
         raise NotImplementedError("Mesh.plot() not implemented!")
 
+class MeshQuad(Mesh):
+    """Quadrilateral mesh."""
+    refdom="quad"
+    brefdom="line"
+    
+    def __init__(self,p=np.array([[0,0],[1,0],[1,1],[0,1]]).T,\
+                      t=np.array([[0,1,2,3]]).T):
+        self.p=p
+        self.t=t
+        self.build_mappings()
+        
+    def build_mappings(self):
+        # do not sort since order defines counterclockwise order        
+        # self.t=np.sort(self.t,axis=0)        
+        
+        # define facets: in the order (0,1) (1,2) (2,3) (0,3)
+        self.facets=np.sort(np.vstack((self.t[0,:],self.t[1,:])),axis=0)
+        self.facets=np.hstack((self.facets,np.sort(np.vstack((self.t[1,:],self.t[2,:])),axis=0)))
+        self.facets=np.hstack((self.facets,np.sort(np.vstack((self.t[2,:],self.t[3,:])),axis=0)))
+        self.facets=np.hstack((self.facets,np.sort(np.vstack((self.t[0,:],self.t[3,:])),axis=0)))
+  
+        # get unique facets and build quad-to-facet mapping: 4 (edges) x Nquads
+        tmp=np.ascontiguousarray(self.facets.T)
+        tmp,ixa,ixb=np.unique(tmp.view([('',tmp.dtype)]*tmp.shape[1]),return_index=True,return_inverse=True)
+        self.facets=self.facets[:,ixa]
+        self.t2f=ixb.reshape((4,self.t.shape[1]))
+  
+        # build facet-to-quadrilateral mapping: 2 (quads) x Nedges
+        e_tmp=np.hstack((self.t2f[0,:],self.t2f[1,:],self.t2f[2,:],self.t2f[3,:]))
+        t_tmp=np.tile(np.arange(self.t.shape[1]),(1,4))[0]
+  
+        e_first,ix_first=np.unique(e_tmp,return_index=True)
+        # this emulates matlab unique(e_tmp,'last')
+        e_last,ix_last=np.unique(e_tmp[::-1],return_index=True)
+        ix_last=e_tmp.shape[0]-ix_last-1
+
+        self.f2t=np.zeros((2,self.facets.shape[1]),dtype=np.int64)
+        self.f2t[0,e_first]=t_tmp[ix_first]
+        self.f2t[1,e_last]=t_tmp[ix_last]
+
+        # second row to zero if repeated (i.e., on boundary)
+        self.f2t[1,np.nonzero(self.f2t[0,:]==self.f2t[1,:])[0]]=-1
+        
+    def boundary_nodes(self):
+        """Return an array of boundary node indices."""
+        return np.unique(self.facets[:,self.boundary_facets()])
+        
+    def boundary_facets(self):
+        """Return an array of boundary facet indices."""
+        return np.nonzero(self.f2t[1,:]==-1)[0]
+    
+    def interior_nodes(self):
+        """Return an array of interior node indices."""
+        return np.setdiff1d(np.arange(0,self.p.shape[1]),self.boundary_nodes())    
+    
+    def refine(self,N=1):
+        """Perform one or more refines on the mesh."""
+        for itr in range(N):
+            self.single_refine()
+
+    def single_refine(self):
+        """Perform a single mesh refine."""
+        # rename variables
+        t=self.t
+        p=self.p
+        e=self.facets
+        sz=p.shape[1]
+        t2f=self.t2f+sz
+        mid=range(self.t.shape[1])+np.max(t2f)+1
+        # new vertices are the midpoints of edges ...
+        newp1=0.5*np.vstack((p[0,e[0,:]]+p[0,e[1,:]],p[1,e[0,:]]+p[1,e[1,:]]))
+        # ... and element middle points
+        newp2=0.25*np.vstack((p[0,t[0,:]]+p[0,t[1,:]]+p[0,t[2,:]]+p[0,t[3,:]],\
+                              p[1,t[0,:]]+p[1,t[1,:]]+p[1,t[2,:]]+p[1,t[3,:]]))
+        newp=np.hstack((p,newp1,newp2))
+        # build new triangle definitions
+        newt=np.vstack((t[0,:],t2f[0,:],mid,t2f[3,:]))
+        newt=np.hstack((newt,np.vstack((t2f[0,:],t[1,:],t2f[1,:],mid))))
+        newt=np.hstack((newt,np.vstack((mid,t2f[1,:],t[2,:],t2f[2,:]))))
+        newt=np.hstack((newt,np.vstack((t2f[3,:],mid,t2f[2,:],t[3,:]))))
+        # update fields
+        self.p=newp
+        self.t=newt
+
+        self.build_mappings()
+        
+    def splitquads(self):
+        """Split each quad to triangle."""
+        t=self.t[[0,1,3],:]
+        t=np.hstack((t,self.t[[1,2,3]]))
+        return MeshTri(self.p,t)
+        
+    def plot(self,z,smooth=False):
+        """Visualize nodal or elemental function (2d)."""
+        m=self.splitquads()
+        return m.plot(z,smooth)
+        
+    def jiggle(self,z=None):
+        """Jiggle the interior nodes of the mesh."""
+        if z is None:
+            y=0.2*self.param()
+        else:
+            y=z*self.param()
+        I=self.interior_nodes()
+        self.p[0,I]=self.p[0,I]+y*np.random.rand(len(I))
+        self.p[1,I]=self.p[1,I]+y*np.random.rand(len(I))
+    
+    def param(self):
+        """Return mesh parameter."""
+        return np.max(np.sqrt(np.sum((self.p[:,self.facets[0,:]]-self.p[:,self.facets[1,:]])**2,axis=0)))    
+    
+    def draw(self):
+        """Draw the mesh."""
+        fig=plt.figure()
+        # visualize the mesh
+        # faster plotting is achieved through
+        # None insertion trick.
+        xs=[]
+        ys=[]
+        for s,t,u,v in zip(self.p[0,self.facets[0,:]],self.p[1,self.facets[0,:]],self.p[0,self.facets[1,:]],self.p[1,self.facets[1,:]]):
+            xs.append(s)
+            xs.append(u)
+            xs.append(None)
+            ys.append(t)
+            ys.append(v)
+            ys.append(None)
+        plt.plot(xs,ys,'k')
+        return fig
+        
+    def plot3(self,z,smooth=False):
+        """Visualize nodal function (3d i.e. three axes)."""
+        m=self.splitquads()
+        return m.plot3(z,smooth)
+
 class MeshTet(Mesh):
     """Tetrahedral mesh."""
     p=np.empty([3,0],dtype=np.float_)
@@ -47,14 +181,15 @@ class MeshTet(Mesh):
     def __init__(self,p=np.array([[0,0,0],[0,0,1],[0,1,0],[1,0,0],[0,1,1],[1,0,1],[1,1,0],[1,1,1]]).T,\
                       t=np.array([[0,1,2,3],[3,5,1,7],[2,3,6,7],[2,3,1,7],[1,2,4,7]]).T):
         self.p=p
-        # no sorting to get RED refinement
-        # self.t=np.sort(t,axis=0)
         self.t=t
-
         self.build_mappings()
 
     def build_mappings(self):
         """Build element-to-facet, element-to-edges, etc. mappings."""
+        # dont sort to get RED refinement
+        # TODO investigate whether sorting is needed or not in 3D
+        # could use additional data structure to achieve red
+        # self.t=np.sort(self.t,axis=0)
 
         # define edges: in the order (0,1) (1,2) (0,2) (0,3) (1,3) (2,3)
         self.edges=np.sort(np.vstack((self.t[0,:],self.t[1,:])),axis=0)

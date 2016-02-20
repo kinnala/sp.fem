@@ -36,6 +36,95 @@ class Mapping:
     def detDG(self,X,find):
         raise NotImplementedError("Mapping.detDG() not implemented!")
 
+class MappingQ1(Mapping):
+    """Mapping for quadrilaterals."""
+    
+    def __init__(self,mesh):
+        if isinstance(mesh,fem.mesh.MeshQuad):
+            self.dim=2
+            
+            self.t=mesh.t
+            self.p=mesh.p
+            
+            self.J={0:{},1:{}}
+            
+            self.J[0][0]=lambda x,y: 0.25*(-mesh.p[0,mesh.t[0,:]][:,None]*(1-y)+\
+                                            mesh.p[0,mesh.t[1,:]][:,None]*(1-y)+\
+                                            mesh.p[0,mesh.t[2,:]][:,None]*(1+y)-\
+                                            mesh.p[0,mesh.t[3,:]][:,None]*(1+y))
+            self.J[0][1]=lambda x,y: 0.25*(-mesh.p[0,mesh.t[0,:]][:,None]*(1-x)-\
+                                            mesh.p[0,mesh.t[1,:]][:,None]*(1+x)+\
+                                            mesh.p[0,mesh.t[2,:]][:,None]*(1+x)+\
+                                            mesh.p[0,mesh.t[3,:]][:,None]*(1-x))
+            self.J[1][0]=lambda x,y: 0.25*(-mesh.p[1,mesh.t[0,:]][:,None]*(1-y)+\
+                                            mesh.p[1,mesh.t[1,:]][:,None]*(1-y)+\
+                                            mesh.p[1,mesh.t[2,:]][:,None]*(1+y)-\
+                                            mesh.p[1,mesh.t[3,:]][:,None]*(1+y))
+            self.J[1][1]=lambda x,y: 0.25*(-mesh.p[1,mesh.t[0,:]][:,None]*(1-x)-\
+                                            mesh.p[1,mesh.t[1,:]][:,None]*(1+x)+\
+                                            mesh.p[1,mesh.t[2,:]][:,None]*(1+x)+\
+                                            mesh.p[1,mesh.t[3,:]][:,None]*(1-x))
+        else:
+            raise NotImplementedError("MappingQ1: wrong type of mesh was given to constructor!")
+
+    def quadbasis(self,x,y,i):
+        return {
+            0:lambda x,y: 0.25*(1-x)*(1-y),
+            1:lambda x,y: 0.25*(1+x)*(1-y),
+            2:lambda x,y: 0.25*(1+x)*(1+y),
+            3:lambda x,y: 0.25*(1-x)*(1+y)
+            }[i](x,y)
+   
+    def F(self,X,tind=None):
+        """Mapping defined by Q1 basis."""
+        out={}
+        out[0]=np.outer(self.p[0,self.t[0,:]],self.quadbasis(X[0,:],X[1,:],0))+\
+               np.outer(self.p[0,self.t[1,:]],self.quadbasis(X[0,:],X[1,:],1))+\
+               np.outer(self.p[0,self.t[2,:]],self.quadbasis(X[0,:],X[1,:],2))+\
+               np.outer(self.p[0,self.t[3,:]],self.quadbasis(X[0,:],X[1,:],3))
+        out[1]=np.outer(self.p[1,self.t[0,:]],self.quadbasis(X[0,:],X[1,:],0))+\
+               np.outer(self.p[1,self.t[1,:]],self.quadbasis(X[0,:],X[1,:],1))+\
+               np.outer(self.p[1,self.t[2,:]],self.quadbasis(X[0,:],X[1,:],2))+\
+               np.outer(self.p[1,self.t[3,:]],self.quadbasis(X[0,:],X[1,:],3))
+
+        return out
+        
+    def detDF(self,X,tind=None):
+        if isinstance(X,dict):
+            detDF=self.J[0][0](X[0],X[1])*self.J[1][1](X[0],X[1])-\
+                  self.J[0][1](X[0],X[1])*self.J[1][0](X[0],X[1]) 
+        else:
+            detDF=self.J[0][0](X[0,:],X[1,:])*self.J[1][1](X[0,:],X[1,:])-\
+                  self.J[0][1](X[0,:],X[1,:])*self.J[1][0](X[0,:],X[1,:])          
+        if tind is not None:
+            return detDF[tind,:]
+        else:
+            return detDF
+            
+    def invDF(self,X,tind=None):
+        invJ={0:{},1:{}}
+        if isinstance(X,dict):
+            x=X[0]
+            y=X[1]
+        else:
+            x=X[0,:]
+            y=X[1,:]
+        
+        if tind is None:        
+            detDF=self.detDF(X)
+            invJ[0][0]=(self.J[1][1](x,y)/detDF)
+            invJ[0][1]=(-self.J[0][1](x,y)/detDF)
+            invJ[1][0]=(-self.J[1][0](x,y)/detDF)
+            invJ[1][1]=(self.J[0][0](x,y)/detDF)
+        else:
+            detDF=self.detDF(X)[tind,:]
+            invJ[0][0]=(self.J[1][1](x,y)[tind,:]/detDF)
+            invJ[0][1]=(-self.J[0][1](x,y)[tind,:]/detDF)
+            invJ[1][0]=(-self.J[1][0](x,y)[tind,:]/detDF)
+            invJ[1][1]=(self.J[0][0](x,y)[tind,:]/detDF)
+        
+        return invJ
+
 class MappingAffine(Mapping):
     """Affine mappings for simplex (=line,tri,tet) mesh."""
     def __init__(self,mesh):
@@ -140,13 +229,7 @@ class MappingAffine(Mapping):
             raise TypeError("MappingAffine initialized with an incompatible mesh type!")
 
     def F(self,X,tind=None):
-        """Affine map F(X)=AX+b.
-
-        Acts on Ndim x Npoints matrices
-        and returns Dict D with D[0] corresponding to
-        x-coordinates and D[1] corresponding to y-coordinates.
-        Both D[0] and D[1] are Nelems x Npoints.
-        """
+        """Affine map F(X)=AX+b."""
         y={}
         if self.dim==2:
             if tind is None:

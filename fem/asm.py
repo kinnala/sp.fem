@@ -68,6 +68,8 @@ class AssemblerElement(Assembler):
     """A quasi-fast assembler for arbitrary element/mesh/mapping."""
     def __init__(self,mesh,mapping,elem_u,elem_v=None):
         # TODO check consistency between (mesh,mapping,elem)
+        if not isinstance(elem_u,fem.element.Element):
+            raise Exception("AssemblerElement: elem_u must be an instace of Element!")
 
         self.mapping=mapping(mesh)
         self.mesh=mesh
@@ -107,7 +109,7 @@ class AssemblerElement(Assembler):
         # TODO add support for assembling on a subset
         
         X,W=get_quadrature(self.mesh.refdom,intorder)
-        
+
         # global quadrature points
         x=self.mapping.F(X,tind)
 

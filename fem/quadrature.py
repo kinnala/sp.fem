@@ -9,6 +9,14 @@ def get_quadrature(refdom,norder):
         return get_quadrature_tet(norder)
     elif refdom is "line":
         return get_quadrature_line(norder)
+    elif refdom is "quad":
+        X,W=get_quadrature_line(norder)
+        A,B=np.meshgrid(X,X)
+        Y=2.0*np.vstack((A.flatten(order='F'),B.flatten(order='F')))-1.0
+        A,B=np.meshgrid(2*W,2*W)
+        Z=A*B
+        W=Z.flatten(order='F')
+        return Y,W
     else:
         raise NotImplementedError("get_quadrature: the given mesh type is not supported!")
 
@@ -63,5 +71,7 @@ def get_quadrature_tri(norder):
 
 def get_quadrature_line(norder):
     """Return a nth order accurate quadrature rule for line [0,1]."""
+    if norder<=1:
+        norder=2
     X,W=np.polynomial.legendre.leggauss(np.ceil((norder+1.0)/2.0))
     return np.array([0.5*X+0.5]),W/2.0
