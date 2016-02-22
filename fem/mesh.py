@@ -127,7 +127,12 @@ class MeshQuad(Mesh):
         """Visualize nodal or elemental function (2d)."""
         m=self.splitquads()
         return m.plot(z,smooth)
-        
+
+    def plot3(self,z,smooth=False):
+        """Visualize nodal function (3d i.e. three axes)."""
+        m=self.splitquads()
+        return m.plot3(z,smooth)
+
     def jiggle(self,z=None):
         """Jiggle the interior nodes of the mesh."""
         if z is None:
@@ -160,11 +165,6 @@ class MeshQuad(Mesh):
         plt.plot(xs,ys,'k')
         return fig
         
-    def plot3(self,z,smooth=False):
-        """Visualize nodal function (3d i.e. three axes)."""
-        m=self.splitquads()
-        return m.plot3(z,smooth)
-
 class MeshTet(Mesh):
     """Tetrahedral mesh."""
     p=np.empty([3,0],dtype=np.float_)
@@ -254,20 +254,11 @@ class MeshTet(Mesh):
         newt=np.hstack((newt,np.vstack((t[1,:],t2e[0,:],t2e[1,:],t2e[4,:]))))
         newt=np.hstack((newt,np.vstack((t[2,:],t2e[1,:],t2e[2,:],t2e[5,:]))))
         newt=np.hstack((newt,np.vstack((t[3,:],t2e[3,:],t2e[4,:],t2e[5,:]))))
-        # 5 = (0,1) = 0
-        # 6 = (0,2) = 2
-        # 7 = (0,3) = 3
-        # 8 = (1,2) = 1
-        # 9 = (1,3) = 4
-        #10 = (2,3) = 5
-        #
-        # 5 6 8 9
+
+        # splitting the pyramid in the middle
         newt=np.hstack((newt,np.vstack((t2e[0,:],t2e[2,:],t2e[1,:],t2e[4,:]))))
-        # 5 6 7 9
         newt=np.hstack((newt,np.vstack((t2e[0,:],t2e[2,:],t2e[3,:],t2e[4,:]))))
-        # 6 7 9 10
         newt=np.hstack((newt,np.vstack((t2e[2,:],t2e[3,:],t2e[4,:],t2e[5,:]))))
-        # 6 8 9 10
         newt=np.hstack((newt,np.vstack((t2e[2,:],t2e[1,:],t2e[4,:],t2e[5,:]))))
         # update fields
         self.p=newp
@@ -527,6 +518,4 @@ class MeshTri(Mesh):
         self.t=newt
 
         self.build_mappings()
-
-
 
