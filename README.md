@@ -51,3 +51,16 @@ Mayavi does not work under windows without
 ```export QT_API=pyqt```
 and iPython lags without
 ```ipython --pylab```
+
+## Poisson assemble speed in 2D (22.2.16)
+Done using AssemblerElement and ElementP1. Computer is Core i7 950 at 3.07 GHz and 4 GB of RAM. Windows 7 with Anaconda Scipy distribution.
+
+|NDOF |time (s)|
+|-----|------|
+|1089 |0.0113|
+|4225 |0.0390|
+|16641|0.1820|
+|66049|0.8950|
+|263169|3.73|
+|1050625|14.4|
+
