@@ -467,18 +467,32 @@ class MeshTri(Mesh):
     def plot3(self,z,smooth=False):
         """Visualize nodal function (3d i.e. three axes)."""
         fig=plt.figure()
-        # visualize a solution vector
-        if smooth:
-            # use mayavi
-            if opt_mayavi:
-                mlab.triangular_mesh(self.p[0,:],self.p[1,:],z,self.t.T)
+        if len(z)==self.p.shape[1]:
+            # one value per node (piecewise linear, globally cont)
+            if smooth:
+                # use mayavi
+                if opt_mayavi:
+                    mlab.triangular_mesh(self.p[0,:],self.p[1,:],z,self.t.T)
+                else:
+                    raise ImportError("MeshTri: Mayavi not supported by the host system!")
             else:
-                raise ImportError("MeshTri: Mayavi not supported by the host system!")
-        else:
-            # use matplotlib
+                # use matplotlib
+                ax=fig.gca(projection='3d')
+                ts=mtri.Triangulation(self.p[0,:],self.p[1,:],self.t.T)
+                ax.plot_trisurf(self.p[0,:],self.p[1,:],z,triangles=ts.triangles,cmap=plt.cm.Spectral)
+        elif len(z)==self.t.shape[1]:
+            # one value per element (piecewise const)
+            nt=self.t.shape[1]
+            newt=np.arange(3*nt,dtype=np.int64).reshape((nt,3))
+            newpx=self.p[0,self.t].flatten(order='F')
+            newpy=self.p[1,self.t].flatten(order='F')
+            newz=np.vstack((z,z,z)).flatten(order='F')
             ax=fig.gca(projection='3d')
-            ts=mtri.Triangulation(self.p[0,:],self.p[1,:],self.t.T)
-            ax.plot_trisurf(self.p[0,:],self.p[1,:],z,triangles=ts.triangles,cmap=plt.cm.Spectral)
+            ts=mtri.Triangulation(newpx,newpx,newt)
+            ax.plot_trisurf(newpx,newpy,newz,triangles=ts.triangles,cmap=plt.cm.Spectral)
+        else:
+            raise NotImplementedError("MeshTri.plot3: not implemented for the given shape of input vector!")
+
 
     def show(self):
         """Call after plot functions."""
