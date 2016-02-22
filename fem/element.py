@@ -354,16 +354,63 @@ class ElementTriLagrangePp(ElementH1):
             dphi[0]=polyval2d(X[0],X[1],self.bfunsdx[self.intdofs[i-3-3*np.max([self.p-1,0])]])
             dphi[1]=polyval2d(X[0],X[1],self.bfunsdy[self.intdofs[i-3-3*np.max([self.p-1,0])]])
         return phi,dphi
-            
-        
 
+class ElementP0(ElementH1):
+    i_dofs=1
+    max_deg=1
+
+    # TODO could implement for 3D and Quads as well?
+
+    def lbasis(self,X,i):
+        phi={
+            0:lambda x,y: 1+0*x
+            }[i](X[0],X[1])
+        dphi={}
+        dphi[0]={
+                0:lambda x,y: 0*x
+                }[i](X[0],X[1])
+        dphi[1]={
+                0:lambda x,y: 0*x
+                }[i](X[0],X[1])
+        return phi,dphi
+
+            
+class ElementMini(ElementH1):
+    n_dofs=1
+    i_dofs=1
+    max_deg=3
+
+    # TODO could implement for 3D as well?
+
+    def lbasis(self,X,i):
+        phi={
+            0:lambda x,y: 1-x-y,
+            1:lambda x,y: x,
+            2:lambda x,y: y,
+            3:lambda x,y: (1-x-y)*x*y
+            }[i](X[0],X[1])
+
+        dphi={}
+        dphi[0]={
+                0:lambda x,y: -1+0*x,
+                1:lambda x,y: 1+0*x,
+                2:lambda x,y: 0*x,
+                3:lambda x,y: (1-x-y)*y-x*y
+                }[i](X[0],X[1])
+        dphi[1]={
+                0:lambda x,y: -1+0*x,
+                1:lambda x,y: 0*x,
+                2:lambda x,y: 1+0*x,
+                3:lambda x,y: (1-x-y)*x-x*y
+                }[i](X[0],X[1])
+        return phi,dphi
 
 class ElementP1(ElementH1):
     
     n_dofs=1
     maxdeg=1
     
-    def __init__(self,dim=1):
+    def __init__(self,dim=2):
         self.dim=dim
 
     def lbasis(self,X,i):
