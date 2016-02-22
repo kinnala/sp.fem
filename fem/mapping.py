@@ -47,23 +47,22 @@ class MappingQ1(Mapping):
             self.p=mesh.p
             
             self.J={0:{},1:{}}
-            
-            self.J[0][0]=lambda x,y: 0.25*(-mesh.p[0,mesh.t[0,:]][:,None]*(1-y)+\
-                                            mesh.p[0,mesh.t[1,:]][:,None]*(1-y)+\
-                                            mesh.p[0,mesh.t[2,:]][:,None]*(1+y)-\
-                                            mesh.p[0,mesh.t[3,:]][:,None]*(1+y))
-            self.J[0][1]=lambda x,y: 0.25*(-mesh.p[0,mesh.t[0,:]][:,None]*(1-x)-\
-                                            mesh.p[0,mesh.t[1,:]][:,None]*(1+x)+\
-                                            mesh.p[0,mesh.t[2,:]][:,None]*(1+x)+\
-                                            mesh.p[0,mesh.t[3,:]][:,None]*(1-x))
-            self.J[1][0]=lambda x,y: 0.25*(-mesh.p[1,mesh.t[0,:]][:,None]*(1-y)+\
-                                            mesh.p[1,mesh.t[1,:]][:,None]*(1-y)+\
-                                            mesh.p[1,mesh.t[2,:]][:,None]*(1+y)-\
-                                            mesh.p[1,mesh.t[3,:]][:,None]*(1+y))
-            self.J[1][1]=lambda x,y: 0.25*(-mesh.p[1,mesh.t[0,:]][:,None]*(1-x)-\
-                                            mesh.p[1,mesh.t[1,:]][:,None]*(1+x)+\
-                                            mesh.p[1,mesh.t[2,:]][:,None]*(1+x)+\
-                                            mesh.p[1,mesh.t[3,:]][:,None]*(1-x))
+            self.J[0][0]=lambda x,y:0.25*(-mesh.p[0,mesh.t[0,:]][:,None]*(1-y)\
+                                          +mesh.p[0,mesh.t[1,:]][:,None]*(1-y)\
+                                          +mesh.p[0,mesh.t[2,:]][:,None]*(1+y)\
+                                          -mesh.p[0,mesh.t[3,:]][:,None]*(1+y))
+            self.J[0][1]=lambda x,y:0.25*(-mesh.p[0,mesh.t[0,:]][:,None]*(1-x)\
+                                          -mesh.p[0,mesh.t[1,:]][:,None]*(1+x)\
+                                          +mesh.p[0,mesh.t[2,:]][:,None]*(1+x)\
+                                          +mesh.p[0,mesh.t[3,:]][:,None]*(1-x))
+            self.J[1][0]=lambda x,y:0.25*(-mesh.p[1,mesh.t[0,:]][:,None]*(1-y)\
+                                          +mesh.p[1,mesh.t[1,:]][:,None]*(1-y)\
+                                          +mesh.p[1,mesh.t[2,:]][:,None]*(1+y)\
+                                          -mesh.p[1,mesh.t[3,:]][:,None]*(1+y))
+            self.J[1][1]=lambda x,y:0.25*(-mesh.p[1,mesh.t[0,:]][:,None]*(1-x)\
+                                          -mesh.p[1,mesh.t[1,:]][:,None]*(1+x)\
+                                          +mesh.p[1,mesh.t[2,:]][:,None]*(1+x)\
+                                          +mesh.p[1,mesh.t[3,:]][:,None]*(1-x))
         else:
             raise NotImplementedError("MappingQ1: wrong type of mesh was given to constructor!")
 
@@ -112,16 +111,16 @@ class MappingQ1(Mapping):
         
         if tind is None:        
             detDF=self.detDF(X)
-            invJ[0][0]=(self.J[1][1](x,y)/detDF)
-            invJ[0][1]=(-self.J[0][1](x,y)/detDF)
-            invJ[1][0]=(-self.J[1][0](x,y)/detDF)
-            invJ[1][1]=(self.J[0][0](x,y)/detDF)
+            invJ[0][0]=self.J[1][1](x,y)/detDF
+            invJ[0][1]=-self.J[0][1](x,y)/detDF
+            invJ[1][0]=-self.J[1][0](x,y)/detDF
+            invJ[1][1]=self.J[0][0](x,y)/detDF
         else:
             detDF=self.detDF(X)[tind,:]
-            invJ[0][0]=(self.J[1][1](x,y)[tind,:]/detDF)
-            invJ[0][1]=(-self.J[0][1](x,y)[tind,:]/detDF)
-            invJ[1][0]=(-self.J[1][0](x,y)[tind,:]/detDF)
-            invJ[1][1]=(self.J[0][0](x,y)[tind,:]/detDF)
+            invJ[0][0]=self.J[1][1](x,y)[tind,:]/detDF
+            invJ[0][1]=-self.J[0][1](x,y)[tind,:]/detDF
+            invJ[1][0]=-self.J[1][0](x,y)[tind,:]/detDF
+            invJ[1][1]=self.J[0][0](x,y)[tind,:]/detDF
         
         return invJ
 

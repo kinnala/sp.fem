@@ -37,19 +37,6 @@ class ElementH1(Element):
             [phi,dphi]=self.lbasis(X,i)
             u=phi
             du={}
-            invDF=mapping.invDF(X,tind)
-            
-            if mapping.dim==2:
-                du[0]=invDF[0][0]*dphi[0]+invDF[1][0]*dphi[1]
-                du[1]=invDF[0][1]*dphi[0]+invDF[1][1]*dphi[1]
-            elif mapping.dim==3:
-                du[0]=invDF[0][0]*dphi[0]+invDF[1][0]*dphi[1]+invDF[2][0]*dphi[2]
-                du[1]=invDF[0][1]*dphi[0]+invDF[1][1]*dphi[1]+invDF[2][1]*dphi[2]
-                du[2]=invDF[0][2]*dphi[0]+invDF[1][2]*dphi[1]+invDF[2][2]*dphi[2]
-            else:
-                raise NotImplementedError("ElementH1.gbasis: not implemented for the given dim.")
-            ddu=None # TODO fix ddu (for H1 element, Laplacian?)
-            
         else:
             x={}
             x[0]=X[0,:]
@@ -60,18 +47,19 @@ class ElementH1(Element):
             [phi,dphi]=self.lbasis(x,i)
             u=np.tile(phi,(len(tind),1))
             du={}
-            invDF=mapping.invDF(X,tind)
             
-            if mapping.dim==2:
-                du[0]=invDF[0][0]*dphi[0]+invDF[1][0]*dphi[1]
-                du[1]=invDF[0][1]*dphi[0]+invDF[1][1]*dphi[1]
-            elif mapping.dim==3:
-                du[0]=invDF[0][0]*dphi[0]+invDF[1][0]*dphi[1]+invDF[2][0]*dphi[2]
-                du[1]=invDF[0][1]*dphi[0]+invDF[1][1]*dphi[1]+invDF[2][1]*dphi[2]
-                du[2]=invDF[0][2]*dphi[0]+invDF[1][2]*dphi[1]+invDF[2][2]*dphi[2]
-            else:
-                raise NotImplementedError("ElementH1.gbasis: not implemented for the given dim.")
-            ddu=None # TODO fix ddu (for H1 element, Laplacian?)
+        invDF=mapping.invDF(X,tind) # investigate if 'x' should used after else
+            
+        if mapping.dim==2:
+            du[0]=invDF[0][0]*dphi[0]+invDF[1][0]*dphi[1]
+            du[1]=invDF[0][1]*dphi[0]+invDF[1][1]*dphi[1]
+        elif mapping.dim==3:
+            du[0]=invDF[0][0]*dphi[0]+invDF[1][0]*dphi[1]+invDF[2][0]*dphi[2]
+            du[1]=invDF[0][1]*dphi[0]+invDF[1][1]*dphi[1]+invDF[2][1]*dphi[2]
+            du[2]=invDF[0][2]*dphi[0]+invDF[1][2]*dphi[1]+invDF[2][2]*dphi[2]
+        else:
+            raise NotImplementedError("ElementH1.gbasis: not implemented for the given dim.")
+        ddu=None # TODO fix ddu (for H1 element, Laplacian?)
 
         return u,du,ddu
         
