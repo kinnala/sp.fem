@@ -84,7 +84,17 @@ class MeshQuad(Mesh):
     
     def interior_nodes(self):
         """Return an array of interior node indices."""
-        return np.setdiff1d(np.arange(0,self.p.shape[1]),self.boundary_nodes())    
+        return np.setdiff1d(np.arange(0,self.p.shape[1]),self.boundary_nodes())
+        
+    def nodes_satisfying(self,test):
+        """Return nodes that satisfy some condition."""
+        return np.nonzero(test(self.p[0,:],self.p[1,:]))[0]
+        
+    def facets_satisfying(self,test):
+        """Return facets whose midpoints satisfy some condition."""
+        mx=0.5*(self.p[0,self.facets[0,:]]+self.p[0,self.facets[1,:]])
+        my=0.5*(self.p[1,self.facets[0,:]]+self.p[1,self.facets[1,:]])
+        return np.nonzero(test(mx,my))[0]
     
     def refine(self,N=1):
         """Perform one or more refines on the mesh."""
@@ -117,15 +127,20 @@ class MeshQuad(Mesh):
 
         self.build_mappings()
         
-    def splitquads(self):
+    def splitquads(self,z):
         """Split each quad to triangle."""
+        if len(z)==self.t.shape[1]:
+            # preserve elemental constant functions
+            Z=np.concatenate((z,z))
+        else:
+            Z=z
         t=self.t[[0,1,3],:]
         t=np.hstack((t,self.t[[1,2,3]]))
-        return MeshTri(self.p,t)
+        return MeshTri(self.p,t),Z
         
     def plot(self,z,smooth=False):
         """Visualize nodal or elemental function (2d)."""
-        m=self.splitquads()
+        m,z=self.splitquads(z)
         return m.plot(z,smooth)
 
     def plot3(self,z,smooth=False):

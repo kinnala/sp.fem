@@ -91,6 +91,52 @@ class ElementQ1(ElementH1):
             3:lambda x,y: 0.25*(1-x)
             }[i](X[0],X[1])
         return phi,dphi
+        
+class ElementQ2(ElementH1):
+    """Second order quadrilateral element."""
+    
+    def __init__(self):
+        self.maxdeg=3
+        self.n_dofs=1
+        self.f_dofs=1
+        self.i_dofs=1
+        
+    def lbasis(self,X,i):
+        phi={
+            0:lambda x,y: 0.25*(x**2-x)*(y**2-y),
+            1:lambda x,y: 0.25*(x**2+x)*(y**2-y),
+            2:lambda x,y: 0.25*(x**2+x)*(y**2+y),
+            3:lambda x,y: 0.25*(x**2-x)*(y**2+y),
+            4:lambda x,y: 0.5*(y**2-y)*(1-x**2),
+            5:lambda x,y: 0.5*(x**2+x)*(1-y**2),
+            6:lambda x,y: 0.5*(y**2+y)*(1-x**2),
+            7:lambda x,y: 0.5*(x**2-x)*(1-y**2),
+            8:lambda x,y: (1-x**2)*(1-y**2)
+            }[i](X[0],X[1])
+        dphi={}
+        dphi[0]={
+            0:lambda x,y:((-1 + 2*x)*(-1 + y)*y)/4.,
+            1:lambda x,y:((1 + 2*x)*(-1 + y)*y)/4.,
+            2:lambda x,y:((1 + 2*x)*y*(1 + y))/4.,
+            3:lambda x,y:((-1 + 2*x)*y*(1 + y))/4.,
+            4:lambda x,y:-(x*(-1 + y)*y),
+            5:lambda x,y:-((1 + 2*x)*(-1 + y**2))/2.,
+            6:lambda x,y:-(x*y*(1 + y)),
+            7:lambda x,y:-((-1 + 2*x)*(-1 + y**2))/2.,
+            8:lambda x,y:2*x*(-1 + y**2)
+            }[i](X[0],X[1])
+        dphi[1]={
+            0:lambda x,y:((-1 + x)*x*(-1 + 2*y))/4.,
+            1:lambda x,y:(x*(1 + x)*(-1 + 2*y))/4.,
+            2:lambda x,y:(x*(1 + x)*(1 + 2*y))/4.,
+            3:lambda x,y:((-1 + x)*x*(1 + 2*y))/4.,
+            4:lambda x,y:-((-1 + x**2)*(-1 + 2*y))/2.,
+            5:lambda x,y:-(x*(1 + x)*y),
+            6:lambda x,y:-((-1 + x**2)*(1 + 2*y))/2.,
+            7:lambda x,y:-((-1 + x)*x*y),
+            8:lambda x,y:2*(-1 + x**2)*y
+            }[i](X[0],X[1])
+        return phi,dphi
 
 class ElementTriPp(ElementH1):
     """A somewhat slow implementation of hierarchical p-basis for triangular mesh."""
@@ -290,6 +336,7 @@ class ElementP1(ElementH1):
     
     def __init__(self,dim=2):
         self.dim=dim
+        # TODO remove initialization with dim. Deduce dim from input X in lbasis
 
     def lbasis(self,X,i):
         # TODO implement for 1D
