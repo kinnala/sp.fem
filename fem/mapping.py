@@ -47,22 +47,35 @@ class MappingQ1(Mapping):
             self.p=mesh.p
             
             self.J={0:{},1:{}}
-            self.J[0][0]=lambda x,y:0.25*(-mesh.p[0,mesh.t[0,:]][:,None]*(1-y)\
-                                          +mesh.p[0,mesh.t[1,:]][:,None]*(1-y)\
-                                          +mesh.p[0,mesh.t[2,:]][:,None]*(1+y)\
-                                          -mesh.p[0,mesh.t[3,:]][:,None]*(1+y))
-            self.J[0][1]=lambda x,y:0.25*(-mesh.p[0,mesh.t[0,:]][:,None]*(1-x)\
-                                          -mesh.p[0,mesh.t[1,:]][:,None]*(1+x)\
-                                          +mesh.p[0,mesh.t[2,:]][:,None]*(1+x)\
-                                          +mesh.p[0,mesh.t[3,:]][:,None]*(1-x))
-            self.J[1][0]=lambda x,y:0.25*(-mesh.p[1,mesh.t[0,:]][:,None]*(1-y)\
-                                          +mesh.p[1,mesh.t[1,:]][:,None]*(1-y)\
-                                          +mesh.p[1,mesh.t[2,:]][:,None]*(1+y)\
-                                          -mesh.p[1,mesh.t[3,:]][:,None]*(1+y))
-            self.J[1][1]=lambda x,y:0.25*(-mesh.p[1,mesh.t[0,:]][:,None]*(1-x)\
-                                          -mesh.p[1,mesh.t[1,:]][:,None]*(1+x)\
-                                          +mesh.p[1,mesh.t[2,:]][:,None]*(1+x)\
-                                          +mesh.p[1,mesh.t[3,:]][:,None]*(1-x))
+            self.J[0][0]=lambda x,y,t:0.25*(-mesh.p[0,mesh.t[0,t]][:,None]*(1-y)\
+                                            +mesh.p[0,mesh.t[1,t]][:,None]*(1-y)\
+                                            +mesh.p[0,mesh.t[2,t]][:,None]*(1+y)\
+                                            -mesh.p[0,mesh.t[3,t]][:,None]*(1+y))
+            self.J[0][1]=lambda x,y,t:0.25*(-mesh.p[0,mesh.t[0,t]][:,None]*(1-x)\
+                                            -mesh.p[0,mesh.t[1,t]][:,None]*(1+x)\
+                                            +mesh.p[0,mesh.t[2,t]][:,None]*(1+x)\
+                                            +mesh.p[0,mesh.t[3,t]][:,None]*(1-x))
+            self.J[1][0]=lambda x,y,t:0.25*(-mesh.p[1,mesh.t[0,t]][:,None]*(1-y)\
+                                            +mesh.p[1,mesh.t[1,t]][:,None]*(1-y)\
+                                            +mesh.p[1,mesh.t[2,t]][:,None]*(1+y)\
+                                            -mesh.p[1,mesh.t[3,t]][:,None]*(1+y))
+            self.J[1][1]=lambda x,y,t:0.25*(-mesh.p[1,mesh.t[0,t]][:,None]*(1-x)\
+                                            -mesh.p[1,mesh.t[1,t]][:,None]*(1+x)\
+                                            +mesh.p[1,mesh.t[2,t]][:,None]*(1+x)\
+                                            +mesh.p[1,mesh.t[3,t]][:,None]*(1-x))
+                                          
+            # Matrices and vectors for boundary mappings: G(X)=BX+c
+            self.B={}
+    
+            self.B[0]=mesh.p[0,mesh.facets[1,:]]-mesh.p[0,mesh.facets[0,:]]
+            self.B[1]=mesh.p[1,mesh.facets[1,:]]-mesh.p[1,mesh.facets[0,:]]
+    
+            self.c={}
+    
+            self.c[0]=mesh.p[0,mesh.facets[0,:]]
+            self.c[1]=mesh.p[1,mesh.facets[0,:]]
+    
+            self.detB=np.sqrt(self.B[0]**2+self.B[1]**2)
         else:
             raise NotImplementedError("MappingQ1: wrong type of mesh was given to constructor!")
 
@@ -74,31 +87,73 @@ class MappingQ1(Mapping):
             3:lambda x,y: 0.25*(1-x)*(1+y)
             }[i](x,y)
    
-    def F(self,X,tind=None):
+    def F(self,Y,tind=None):
         """Mapping defined by Q1 basis."""
         out={}
-        out[0]=np.outer(self.p[0,self.t[0,:]],self.quadbasis(X[0,:],X[1,:],0))+\
-               np.outer(self.p[0,self.t[1,:]],self.quadbasis(X[0,:],X[1,:],1))+\
-               np.outer(self.p[0,self.t[2,:]],self.quadbasis(X[0,:],X[1,:],2))+\
-               np.outer(self.p[0,self.t[3,:]],self.quadbasis(X[0,:],X[1,:],3))
-        out[1]=np.outer(self.p[1,self.t[0,:]],self.quadbasis(X[0,:],X[1,:],0))+\
-               np.outer(self.p[1,self.t[1,:]],self.quadbasis(X[0,:],X[1,:],1))+\
-               np.outer(self.p[1,self.t[2,:]],self.quadbasis(X[0,:],X[1,:],2))+\
-               np.outer(self.p[1,self.t[3,:]],self.quadbasis(X[0,:],X[1,:],3))
+
+        if not isinstance(Y,dict):
+            X={}
+            X[0]=Y[0,:]
+            X[1]=Y[1,:]
+        else:
+            X=Y
+            
+        if tind is None:
+            tind=range(self.t.shape[1])
+
+        out[0]=self.p[0,self.t[0,tind]][:,None]*self.quadbasis(X[0],X[1],0)+\
+               self.p[0,self.t[1,tind]][:,None]*self.quadbasis(X[0],X[1],1)+\
+               self.p[0,self.t[2,tind]][:,None]*self.quadbasis(X[0],X[1],2)+\
+               self.p[0,self.t[3,tind]][:,None]*self.quadbasis(X[0],X[1],3)
+        out[1]=self.p[1,self.t[0,tind]][:,None]*self.quadbasis(X[0],X[1],0)+\
+               self.p[1,self.t[1,tind]][:,None]*self.quadbasis(X[0],X[1],1)+\
+               self.p[1,self.t[2,tind]][:,None]*self.quadbasis(X[0],X[1],2)+\
+               self.p[1,self.t[3,tind]][:,None]*self.quadbasis(X[0],X[1],3)     
+        
+        #out[0]=np.outer(self.p[0,self.t[0,:]],self.quadbasis(X[0,:],X[1,:],0))+\
+        #       np.outer(self.p[0,self.t[1,:]],self.quadbasis(X[0,:],X[1,:],1))+\
+        #       np.outer(self.p[0,self.t[2,:]],self.quadbasis(X[0,:],X[1,:],2))+\
+        #       np.outer(self.p[0,self.t[3,:]],self.quadbasis(X[0,:],X[1,:],3))
+        #out[1]=np.outer(self.p[1,self.t[0,:]],self.quadbasis(X[0,:],X[1,:],0))+\
+        #       np.outer(self.p[1,self.t[1,:]],self.quadbasis(X[0,:],X[1,:],1))+\
+        #       np.outer(self.p[1,self.t[2,:]],self.quadbasis(X[0,:],X[1,:],2))+\
+        #       np.outer(self.p[1,self.t[3,:]],self.quadbasis(X[0,:],X[1,:],3))
 
         return out
         
+    def invF(self,x,tind=None):
+        """Inverse map. Perform Newton iteration."""
+        X={}
+        X[0]=0*x[0]
+        X[1]=0*x[1]
+        for itr in range(1): # One Newton iteration. Should be enough?
+            g={}
+            F=self.F(X,tind)
+            invDF=self.invDF(X,tind)
+            g[0]=x[0]-F[0]
+            g[1]=x[1]-F[1]
+            xnext={}
+            xnext[0]=X[0]+invDF[0][0]*g[0]+invDF[0][1]*g[1]
+            xnext[1]=X[1]+invDF[1][0]*g[0]+invDF[1][1]*g[1]
+            
+        #print xnext[0]
+        return xnext
+            
+        
     def detDF(self,X,tind=None):
+        if tind is None:
+            tind=range(self.t.shape[1])
         if isinstance(X,dict):
-            detDF=self.J[0][0](X[0],X[1])*self.J[1][1](X[0],X[1])-\
-                  self.J[0][1](X[0],X[1])*self.J[1][0](X[0],X[1]) 
+            detDF=self.J[0][0](X[0],X[1],tind)*self.J[1][1](X[0],X[1],tind)-\
+                  self.J[0][1](X[0],X[1],tind)*self.J[1][0](X[0],X[1],tind) 
         else:
-            detDF=self.J[0][0](X[0,:],X[1,:])*self.J[1][1](X[0,:],X[1,:])-\
-                  self.J[0][1](X[0,:],X[1,:])*self.J[1][0](X[0,:],X[1,:])          
-        if tind is not None:
-            return detDF[tind,:]
-        else:
-            return detDF
+            detDF=self.J[0][0](X[0,:],X[1,:],tind)*self.J[1][1](X[0,:],X[1,:],tind)-\
+                  self.J[0][1](X[0,:],X[1,:],tind)*self.J[1][0](X[0,:],X[1,:],tind)
+        return detDF
+        #if tind is not None:
+        #    return detDF[tind,:]
+        #else:
+        #    return detDF
             
     def invDF(self,X,tind=None):
         invJ={0:{},1:{}}
@@ -108,21 +163,37 @@ class MappingQ1(Mapping):
         else:
             x=X[0,:]
             y=X[1,:]
-        
-        if tind is None:        
-            detDF=self.detDF(X)
-            invJ[0][0]=self.J[1][1](x,y)/detDF
-            invJ[0][1]=-self.J[0][1](x,y)/detDF
-            invJ[1][0]=-self.J[1][0](x,y)/detDF
-            invJ[1][1]=self.J[0][0](x,y)/detDF
-        else:
-            detDF=self.detDF(X)[tind,:]
-            invJ[0][0]=self.J[1][1](x,y)[tind,:]/detDF
-            invJ[0][1]=-self.J[0][1](x,y)[tind,:]/detDF
-            invJ[1][0]=-self.J[1][0](x,y)[tind,:]/detDF
-            invJ[1][1]=self.J[0][0](x,y)[tind,:]/detDF
+            
+        if tind is None:
+            tind=range(self.t.shape[1])
+                
+        detDF=self.detDF(X,tind)
+        invJ[0][0]=self.J[1][1](x,y,tind)/detDF
+        invJ[0][1]=-self.J[0][1](x,y,tind)/detDF
+        invJ[1][0]=-self.J[1][0](x,y,tind)/detDF
+        invJ[1][1]=self.J[0][0](x,y,tind)/detDF
         
         return invJ
+        
+    def G(self,X,find=None):
+        """Boundary mapping G(X)=Bx+c."""
+        y={}
+        if find is None:
+            y[0]=np.outer(self.B[0],X).T+self.c[0]
+            y[1]=np.outer(self.B[1],X).T+self.c[1]
+        else:
+            y[0]=np.outer(self.B[0][find],X).T+self.c[0][find]
+            y[1]=np.outer(self.B[1][find],X).T+self.c[1][find]
+        y[0]=y[0].T
+        y[1]=y[1].T
+        return y
+        
+    def detDG(self,X,find=None):
+        if find is None:
+            detDG=self.detB
+        else:
+            detDG=self.detB[find]
+        return np.tile(detDG,(X.shape[1],1)).T
 
 class MappingAffine(Mapping):
     """Affine mappings for simplex (=line,tri,tet) mesh."""

@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 """
-Created on Tue Nov 17 11:44:11 2015
-
 @author: knl
 """
 
@@ -26,8 +24,8 @@ m.jiggle()
 m.draw()
 
 qmap=fmap.MappingQ1
-e1=felem.ElementQ1()
-e2=felem.ElementP0()
+e1=felem.ElementQ2()
+e2=felem.ElementQ1()
 
 # Q2-Q1 for Stokes
 a=fasm.AssemblerElement(m,qmap,e1)

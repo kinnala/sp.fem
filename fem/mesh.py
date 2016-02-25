@@ -145,7 +145,7 @@ class MeshQuad(Mesh):
 
     def plot3(self,z,smooth=False):
         """Visualize nodal function (3d i.e. three axes)."""
-        m=self.splitquads()
+        m,z=self.splitquads(z)
         return m.plot3(z,smooth)
 
     def jiggle(self,z=None):
