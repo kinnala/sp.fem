@@ -10,6 +10,105 @@ import fem.mapping as fmap
 import fem.element as felem
 import matplotlib.pyplot as plt
 
+class AssemblerElementQ1Q2Test(unittest.TestCase):
+    """Test first and second-order quadrilateral elements
+    and their facet assembly."""
+    def runTest(self):
+
+        def U(x):
+            return 1+x[0]-x[0]**2*x[1]**2+np.exp(x[0])
+        
+        def dUdx(x):
+            return 1-2*x[0]*x[1]**2+np.exp(x[0])
+        
+        def dUdy(x):
+            return -2*x[0]**2*x[1]
+        
+        def dudv(du,dv):
+            return du[0]*dv[0]+du[1]*dv[1]
+        
+        def uv(u,v):
+            return u*v
+        
+        def F(x,y):
+            return 2*x**2+2*y**2-np.exp(x)
+        
+        def fv(v,x):
+            return F(x[0],x[1])*v
+        
+        def G(x,y):
+            return (x==1)*(3-3*y**2+2*np.exp(1))+\
+                    (x==0)*(0)+\
+                    (y==1)*(1+x-3*x**2+np.exp(x))+\
+                    (y==0)*(1+x+np.exp(x))
+        
+        def gv(v,x):
+            return G(x[0],x[1])*v
+        
+        dexact={}
+        dexact[0]=dUdx
+        dexact[1]=dUdy
+        
+        # Q1
+        hs=np.array([])
+        H1errs=np.array([])
+        L2errs=np.array([])
+        
+        mesh=fmsh.MeshQuad()
+        
+        for itr in range(3):
+            mesh.refine()
+        
+            a=fasm.AssemblerElement(mesh,fmap.MappingQ1,felem.ElementQ1())
+        
+            A=a.iasm(dudv)
+            f=a.iasm(fv)
+        
+            B=a.fasm(uv)
+            g=a.fasm(gv)
+        
+            u=np.zeros(a.dofnum_u.N)
+            u=scipy.sparse.linalg.spsolve(A+B,f+g)
+        
+        
+            hs=np.append(hs,mesh.param())
+            L2errs=np.append(L2errs,a.L2error(u,U))
+            H1errs=np.append(H1errs,a.H1error(u,dexact))
+        
+        pfit=np.polyfit(np.log10(hs),np.log10(np.sqrt(L2errs**2+H1errs**2)),1)
+        self.assertTrue(pfit[0]>=0.95)
+        self.assertTrue(pfit[0]<=1.05)
+        
+        # Q2
+        hs=np.array([])
+        H1errs=np.array([])
+        L2errs=np.array([])        
+        
+        mesh=fmsh.MeshQuad()
+        
+        for itr in range(3):
+            mesh.refine()
+        
+            a=fasm.AssemblerElement(mesh,fmap.MappingQ1,felem.ElementQ2())
+        
+            A=a.iasm(dudv)
+            f=a.iasm(fv)
+        
+            B=a.fasm(uv)
+            g=a.fasm(gv)
+        
+            u=np.zeros(a.dofnum_u.N)
+            u=scipy.sparse.linalg.spsolve(A+B,f+g)
+        
+        
+            hs=np.append(hs,mesh.param())
+            L2errs=np.append(L2errs,a.L2error(u,U))
+            H1errs=np.append(H1errs,a.H1error(u,dexact))
+        
+        pfit=np.polyfit(np.log10(hs),np.log10(np.sqrt(L2errs**2+H1errs**2)),1)
+        self.assertTrue(pfit[0]>=1.95)
+        self.assertTrue(pfit[0]<=2.05)
+
 class AssemblerElementTriPpTest(unittest.TestCase):
     """Test triangular h-refinement with various p.
     Also test facet assembly."""
@@ -55,7 +154,7 @@ class AssemblerElementTriPpTest(unittest.TestCase):
 
         for p in range(1,4):
             mesh=fmsh.MeshTri()
-            mesh.refine(2)
+            mesh.refine(1)
             hs[p-1]=np.array([])
             H1errs[p-1]=np.array([])
             L2errs[p-1]=np.array([])
