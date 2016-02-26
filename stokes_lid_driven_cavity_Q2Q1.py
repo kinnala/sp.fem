@@ -19,13 +19,13 @@ plt.close('all')
 
 m=fmsh.MeshQuad()
 m.refine(5)
-m.jiggle()
+#m.jiggle()
 #m.refine(1)
 m.draw()
 
 qmap=fmap.MappingQ1
-e1=felem.ElementQ2()
-e2=felem.ElementQ1()
+e1=felem.ElementQ1()
+e2=felem.ElementP0()
 
 # Q2-Q1 for Stokes
 a=fasm.AssemblerElement(m,qmap,e1)
@@ -49,7 +49,7 @@ Ip=np.arange(b.dofnum_v.N,dtype=np.int64)+2*a.dofnum_u.N
 A=a.iasm(dudv,intorder=4)
 B1=b.iasm(duxv,intorder=4)
 B2=b.iasm(duyv,intorder=4)
-Z1=spsp.csr_matrix(A.shape)
+Z1=sp.csr_matrix(A.shape)
 #C=spsp.csr_matrix((len(Ip),len(Ip)))
 C=c.iasm(lambda u,v: 1e-5*u*v)
 

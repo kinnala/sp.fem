@@ -102,7 +102,7 @@ class MeshQuad(Mesh):
             self.single_refine()
 
     def single_refine(self):
-        """Perform a single mesh refine."""
+        """Perform a single mesh refine that halves 'h'."""
         # rename variables
         t=self.t
         p=self.p
@@ -116,7 +116,7 @@ class MeshQuad(Mesh):
         newp2=0.25*np.vstack((p[0,t[0,:]]+p[0,t[1,:]]+p[0,t[2,:]]+p[0,t[3,:]],\
                               p[1,t[0,:]]+p[1,t[1,:]]+p[1,t[2,:]]+p[1,t[3,:]]))
         newp=np.hstack((p,newp1,newp2))
-        # build new triangle definitions
+        # build new quadrilateral definitions
         newt=np.vstack((t[0,:],t2f[0,:],mid,t2f[3,:]))
         newt=np.hstack((newt,np.vstack((t2f[0,:],t[1,:],t2f[1,:],mid))))
         newt=np.hstack((newt,np.vstack((mid,t2f[1,:],t[2,:],t2f[2,:]))))
