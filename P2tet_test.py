@@ -15,6 +15,7 @@ import matplotlib.pyplot as plt
 import copy       
 import fem.element as felem
 import fem.mapping as fmap
+import fem.solvers as fsol
 
 plt.close('all')
 
@@ -62,32 +63,31 @@ hs=np.array([])
 H1err=np.array([])
 L2err=np.array([])
 
-for itr in range(1,4):
-    mesh=fmsh.MeshTet()
-    mesh.refine(itr)
+mesh=fmsh.MeshTet()
+mesh.refine(5)
 
-    a=fasm.AssemblerElement(mesh,fmap.MappingAffine,felem.ElementTetP2())
+a=fasm.AssemblerElement(mesh,fmap.MappingAffine,felem.ElementTetP2())
 
-    A=a.iasm(dudv)
-    f=a.iasm(fv)
+A=a.iasm(dudv)
+f=a.iasm(fv)
 
-    B=a.fasm(uv)
-    g=a.fasm(gv)
+B=a.fasm(uv)
+g=a.fasm(gv)
 
-    u=np.zeros(a.dofnum_u.N)
+u=np.zeros(a.dofnum_u.N)
 
-    u=scipy.sparse.linalg.spsolve(A+B,f+g)
+u=fsol.cg(A+B,f+g,1e-7,200)
 
-    p={}
-    p[0]=mesh.p[0,:]
-    p[1]=mesh.p[1,:]
-    p[2]=mesh.p[2,:]
+p={}
+p[0]=mesh.p[0,:]
+p[1]=mesh.p[1,:]
+p[2]=mesh.p[2,:]
 
-    hs=np.append(hs,mesh.param())
-    L2err=np.append(L2err,a.L2error(u,U))
-    H1err=np.append(H1err,a.H1error(u,dexact))
+hs=np.append(hs,mesh.param())
+L2err=np.append(L2err,a.L2error(u,U))
+H1err=np.append(H1err,a.H1error(u,dexact))
 
-mesh.draw(lambda x,y,z:x<=0.5,u[range(mesh.p.shape[1])])
+#mesh.draw(lambda x,y,z:x<=0.5,u[range(mesh.p.shape[1])])
 print mesh.param()
 print L2err
 print H1err

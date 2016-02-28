@@ -27,7 +27,6 @@ The code is initially (c) Tom Gustafsson but the license will change in the futu
 
 ### Possibly breaking changes (solve first)
 
-* Edge dof's in 3D elements (i.e. tetra+P2) and corresponding changes in Dofnum
 * Implement ElementHdiv (mostly to check consistency of Element and Mapping interfaces for arbitrary elements)
 * Implement ElementHcurl
 * Orientation of global facets/edges for better flexibility.
