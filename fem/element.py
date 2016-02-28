@@ -328,6 +328,67 @@ class ElementMini(ElementH1):
                 3:lambda x,y: (1-x-y)*x-x*y
                 }[i](X[0],X[1])
         return phi,dphi
+        
+class ElementTetP2(ElementH1):
+    
+    n_dofs=1
+    e_dofs=1
+    maxdeg=2
+    
+    def lbasis(self,X,i):
+        
+        phi={
+                0:lambda x,y,z: 1. - 3.*x + 2.*x**2 - 3.*y + 4.*x*y + 2.*y**2 - 3.*z + 4.*x*z + 4.*y*z + 2.*z**2,
+                1:lambda x,y,z: 0. - 1.*z + 2.*z**2,
+                2:lambda x,y,z: 0. - 1.*y + 2.*y**2,
+                3:lambda x,y,z: 0. - 1.*x + 2.*x**2,
+                4:lambda x,y,z: 0. + 4.*x - 4.*x**2 - 4.*x*y - 4.*x*z,
+                5:lambda x,y,z: 0. + 4.*y - 4.*x*y - 4.*y**2 - 4.*y*z,
+                6:lambda x,y,z: 0. + 4.*z - 4.*x*z - 4.*y*z - 4.*z**2,
+                7:lambda x,y,z: 0. + 4.*x*y,
+                8:lambda x,y,z: 0. + 4.*x*z,
+                9:lambda x,y,z: 0. + 4.*y*z,
+                }[i](X[0],X[1],X[2])
+    
+        dphi={}
+        dphi[0]={
+                0:lambda x,y,z: -3. + 4.*x + 4.*y + 4.*z,
+                1:lambda x,y,z: 0.*x,
+                2:lambda x,y,z: 0.*x,
+                3:lambda x,y,z: -1. + 4.*x,
+                4:lambda x,y,z: 4. - 8.*x - 4.*y - 4.*z,
+                5:lambda x,y,z: -4.*y,
+                6:lambda x,y,z: -4.*z,
+                7:lambda x,y,z: 4.*y,
+                8:lambda x,y,z: 4.*z,
+                9:lambda x,y,z: 0.*x,
+                }[i](X[0],X[1],X[2])
+        dphi[1]={
+                0:lambda x,y,z: -3. + 4.*x + 4.*y + 4.*z,
+                1:lambda x,y,z: 0.*x,
+                2:lambda x,y,z: -1. + 4.*y,
+                3:lambda x,y,z: 0.*x,
+                4:lambda x,y,z: -4.*x,
+                5:lambda x,y,z: 4. - 4.*x - 8.*y - 4.*z,
+                6:lambda x,y,z: -4.*z,
+                7:lambda x,y,z: 4.*x,
+                8:lambda x,y,z: 0.*x,
+                9:lambda x,y,z: 4.*z,
+                }[i](X[0],X[1],X[2])
+        dphi[2]={
+                0:lambda x,y,z: -3. + 4.*x + 4.*y + 4.*z,
+                1:lambda x,y,z: -1. + 4.*z,
+                2:lambda x,y,z: 0.*x,
+                3:lambda x,y,z: 0.*x,
+                4:lambda x,y,z: -4.*x,
+                5:lambda x,y,z: -4.*y,
+                6:lambda x,y,z: 4. - 4.*x - 4.*y - 8.*z,
+                7:lambda x,y,z: 0.*x,
+                8:lambda x,y,z: 4.*x,
+                9:lambda x,y,z: 4.*y,        
+                }[i](X[0],X[1],X[2])
+                
+        return phi,dphi
 
 class ElementP1(ElementH1):
     

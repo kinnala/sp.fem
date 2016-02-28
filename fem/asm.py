@@ -356,6 +356,9 @@ class Dofnum():
     def __init__(self,mesh,element):
         self.n_dof=np.reshape(np.arange(element.n_dofs*mesh.p.shape[1],dtype=np.int64),(element.n_dofs,mesh.p.shape[1]),order='F')
         offset=element.n_dofs*mesh.p.shape[1]
+        if hasattr(mesh,'edges'): # 3d mesh
+            self.e_dof=np.reshape(np.arange(element.e_dofs*mesh.edges.shape[1],dtype=np.int64),(element.e_dofs,mesh.edges.shape[1]),order='F')
+            offset=element.e_dofs*mesh.edges.shape[1]
         self.f_dof=np.reshape(np.arange(element.f_dofs*mesh.facets.shape[1],dtype=np.int64),(element.f_dofs,mesh.facets.shape[1]),order='F')+offset
         offset=offset+element.f_dofs*mesh.facets.shape[1]
         self.i_dof=np.reshape(np.arange(element.i_dofs*mesh.t.shape[1],dtype=np.int64),(element.i_dofs,mesh.t.shape[1]),order='F')+offset
@@ -363,9 +366,16 @@ class Dofnum():
         # global numbering
         self.t_dof=np.zeros((0,mesh.t.shape[1]),dtype=np.int64)
         
+        # nodal dofs
         for itr in range(mesh.t.shape[0]):
             self.t_dof=np.vstack((self.t_dof,self.n_dof[:,mesh.t[itr,:]]))
         
+        # edge dofs (if 3D)
+        if hasattr(mesh,'edges'):
+            for itr in range(mesh.t2e.shape[0]):
+                self.t_dof=np.vstack((self.t_dof,self.e_dof[:,mesh.t2e[itr,:]]))
+
+        # facet dofs (TODO if 2D or 3D)        
         for itr in range(mesh.t2f.shape[0]):
             self.t_dof=np.vstack((self.t_dof,self.f_dof[:,mesh.t2f[itr,:]]))
         
