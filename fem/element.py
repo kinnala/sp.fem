@@ -389,6 +389,69 @@ class ElementTetP2(ElementH1):
                 }[i](X[0],X[1],X[2])
                 
         return phi,dphi
+        
+class ElementTriP1(ElementH1):
+    n_dofs=1
+    dim=2
+    maxdeg=1
+    
+    def lbasis(self,X,i):
+        phi={
+            0:lambda x,y: 1-x-y,
+            1:lambda x,y: x,
+            2:lambda x,y: y
+            }[i](X[0],X[1])
+
+        dphi={}
+        dphi[0]={
+                0:lambda x,y: -1+0*x,
+                1:lambda x,y: 1+0*x,
+                2:lambda x,y: 0*x
+                }[i](X[0],X[1])
+        dphi[1]={
+                0:lambda x,y: -1+0*x,
+                1:lambda x,y: 0*x,
+                2:lambda x,y: 1+0*x
+                }[i](X[0],X[1])
+                
+        return phi,dphi
+        
+class ElementTetP1(ElementH1):
+    
+    n_dofs=1
+    maxdeg=1
+    dim=3
+
+    def lbasis(self,X,i):
+
+        phi={
+            0:lambda x,y,z: 1-x-y-z,
+            1:lambda x,y,z: x,
+            2:lambda x,y,z: y,
+            3:lambda x,y,z: z,
+            }[i](X[0],X[1],X[2])
+
+        dphi={}
+        dphi[0]={
+                0:lambda x,y,z: -1+0*x,
+                1:lambda x,y,z: 1+0*x,
+                2:lambda x,y,z: 0*x,
+                3:lambda x,y,z: 0*x
+                }[i](X[0],X[1],X[2])
+        dphi[1]={
+                0:lambda x,y,z: -1+0*x,
+                1:lambda x,y,z: 0*x,
+                2:lambda x,y,z: 1+0*x,
+                3:lambda x,y,z: 0*x
+                }[i](X[0],X[1],X[2])
+        dphi[2]={
+                0:lambda x,y,z: -1+0*x,
+                1:lambda x,y,z: 0*x,
+                2:lambda x,y,z: 0*x,
+                3:lambda x,y,z: 1+0*x
+                }[i](X[0],X[1],X[2])
+
+        return phi,dphi
 
 class ElementP1(ElementH1):
     
