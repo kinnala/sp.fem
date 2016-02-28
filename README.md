@@ -25,14 +25,34 @@ The code is initially (c) Tom Gustafsson but the license will change in the futu
 
 ## TODO list
 
-* Interpolation in AssemblerTriP1.fasm
-* Tests for AssemblerElement (both interior and facet assembly)
-* Tests for MeshTet
+### Possibly breaking changes (solve first)
+
+* Edge dof's in 3D elements (i.e. tetra+P2) and corresponding changes in Dofnum
 * Implement ElementHdiv (mostly to check consistency of Element and Mapping interfaces for arbitrary elements)
+* Implement ElementHcurl
+* Orientation of global facets/edges for better flexibility.
+* Composition of elements for multiple scalar equations: vectorial, sum of elements
+
+### First things after fixing breaking changes
+
+* Adding more test cases, documentation, guards + speed tests.
+* Adaptive 2D triangle meshing.
+
+### Other ideas
+
+* Assemblies on subsets of elements
+* Interpolation in assembly
+* Normal vectors in facet assemblies
+* Adding optimization flags to AssemblyElement (e.g. disable computation of ddu)
+* Adding more test cases, documentation, guards + speed tests.
+* Tetgen support and adaptive meshing.
+* Loading of various mesh formats (GMSH, Comsol) in platform independent way
+* Plotting cross sections in MeshTet.
+* Better way of setting boundary conditions, current fetching of indices from Dofnum is horrible
+* Better way of defining complex weak forms (idea: class WeakForm which is "compiled" to a simple function handle for use)
 * MeshLine and some 1D element. For example, Euler-Bernoulli beam element and ElementH2 (or ElementGlobal)
 * Geometry for extrusion of 2D meshes to 3D meshes (mesh with TetGen maybe?)
 * Geometry for rotation of 2D meshes/geometries to 3D meshes
-* Documentation with Doxygen
 
 ## Running tests
 
