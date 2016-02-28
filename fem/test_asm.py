@@ -256,7 +256,7 @@ class AssemblerElementTetP1Test(unittest.TestCase):
             H1err=np.append(H1err,a.H1error(u,dexact))
 
         pfit=np.polyfit(np.log10(hs),np.log10(np.sqrt(L2err**2+H1err**2)),1)
-
+        
         # check that the convergence rate matches theory
         self.assertTrue(pfit[0]>=1)
 

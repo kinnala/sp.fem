@@ -62,9 +62,9 @@ hs=np.array([])
 H1err=np.array([])
 L2err=np.array([])
 
-for itr in range(1):
+for itr in range(1,4):
     mesh=fmsh.MeshTet()
-    mesh.refine(2)
+    mesh.refine(itr)
 
     a=fasm.AssemblerElement(mesh,fmap.MappingAffine,felem.ElementTetP2())
 
@@ -88,5 +88,8 @@ for itr in range(1):
     H1err=np.append(H1err,a.H1error(u,dexact))
 
 mesh.draw(lambda x,y,z:x<=0.5,u[range(mesh.p.shape[1])])
+print mesh.param()
+print L2err
+print H1err
 
 #pfit=np.polyfit(np.log10(hs),np.log10(np.sqrt(L2err**2+H1err**2)),1)

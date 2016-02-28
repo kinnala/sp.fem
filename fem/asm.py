@@ -357,8 +357,8 @@ class Dofnum():
         self.n_dof=np.reshape(np.arange(element.n_dofs*mesh.p.shape[1],dtype=np.int64),(element.n_dofs,mesh.p.shape[1]),order='F')
         offset=element.n_dofs*mesh.p.shape[1]
         if hasattr(mesh,'edges'): # 3d mesh
-            self.e_dof=np.reshape(np.arange(element.e_dofs*mesh.edges.shape[1],dtype=np.int64),(element.e_dofs,mesh.edges.shape[1]),order='F')
-            offset=element.e_dofs*mesh.edges.shape[1]
+            self.e_dof=np.reshape(np.arange(element.e_dofs*mesh.edges.shape[1],dtype=np.int64),(element.e_dofs,mesh.edges.shape[1]),order='F')+offset
+            offset=offset+element.e_dofs*mesh.edges.shape[1]
         self.f_dof=np.reshape(np.arange(element.f_dofs*mesh.facets.shape[1],dtype=np.int64),(element.f_dofs,mesh.facets.shape[1]),order='F')+offset
         offset=offset+element.f_dofs*mesh.facets.shape[1]
         self.i_dof=np.reshape(np.arange(element.i_dofs*mesh.t.shape[1],dtype=np.int64),(element.i_dofs,mesh.t.shape[1]),order='F')+offset
