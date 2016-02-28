@@ -299,12 +299,10 @@ class ElementP0(ElementH1):
         return phi,dphi
 
             
-class ElementMini(ElementH1):
+class ElementTriMini(ElementH1):
     n_dofs=1
     i_dofs=1
     max_deg=3
-
-    # TODO could implement for 3D as well?
 
     def lbasis(self,X,i):
         phi={
