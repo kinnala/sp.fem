@@ -29,6 +29,57 @@ class Element:
         """Returns global basis functions evaluated at some local points."""
         raise NotImplementedError("Element.gbasis: local basis (lbasis) not implemented!")
 
+class ElementHdiv(Element):
+    """Hdiv conforming finite element."""
+
+    def gbasis(self,mapping,X,i,tind):
+        if isinstance(X,dict):
+            raise NotImplementedError("Calling ElementHdiv gbasis with dict not implemented!")
+        else:
+            x={}
+            x[0]=X[0,:]
+            x[1]=X[1,:]
+            [phi,dphi]=self.lbasis(x,i)
+
+        DF=mapping.DF(X,tind)
+        detDF=mapping.detDF(X,tind)
+
+        u={}
+        u[0]=(DF[0][0]*phi[0]+DF[0][1]*phi[1])/detDF
+        u[1]=(DF[1][0]*phi[0]+DF[1][1]*phi[1])/detDF
+
+        du=dphi/detDF
+
+        ddu=None
+
+        return u,du,ddu
+
+class ElementTriRT0(ElementHdiv):
+    """Lowest order Raviart-Thomas element for triangle."""
+
+    maxdeg=1
+    f_dofs=1
+
+    def lbasis(self,X,i):
+        phi={}
+        phi[0]={
+                0:lambda x,y: x,
+                1:lambda x,y: x,
+                2:lambda x,y: -x+1.,
+                }[i](X[0],X[1])
+        phi[1]={
+                0:lambda x,y: y-1.,
+                1:lambda x,y: y,
+                2:lambda x,y: -y,
+                }[i](X[0],X[1])
+        dphi={
+            0:lambda x,y: 2+0.*x,
+            1:lambda x,y: 2+0.*x,
+            2:lambda x,y: -2+0.*x,
+            }[i](X[0],X[1])
+
+        return phi,dphi
+
 class ElementH1(Element):
     """H1 conforming finite element."""
 

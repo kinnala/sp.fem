@@ -404,6 +404,49 @@ class MappingAffine(Mapping):
         else:
             raise NotImplementedError("MappingAffine.G: given dimension not implemented yet!")
         return y
+
+    def DF(self,X,tind=None):
+        A=copy.deepcopy(self.A)
+        
+        if isinstance(X,dict):
+            N=X[0].shape[1]
+        else:
+            N=X.shape[1]
+        
+        if self.dim==2:
+            if tind is None: # TODO did not test
+                A[0][0]=np.tile(A[0][0],(N,1)).T
+                A[0][1]=np.tile(A[0][1],(N,1)).T
+                A[1][0]=np.tile(A[1][0],(N,1)).T
+                A[1][1]=np.tile(A[1][1],(N,1)).T
+            else:
+                A[0][0]=np.tile(A[0][0][tind],(N,1)).T
+                A[0][1]=np.tile(A[0][1][tind],(N,1)).T
+                A[1][0]=np.tile(A[1][0][tind],(N,1)).T
+                A[1][1]=np.tile(A[1][1][tind],(N,1)).T
+        if self.dim==3:
+            if tind is None: # TODO did not test
+                A[0][0]=np.tile(A[0][0],(N,1)).T
+                A[0][1]=np.tile(A[0][1],(N,1)).T
+                A[0][2]=np.tile(A[0][2],(N,1)).T
+                A[1][0]=np.tile(A[1][0],(N,1)).T
+                A[1][1]=np.tile(A[1][1],(N,1)).T
+                A[1][2]=np.tile(A[1][2],(N,1)).T
+                A[2][0]=np.tile(A[2][0],(N,1)).T
+                A[2][1]=np.tile(A[2][1],(N,1)).T
+                A[2][2]=np.tile(A[2][2],(N,1)).T
+            else:
+                A[0][0]=np.tile(A[0][0][tind],(N,1)).T
+                A[0][1]=np.tile(A[0][1][tind],(N,1)).T
+                A[0][2]=np.tile(A[0][2][tind],(N,1)).T
+                A[1][0]=np.tile(A[1][0][tind],(N,1)).T
+                A[1][1]=np.tile(A[1][1][tind],(N,1)).T
+                A[1][2]=np.tile(A[1][2][tind],(N,1)).T
+                A[2][0]=np.tile(A[2][0][tind],(N,1)).T
+                A[2][1]=np.tile(A[2][1][tind],(N,1)).T
+                A[2][2]=np.tile(A[2][2][tind],(N,1)).T           
+                
+        return A
         
     def detDF(self,X,tind=None):
         if tind is None:
