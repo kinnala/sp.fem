@@ -30,6 +30,43 @@ class Mesh:
 
     def plot(self):
         raise NotImplementedError("Mesh.plot() not implemented!")
+        
+class MeshLine(Mesh):
+    """One-dimensional mesh."""
+    refdom="line"
+    brefdom="point"
+    
+    def __init__(self,p=np.array([[0,1]]),\
+                      t=np.array([[0],[1]])):
+        self.p=p
+        self.t=t
+        # self.build_mappings()
+        
+    def refine(self,N=1):
+        """Perform one or more refines on the mesh."""
+        for itr in range(N):
+            self.single_refine()
+
+    def single_refine(self):
+        """Perform a single mesh refine that halves 'h'."""
+        # rename variables
+        t=self.t
+        p=self.p
+
+        mid=range(self.t.shape[1])+np.max(t2f)+1
+        # new vertices are the midpoints of edges ...
+        newp=np.hstack((p,0.5*(p[0,self.t[0,:]]+p[0,self.t[1,:]])))
+        newt=np.hstack((t,))
+        # build new quadrilateral definitions
+        newt=np.vstack((t[0,:],t2f[0,:],mid,t2f[3,:]))
+        newt=np.hstack((newt,np.vstack((t2f[0,:],t[1,:],t2f[1,:],mid))))
+        newt=np.hstack((newt,np.vstack((mid,t2f[1,:],t[2,:],t2f[2,:]))))
+        newt=np.hstack((newt,np.vstack((t2f[3,:],mid,t2f[2,:],t[3,:]))))
+        # update fields
+        self.p=newp
+        self.t=newt
+
+        self.build_mappings()
 
 class MeshQuad(Mesh):
     """Quadrilateral mesh."""
