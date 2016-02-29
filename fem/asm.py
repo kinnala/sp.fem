@@ -321,7 +321,9 @@ class AssemblerElement(Assembler):
         # assemble some helper matrices
         # the idea is to use the identity: (u-uh,u-uh)=(u,u)+(uh,uh)-2(u,uh)
         def uv(du,dv):
-            if len(du)==2:
+            if not isinstance(du,dict):
+                return du*dv
+            elif len(du)==2:
                 return du[0]*dv[0]+du[1]*dv[1]
             elif len(du)==3:
                 return du[0]*dv[0]+du[1]*dv[1]+du[2]*dv[2]
@@ -329,7 +331,9 @@ class AssemblerElement(Assembler):
                 raise NotImplementedError("AssemblerElement.H1error: not implemented for current domain dimension!")
     
         def fv(dv,x):
-            if len(x)==2:
+            if not isinstance(x,dict):
+                return dexact(x)*dv
+            elif len(x)==2:
                 return dexact[0](x)*dv[0]+dexact[1](x)*dv[1]
             elif len(x)==3:
                 return dexact[0](x)*dv[0]+dexact[1](x)*dv[1]+dexact[2](x)*dv[2]
@@ -342,7 +346,9 @@ class AssemblerElement(Assembler):
         detDF=self.mapping.detDF(X)
         x=self.mapping.F(X)
         
-        if len(x)==2:
+        if not isinstance(x,dict):
+            uu=np.sum(np.dot((dexact(x)**2)*np.abs(detDF),W))
+        elif len(x)==2:
             uu=np.sum(np.dot((dexact[0](x)**2+dexact[1](x)**2)*np.abs(detDF),W))
         elif len(x)==3:
             uu=np.sum(np.dot((dexact[0](x)**2+dexact[1](x)**2+dexact[2](x)**2)*np.abs(detDF),W))
@@ -359,8 +365,9 @@ class Dofnum():
         if hasattr(mesh,'edges'): # 3d mesh
             self.e_dof=np.reshape(np.arange(element.e_dofs*mesh.edges.shape[1],dtype=np.int64),(element.e_dofs,mesh.edges.shape[1]),order='F')+offset
             offset=offset+element.e_dofs*mesh.edges.shape[1]
-        self.f_dof=np.reshape(np.arange(element.f_dofs*mesh.facets.shape[1],dtype=np.int64),(element.f_dofs,mesh.facets.shape[1]),order='F')+offset
-        offset=offset+element.f_dofs*mesh.facets.shape[1]
+        if hasattr(mesh,'facets'): # 2d or 3d mesh
+            self.f_dof=np.reshape(np.arange(element.f_dofs*mesh.facets.shape[1],dtype=np.int64),(element.f_dofs,mesh.facets.shape[1]),order='F')+offset
+            offset=offset+element.f_dofs*mesh.facets.shape[1]
         self.i_dof=np.reshape(np.arange(element.i_dofs*mesh.t.shape[1],dtype=np.int64),(element.i_dofs,mesh.t.shape[1]),order='F')+offset
         
         # global numbering
@@ -375,9 +382,10 @@ class Dofnum():
             for itr in range(mesh.t2e.shape[0]):
                 self.t_dof=np.vstack((self.t_dof,self.e_dof[:,mesh.t2e[itr,:]]))
 
-        # facet dofs (TODO if 2D or 3D)        
-        for itr in range(mesh.t2f.shape[0]):
-            self.t_dof=np.vstack((self.t_dof,self.f_dof[:,mesh.t2f[itr,:]]))
+        # facet dofs (if 2D or 3D)
+        if hasattr(mesh,'facets'):      
+            for itr in range(mesh.t2f.shape[0]):
+                self.t_dof=np.vstack((self.t_dof,self.f_dof[:,mesh.t2f[itr,:]]))
         
         self.t_dof=np.vstack((self.t_dof,self.i_dof))
         

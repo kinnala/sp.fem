@@ -100,8 +100,10 @@ class ElementH1(Element):
             du={}
             
         invDF=mapping.invDF(X,tind) # investigate if 'x' should used after else
-            
-        if mapping.dim==2:
+
+        if mapping.dim==1:
+            du=np.outer(invDF,dphi)
+        elif mapping.dim==2:
             du[0]=invDF[0][0]*dphi[0]+invDF[1][0]*dphi[1]
             du[1]=invDF[0][1]*dphi[0]+invDF[1][1]*dphi[1]
         elif mapping.dim==3:
@@ -438,6 +440,25 @@ class ElementTetP2(ElementH1):
                 }[i](X[0],X[1],X[2])
                 
         return phi,dphi
+        
+class ElementLineP1(ElementH1):
+    n_dofs=1
+    dim=1
+    maxdeg=1
+    
+    def lbasis(self,X,i):
+        phi={
+            0:lambda x: 1-x,
+            1:lambda x: x,
+            }[i](X[0])
+
+        dphi={}
+        dphi={
+                0:lambda x: -1+0*x,
+                1:lambda x: 1+0*x,
+                }[i](X[0])
+                
+        return phi,dphi        
         
 class ElementTriP1(ElementH1):
     n_dofs=1

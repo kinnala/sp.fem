@@ -198,7 +198,17 @@ class MappingQ1(Mapping):
 class MappingAffine(Mapping):
     """Affine mappings for simplex (=line,tri,tet) mesh."""
     def __init__(self,mesh):
-        if isinstance(mesh,fem.mesh.MeshTri):
+        if isinstance(mesh,fem.mesh.MeshLine):
+            self.dim=1
+            
+            self.A=mesh.p[0,mesh.t[1,:]]-mesh.p[0,mesh.t[0,:]]
+            self.b=mesh.p[0,mesh.t[0,:]]
+            
+            self.detA=self.A
+            
+            self.invA=1.0/self.A
+          
+        elif isinstance(mesh,fem.mesh.MeshTri):
             self.dim=2            
             
             self.A={0:{},1:{}}
@@ -301,7 +311,10 @@ class MappingAffine(Mapping):
     def F(self,X,tind=None):
         """Affine map F(X)=AX+b."""
         y={}
-        if self.dim==2:
+        if self.dim==1:
+            y=np.outer(self.A,X[0,:]).T+self.b
+            y=y.T
+        elif self.dim==2:
             if tind is None:
                 y[0]=np.outer(self.A[0][0],X[0,:]).T+np.outer(self.A[0][1],X[1,:]).T+self.b[0]
                 y[1]=np.outer(self.A[1][0],X[0,:]).T+np.outer(self.A[1][1],X[1,:]).T+self.b[1]
@@ -481,7 +494,7 @@ class MappingAffine(Mapping):
                 invA[0][1]=np.tile(invA[0][1][tind],(N,1)).T
                 invA[1][0]=np.tile(invA[1][0][tind],(N,1)).T
                 invA[1][1]=np.tile(invA[1][1][tind],(N,1)).T
-        if self.dim==3:
+        elif self.dim==3:
             if tind is None: # TODO did not test
                 invA[0][0]=np.tile(invA[0][0],(N,1)).T
                 invA[0][1]=np.tile(invA[0][1],(N,1)).T

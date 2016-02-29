@@ -53,20 +53,32 @@ class MeshLine(Mesh):
         t=self.t
         p=self.p
 
-        mid=range(self.t.shape[1])+np.max(t2f)+1
-        # new vertices are the midpoints of edges ...
-        newp=np.hstack((p,0.5*(p[0,self.t[0,:]]+p[0,self.t[1,:]])))
-        newt=np.hstack((t,))
-        # build new quadrilateral definitions
-        newt=np.vstack((t[0,:],t2f[0,:],mid,t2f[3,:]))
-        newt=np.hstack((newt,np.vstack((t2f[0,:],t[1,:],t2f[1,:],mid))))
-        newt=np.hstack((newt,np.vstack((mid,t2f[1,:],t[2,:],t2f[2,:]))))
-        newt=np.hstack((newt,np.vstack((t2f[3,:],mid,t2f[2,:],t[3,:]))))
+        mid=range(self.t.shape[1])+np.max(t)+1
+        # new vertices and elements
+        newp=np.hstack((p,0.5*(p[:,self.t[0,:]]+p[:,self.t[1,:]])))
+        newt=np.vstack((t[0,:],mid))
+        newt=np.hstack((newt,np.vstack((mid,t[1,:]))))
         # update fields
         self.p=newp
         self.t=newt
 
-        self.build_mappings()
+        #self.build_mappings()
+
+    def plot(self,u,color='ko-'):
+        """Plot a function defined on the nodes of the mesh."""
+        plt.figure()
+        #plt.plot(self.p[0,:],u,color)
+        
+        xs=[]
+        ys=[]
+        for y1,y2,s,t in zip(u[self.t[0,:]],u[self.t[1,:]],self.p[0,self.t[0,:]],self.p[0,self.t[1,:]]):
+            xs.append(s)
+            xs.append(t)
+            xs.append(None)
+            ys.append(y1)
+            ys.append(y2)
+            ys.append(None)
+        plt.plot(xs,ys,color)
 
 class MeshQuad(Mesh):
     """Quadrilateral mesh."""
