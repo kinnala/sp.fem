@@ -10,6 +10,68 @@ import fem.mapping as fmap
 import fem.element as felem
 import matplotlib.pyplot as plt
 
+class AssemblerElementTriRT0Test(unittest.TestCase):
+    """Test first-order Raviart-Thomas element."""
+    def runTest(self):
+        mesh=fmsh.MeshTri()
+        mesh.refine(2)
+        
+        a=fasm.AssemblerElement(mesh,fmap.MappingAffine,felem.ElementTriRT0())
+        b=fasm.AssemblerElement(mesh,fmap.MappingAffine,felem.ElementTriRT0(),felem.ElementP0())
+        c=fasm.AssemblerElement(mesh,fmap.MappingAffine,felem.ElementP0())
+        
+        def sigtau(u,v):
+            sig=u
+            tau=v
+            return sig[0]*tau[0]+sig[1]*tau[1]
+        
+        def divsigv(du,v):
+            divsig=du
+            return divsig*v
+        
+        def fv(v,x):
+            return 2*np.pi**2*np.sin(np.pi*x[0])*np.sin(np.pi*x[1])*v
+        
+        def uv(u,v):
+            return u*v
+            
+        def exact(x):
+            return np.sin(np.pi*x[0])*np.sin(np.pi*x[1])
+        
+        hs=np.array([])
+        L2err=np.array([])
+            
+        for itr in range(1,4):
+            mesh.refine()
+            a=fasm.AssemblerElement(mesh,fmap.MappingAffine,felem.ElementTriRT0())
+            b=fasm.AssemblerElement(mesh,fmap.MappingAffine,felem.ElementTriRT0(),felem.ElementP0())
+            c=fasm.AssemblerElement(mesh,fmap.MappingAffine,felem.ElementP0())
+            
+            A=a.iasm(sigtau)
+            B=b.iasm(divsigv)
+            C=c.iasm(uv)
+            f=c.iasm(fv)
+        
+            K1=spsp.hstack((-A,-B.T))
+            K2=spsp.hstack((-B,0*C))
+            K=spsp.vstack((K1,K2)).tocsr()
+            
+            F=np.hstack((np.zeros(A.shape[0]),f))
+            
+            u=np.zeros(a.dofnum_u.N+c.dofnum_u.N)
+            
+            u=scipy.sparse.linalg.spsolve(K,F)
+            
+            Iu=np.arange(C.shape[0],dtype=np.int64)+A.shape[0]
+            
+            hs=np.append(hs,mesh.param())
+            L2err=np.append(L2err,c.L2error(u[Iu],exact))
+    
+    
+        pfit=np.polyfit(np.log10(hs),np.log10(L2err),1)
+        self.assertTrue(pfit[0]>=0.95)
+        self.assertTrue(pfit[0]<=1.15)
+
 class AssemblerElementTetP2Test(unittest.TestCase):
     """Test second order tetrahedral element and facet
     assembly."""

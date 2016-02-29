@@ -17,7 +17,7 @@ import fem.element as felem
 import fem.mapping as fmap
 
 mesh=fmsh.MeshTri()
-mesh.refine(4)
+mesh.refine(6)
 
 a=fasm.AssemblerElement(mesh,fmap.MappingAffine,felem.ElementTriRT0())
 b=fasm.AssemblerElement(mesh,fmap.MappingAffine,felem.ElementTriRT0(),felem.ElementP0())
