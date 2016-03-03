@@ -332,6 +332,14 @@ class ElementTriPp(ElementH1):
 
         raise IndexError("ElementTriPp.lbasis: reached end of lbasis without returning anything.")
 
+class ElementTriDG(ElementH1):
+    def __init__(self,elem):
+        # change all dofs to interior dofs
+        self.elem=elem
+        self.i_dofs=3*elem.n_dofs+3*elem.f_dofs+elem.i_dofs
+    def lbasis(self,X,i):
+        return self.elem.lbasis(X,i)
+
 class ElementP0(ElementH1):
     i_dofs=1
     max_deg=1

@@ -19,15 +19,13 @@ plt.close('all')
 
 m=fmsh.MeshQuad()
 m.refine(5)
-#m.jiggle()
-#m.refine(1)
+m.jiggle()
 m.draw()
 
 qmap=fmap.MappingQ1
-e1=felem.ElementQ1()
-e2=felem.ElementP0()
+e1=felem.ElementQ2()
+e2=felem.ElementTriDG(felem.ElementTriP1())
 
-# Q2-Q1 for Stokes
 a=fasm.AssemblerElement(m,qmap,e1)
 b=fasm.AssemblerElement(m,qmap,e1,e2)
 c=fasm.AssemblerElement(m,qmap,e2)
@@ -43,7 +41,10 @@ def duyv(du,v):
 
 Iv1=a.dofnum_u.n_dof.flatten()
 Iv2=a.dofnum_u.n_dof.flatten()+a.dofnum_u.N  
-Ip=np.arange(b.dofnum_v.N,dtype=np.int64)+2*a.dofnum_u.N    
+Ip=c.dofnum_u.t_dof.flatten()+2*a.dofnum_u.N
+Ip1=c.dofnum_u.i_dof[0,:]+2*a.dofnum_u.N
+Ip2=c.dofnum_u.i_dof[1,:]+2*a.dofnum_u.N
+Ip3=c.dofnum_u.i_dof[2,:]+2*a.dofnum_u.N
 
 # assemble matrices
 A=a.iasm(dudv,intorder=4)
@@ -82,4 +83,4 @@ u[I]=scipy.sparse.linalg.spsolve(K[I].T[I].T,f[I])
 
 m.plot(u[Iv1],smooth=True)
 m.plot(u[Iv2],smooth=True)
-m.plot(u[Ip])
+m.plot((u[Ip1]+u[Ip2]+u[Ip3])/3.)
