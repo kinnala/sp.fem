@@ -1,4 +1,4 @@
-## \example example_asm_poisson.py
+## \example examples_poisson.py
 #
 # In the following example we solve the Poisson equation in a three-dimensional
 # box domain \f$\Omega=[0,1]^3\f$. We construct a simple manufactured solution
@@ -37,3 +37,8 @@
 # \f[
 #   \|u-u_h\|_{H^1(\Omega)} \leq C h^k |u|_2.
 # \f]
+# The code can be tested by starting `ipython --pylab` and running the following commands
+#
+#     import fem.examples_poisson
+#     t=fem.examples_poisson.ExamplePoisson()
+#     t.runTest(verbose=True)
