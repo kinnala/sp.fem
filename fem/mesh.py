@@ -5,6 +5,7 @@ Tools for various finite element meshes.
 Try the following subclasses of Mesh:
     * MeshTri
     * MeshTet
+    * MeshQuad
 
 @author: Tom Gustafsson
 """

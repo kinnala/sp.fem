@@ -344,8 +344,6 @@ class ElementP0(ElementH1):
     i_dofs=1
     max_deg=1
 
-    # TODO could implement for 3D and Quads as well?
-
     def lbasis(self,X,i):
         phi={
             0:lambda x,y: 1+0*x
@@ -530,67 +528,4 @@ class ElementTetP1(ElementH1):
                 }[i](X[0],X[1],X[2])
 
         return phi,dphi
-
-class ElementP1(ElementH1):
-    
-    n_dofs=1
-    maxdeg=1
-    
-    def __init__(self,dim=2):
-        self.dim=dim
-        # TODO remove initialization with dim. Deduce dim from input X in lbasis
-
-    def lbasis(self,X,i):
-        # TODO implement for 1D
-
-        if self.dim==2:
-            phi={
-                0:lambda x,y: 1-x-y,
-                1:lambda x,y: x,
-                2:lambda x,y: y
-                }[i](X[0],X[1])
-    
-            dphi={}
-            dphi[0]={
-                    0:lambda x,y: -1+0*x,
-                    1:lambda x,y: 1+0*x,
-                    2:lambda x,y: 0*x
-                    }[i](X[0],X[1])
-            dphi[1]={
-                    0:lambda x,y: -1+0*x,
-                    1:lambda x,y: 0*x,
-                    2:lambda x,y: 1+0*x
-                    }[i](X[0],X[1])
-        elif self.dim==3:
-            phi={
-                0:lambda x,y,z: 1-x-y-z,
-                1:lambda x,y,z: x,
-                2:lambda x,y,z: y,
-                3:lambda x,y,z: z,
-                }[i](X[0],X[1],X[2])
-    
-            dphi={}
-            dphi[0]={
-                    0:lambda x,y,z: -1+0*x,
-                    1:lambda x,y,z: 1+0*x,
-                    2:lambda x,y,z: 0*x,
-                    3:lambda x,y,z: 0*x
-                    }[i](X[0],X[1],X[2])
-            dphi[1]={
-                    0:lambda x,y,z: -1+0*x,
-                    1:lambda x,y,z: 0*x,
-                    2:lambda x,y,z: 1+0*x,
-                    3:lambda x,y,z: 0*x
-                    }[i](X[0],X[1],X[2])
-            dphi[2]={
-                    0:lambda x,y,z: -1+0*x,
-                    1:lambda x,y,z: 0*x,
-                    2:lambda x,y,z: 0*x,
-                    3:lambda x,y,z: 1+0*x
-                    }[i](X[0],X[1],X[2])
-        else:
-            raise NotImplementedError("ElementP1.lbasis: not implemented for the given X.shape[0].")
-
-        return phi,dphi
-
 

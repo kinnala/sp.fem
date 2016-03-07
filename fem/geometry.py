@@ -14,7 +14,7 @@ class Geometry:
     def mesh(self):
         raise NotImplementedError("Geometry mesher not implemented!")
 
-class GeometryPSLG2D(Geometry):
+class GeometryTriangle2D(Geometry):
     """A geometry defined by PSLG (planar straight line graph).
 
     PSLG's can be meshed using Triangle.
@@ -274,29 +274,3 @@ class GeometryPSLG2D(Geometry):
         self.markers=fixedmarkers
 
         return fem.mesh.MeshTri(p,t)
-
-class GeometryMeshTriComsol(Geometry):
-    """A geometry defined by a triangular mesh in COMSOL *.mphtext format."""
-
-    p=np.empty([2,0],dtype=np.float_)
-    t=np.empty([3,0],dtype=np.intp)
-
-    def __init__(self,filename):
-        # TODO make this multiplatform
-        if platform.system()!="Linux":
-            raise NotImplementedError("GeometryMeshTriComsol: Loading Comsol meshes not supported on this platform!")
-        os.system("csplit "+filename+" '/^# Mesh point coordinates/' > /dev/null")
-        os.system("mv xx01 tmp.fem")
-        os.system("csplit tmp.fem '/^# Elements/' > /dev/null")
-        os.system("mv xx00 vertices.fem")
-        os.system("mv xx01 elements.fem")
-        os.system("csplit elements.fem '/^$/' > /dev/null")
-        os.system("rm elements.fem")
-        os.system("mv xx00 elements.fem")
-        os.system("csplit vertices.fem '/^$/' > /dev/null")
-        os.system("rm vertices.fem")
-        os.system("mv xx00 vertices.fem")
-        t=np.loadtxt('elements.fem',dtype=np.int64).T
-        p=np.loadtxt('vertices.fem').T
-        self.p=p
-        self.t=t
