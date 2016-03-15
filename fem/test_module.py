@@ -378,7 +378,7 @@ class TetP1Test(unittest.TestCase):
             mesh=fmsh.MeshTet()
             mesh.refine(itr)
 
-            a=fasm.AssemblerElement(mesh,fmap.MappingAffine,felem.ElementP1(3))
+            a=fasm.AssemblerElement(mesh,fmap.MappingAffine,felem.ElementTetP1())
 
             A=a.iasm(dudv)
             f=a.iasm(fv)
@@ -403,3 +403,62 @@ class TetP1Test(unittest.TestCase):
         
         # check that the convergence rate matches theory
         self.assertTrue(pfit[0]>=1)
+
+class AssemblerTriP1Nitsche(unittest.TestCase):
+    """Solve Poisson with Nitsche approximating Dirichlet BC."""
+    def runTest(self):
+        mesh=fmsh.MeshTri()
+        mesh.refine(2)
+
+        def G(x,y):
+            return x**3*np.sin(20.0*y)
+
+        def U(x):
+            return G(x[0],x[1])
+
+        def dUdx(x):
+            return 3.0*x[0]**2*np.sin(20.0*x[1])
+
+        def dUdy(x):
+            return 20.0*x[0]**3*np.cos(20.0*x[1])
+
+        dU={0:dUdx,1:dUdy}
+
+        def dudv(du,dv):
+            return du[0]*dv[0]+du[1]*dv[1]
+            
+        gamma=100
+
+        def uv(u,v,du,dv,x,h,n):
+            return gamma*1/h*u*v-du[0]*n[0]*v-du[1]*n[1]*v-u*dv[0]*n[0]-u*dv[1]*n[1]
+            
+        def fv(v,dv,x):
+            return (-6.0*x[0]*np.sin(20.0*x[1])+400.0*x[0]**3*np.sin(20.0*x[1]))*v
+            
+        def gv(v,dv,x,h,n):
+            return G(x[0],x[1])*v+gamma*1/h*G(x[0],x[1])*v-dv[0]*n[0]*G(x[0],x[1])-dv[1]*n[1]*G(x[0],x[1])
+
+        hs=np.array([])
+        errs=np.array([])
+
+        for itr in range(4):
+            mesh.refine()
+            a=fasm.AssemblerElement(mesh,fmap.MappingAffine,felem.ElementTriP1())
+            D=mesh.boundary_nodes()
+            I=mesh.interior_nodes()
+
+            K=a.iasm(dudv)
+            B=a.fasm(uv,normals=True)
+            f=a.iasm(fv)
+            g=a.fasm(gv,normals=True)
+
+            x=np.zeros(K.shape[0])
+            x=spsolve(K+B,f+g)
+
+            hs=np.append(hs,mesh.param())
+            errs=np.append(errs,np.sqrt(a.L2error(x,U)**2+a.H1error(x,dU)**2))
+
+        pfit=np.polyfit(np.log10(hs),np.log10(errs),1)
+        
+        # check that the convergence rate matches theory
+        self.assertTrue(pfit[0]>=0.99)

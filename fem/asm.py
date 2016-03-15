@@ -59,6 +59,12 @@ class Assembler:
         elif len(oldargs)==8:
             def newform(*x):
                 return oldform(x[y[0]],x[y[1]],x[y[2]],x[y[3]],x[y[4]],x[y[5]],x[y[6]],x[y[7]])
+        elif len(oldargs)==9:
+            def newform(*x):
+                return oldform(x[y[0]],x[y[1]],x[y[2]],x[y[3]],x[y[4]],x[y[5]],x[y[6]],x[y[7]],x[y[8]])
+        elif len(oldargs)==10:
+            def newform(*x):
+                return oldform(x[y[0]],x[y[1]],x[y[2]],x[y[3]],x[y[4]],x[y[5]],x[y[6]],x[y[7]],x[y[8]],x[y[9]])
         else:
             raise NotImplementedError("Assembler.fillargs: the maximum number of arguments reached")
 
@@ -68,8 +74,9 @@ class AssemblerElement(Assembler):
     """A quasi-fast assembler for arbitrary element/mesh/mapping."""
     def __init__(self,mesh,mapping,elem_u,elem_v=None):
         # TODO check consistency between (mesh,mapping,elem)
+        # TODO add fallback to default mapping as given by mesh
         if not isinstance(elem_u,fem.element.Element):
-            raise Exception("AssemblerElement: elem_u must be an instace of Element!")
+            raise Exception("AssemblerElement: elem_u must be an instance of Element!")
 
         self.mapping=mapping(mesh)
         self.mesh=mesh
@@ -84,7 +91,7 @@ class AssemblerElement(Assembler):
             self.elem_v=elem_v
             self.dofnum_v=Dofnum(mesh,elem_v)
      
-    def iasm(self,form,intorder=None,tind=None):
+    def iasm(self,form,intorder=None,tind=None,interp=None):
         """Interior assembly."""
         nt=self.mesh.t.shape[1]
         if tind is None:
@@ -96,13 +103,10 @@ class AssemblerElement(Assembler):
         # check and fix parameters of form
         oldparams=inspect.getargspec(form).args
         if 'u' in oldparams or 'du' in oldparams:
-            # TODO get these from element (maybe): L2 elems have only u,v etc.
-            paramlist=['u','v','du','dv','ddu','ddv','x']
-            #paramlist=['u','v','du','dv','x','h']
+            paramlist=['u','v','du','dv','ddu','ddv','x','w','h']
             bilinear=True
         else:
-            paramlist=['v','dv','ddv','x']
-            #paramlist=['v','dv','x','h']
+            paramlist=['v','dv','ddv','x','w','h']
             bilinear=False
         fform=self.fillargs(form,paramlist)
         
@@ -119,7 +123,19 @@ class AssemblerElement(Assembler):
         Nbfun_u=self.dofnum_u.t_dof.shape[0]
         Nbfun_v=self.dofnum_v.t_dof.shape[0]  
 
-        #TODO think about precomputing [u,du,ddu] in inner loop MAKE OPTIONAL FLAG FOR OPTIMIZATION
+        # interpolate some previous discrete function at quadrature points
+        w={}
+        if interp is not None:
+            for k in interp:
+                w[k]=0.0*x[0]
+                for j in range(Nbfun_u):
+                    phi,_=self.elem_u.lbasis(X,j)
+                    w[k]=w[k]+np.outer(interp[k][self.dofnum_u.t_dof[j,:]],phi)
+
+        # compute the mesh parameter from jacobian determinant
+        h=np.abs(detDF)**(1.0/self.mesh.dim())
+
+        # TODO think about precomputing [u,du,ddu] in inner loop MAKE OPTIONAL FLAG FOR OPTIMIZATION
         
         # bilinear form
         if bilinear:
@@ -137,7 +153,7 @@ class AssemblerElement(Assembler):
                     ixs=slice(nt*(Nbfun_v*j+i),nt*(Nbfun_v*j+i+1))
                     
                     # compute entries of local stiffness matrices
-                    data[ixs]=np.dot(fform(u,v,du,dv,ddu,ddv,x)*np.abs(detDF),W)
+                    data[ixs]=np.dot(fform(u,v,du,dv,ddu,ddv,x,w,h)*np.abs(detDF),W)
                     rows[ixs]=self.dofnum_v.t_dof[i,:]
                     cols[ixs]=self.dofnum_u.t_dof[j,:]
         
@@ -156,13 +172,13 @@ class AssemblerElement(Assembler):
                 ixs=slice(nt*i,nt*(i+1))
                 
                 # compute entries of local stiffness matrices
-                data[ixs]=np.dot(fform(v,dv,ddv,x)*np.abs(detDF),W)
+                data[ixs]=np.dot(fform(v,dv,ddv,x,w,h)*np.abs(detDF),W)
                 rows[ixs]=self.dofnum_v.t_dof[i,:]
                 cols[ixs]=np.zeros(nt)
         
             return coo_matrix((data,(rows,cols)),shape=(self.dofnum_v.N,1)).toarray().T[0]
             
-    def fasm(self,form,find=None,intorder=None): # TODO fix and test
+    def fasm(self,form,find=None,intorder=None,normals=False): # TODO fix and test
         """Facet assembly on all exterior facets."""
         if find is None:
             find=self.mesh.boundary_facets()
@@ -176,11 +192,11 @@ class AssemblerElement(Assembler):
         # check and fix parameters of form
         oldparams=inspect.getargspec(form).args
         if 'u' in oldparams or 'du' in oldparams:
-            paramlist=['u','v','du','dv','x']
+            paramlist=['u','v','du','dv','x','h','n']
             #paramlist=['u','v','du','dv','x','h','n','w']
             bilinear=True
         else:
-            paramlist=['v','dv','x']
+            paramlist=['v','dv','x','h','n']
             #paramlist=['v','dv','x','h','n','w']
             bilinear=False
         fform=self.fillargs(form,paramlist)
@@ -199,45 +215,18 @@ class AssemblerElement(Assembler):
         Nbfun_v=self.dofnum_v.t_dof.shape[0] 
 
         detDG=self.mapping.detDG(X,find)        
-        
-#        # tangent vectors
-#        t={}
-#        t[0]=self.mesh.p[0,self.mesh.facets[0,find]]-self.mesh.p[0,self.mesh.facets[1,find]]
-#        t[1]=self.mesh.p[1,self.mesh.facets[0,find]]-self.mesh.p[1,self.mesh.facets[1,find]]
-#        
-#        # normalize tangent vectors
-#        tlen=np.sqrt(t[0]**2+t[1]**2)
-#        t[0]/=tlen
-#        t[1]/=tlen
-#        
-#        # normal vectors
-#        n={}
-#        n[0]=-t[1]
-#        n[1]=t[0]
-#
-#        # map normal vectors to reference coords to correct sign (outward normals wanted)
-#        n_ref={}
-#        n_ref[0]=self.invA[0][0][tind]*n[0]+self.invA[1][0][tind]*n[1]
-#        n_ref[1]=self.invA[0][1][tind]*n[0]+self.invA[1][1][tind]*n[1]
-#        
-#        # change the sign of the following normal vectors
-#        meps=np.finfo(float).eps
-#        csgn=np.nonzero((n_ref[0]<0)*(n_ref[1]<0)+\
-#                        (n_ref[0]>0)*(n_ref[1]<meps)*(n_ref[1]>-meps)+\
-#                        (n_ref[0]<meps)*(n_ref[0]>-meps)*(n_ref[1]>0))[0]
-#        n[0][csgn]=(-1.)*(n[0][csgn])
-#        n[1][csgn]=(-1.)*(n[1][csgn])
-#        
-#        n[0]=np.tile(n[0][:,None],(1,W.shape[0]))
-#        n[1]=np.tile(n[1][:,None],(1,W.shape[0]))
-#
-#        if w is not None:
-#            w1=phi[0](Y[0],Y[1])*w[self.mesh.t[0,tind][:,None]]+\
-#               phi[1](Y[0],Y[1])*w[self.mesh.t[1,tind][:,None]]+\
-#               phi[2](Y[0],Y[1])*w[self.mesh.t[2,tind][:,None]]
-#        else:
-#            w1=None
 
+        # compute normal vectors
+        n={}
+        if normals:
+            n=self.mapping.normals(X,tind,find,self.mesh.t2f)
+
+        # compute the mesh parameter from jacobian determinant
+        if self.mesh.dim()>=1.0:
+            h=np.abs(detDG)**(1.0/(self.mesh.dim()-1.0))
+        else: # exception for 1D mesh
+            h=None
+        
         # bilinear form
         if bilinear:
             # initialize sparse matrix structures
@@ -254,11 +243,9 @@ class AssemblerElement(Assembler):
                     ixs=slice(ne*(Nbfun_v*j+i),ne*(Nbfun_v*j+i+1))
                     
                     # compute entries of local stiffness matrices
-                    data[ixs]=np.dot(fform(u,v,du,dv,x)*np.abs(detDG),W)
+                    data[ixs]=np.dot(fform(u,v,du,dv,x,h,n)*np.abs(detDG),W)
                     rows[ixs]=self.dofnum_v.t_dof[i,tind]
                     cols[ixs]=self.dofnum_u.t_dof[j,tind]
-                    #rows[ixs]=self.mesh.t[i,tind]
-                    #cols[ixs]=self.mesh.t[j,tind]
         
             return coo_matrix((data,(rows,cols)),shape=(self.dofnum_v.N,self.dofnum_u.N)).tocsr()
         # linear form
@@ -275,9 +262,8 @@ class AssemblerElement(Assembler):
                 ixs=slice(ne*i,ne*(i+1))
                 
                 # compute entries of local stiffness matrices
-                data[ixs]=np.dot(fform(v,dv,x)*np.abs(detDG),W)
+                data[ixs]=np.dot(fform(v,dv,x,h,n)*np.abs(detDG),W)
                 rows[ixs]=self.dofnum_v.t_dof[i,tind]
-                #rows[ixs]=self.mesh.t[i,tind]
                 cols[ixs]=np.zeros(ne)
         
             return coo_matrix((data,(rows,cols)),shape=(self.dofnum_v.N,1)).toarray().T[0]

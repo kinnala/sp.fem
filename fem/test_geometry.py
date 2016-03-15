@@ -2,11 +2,11 @@ import unittest
 import fem.geometry as fegeom
 import numpy as np
 
-class GeometryPSLG2DMeshABoxTest(unittest.TestCase):
+class GeometryTriangle2DMeshABoxTest(unittest.TestCase):
     """Check that a mesh with correct mesh parameter is given by
-    the GeometryPSLG2D.mesh() method."""
+    the GeometryTriangle2D.mesh() method."""
     def runTest(self):
-        g=fegeom.GeometryPSLG2D()
+        g=fegeom.GeometryTriangle2D()
         g.add_rectangle()
 
         for itr in [0.1,0.05,0.01]:
@@ -20,10 +20,10 @@ class GeometryPSLG2DMeshABoxTest(unittest.TestCase):
             # because default maximum angle is 20
             self.assertTrue(np.max(dl)/2.*np.sqrt(0.36397023426)<=itr)
 
-class GeometryPSLG2DMeshWithHole(unittest.TestCase):
+class GeometryTriangle2DMeshWithHole(unittest.TestCase):
     """Mesh a box with a circular hole."""
     def runTest(self):
-        g=fegeom.GeometryPSLG2D()
+        g=fegeom.GeometryTriangle2D()
         g.add_rectangle(x=-1,y=-1,width=2,height=2)
         g.add_circle(r=0.5,nodes=np.linspace(0,2*np.pi,20))
         g.add_hole((0.0,0.0))
@@ -35,11 +35,11 @@ class GeometryPSLG2DMeshWithHole(unittest.TestCase):
         self.assertTrue(np.all(mesh.p[0,:]**2+mesh.p[1,:]**2>=0.49**2))
 
 
-class GeometryPSLG2DTriangleMarkerTest(unittest.TestCase):
+class GeometryTriangle2DTriangleMarkerTest(unittest.TestCase):
     """Create multiple regions and holes and check that all
     triangles are covered by the markers."""
     def runTest(self):
-        g=fegeom.GeometryPSLG2D()
+        g=fegeom.GeometryTriangle2D()
         g.add_rectangle()
         g.add_circle((0.25,0.25),0.1,marker='bl')
         g.add_circle((0.75,0.75),0.1,marker='ur')

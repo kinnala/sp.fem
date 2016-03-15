@@ -31,6 +31,9 @@ class Mesh:
 
     def plot(self):
         raise NotImplementedError("Mesh.plot() not implemented!")
+
+    def dim(self):
+        return float(self.p.shape[0])
         
 class MeshLine(Mesh):
     """One-dimensional mesh."""

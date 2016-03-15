@@ -36,6 +36,9 @@ class Mapping:
     def detDG(self,X,find):
         raise NotImplementedError("Mapping.detDG() not implemented!")
 
+    def normals(self,X,find):
+        raise NotImplementedError("Mapping.normals() not implemented!")
+
 class MappingQ1(Mapping):
     """Mapping for quadrilaterals."""
     
@@ -474,6 +477,35 @@ class MappingAffine(Mapping):
         else:
             detDG=self.detB[find]
         return np.tile(detDG,(X.shape[1],1)).T
+
+    def normals(self,X,tind,find,t2f):
+        n={}
+        if self.dim==2:
+            nref=np.array([[0,-1],[1,1],[1,0]])
+            invDF=self.invDF(X,tind)
+
+            # initialize n to zero
+            maxfind=np.max(t2f)
+            n[0]=np.zeros(maxfind) # of size Nfacets x Nqp
+            n[1]=np.zeros(maxfind)
+
+            # compute all normals
+            for itr in range(3):
+                inds=t2f[itr,tind]
+                n[0][inds]=invDF[0][0]*nref[itr,0]+invDF[1][0]*nref[itr,1]
+                n[1][inds]=invDF[0][1]*nref[itr,0]+invDF[1][1]*nref[itr,1]
+
+            # normalize
+            nlen=np.sqrt(n[0]**2+n[1]**2)
+
+            # shrink to required facets and tile
+            n[0]=np.tile(n[0][find]/nlen[find],(X.shape[1],1)).T
+            n[1]=np.tile(n[1][find]/nlen[find],(X.shape[1],1)).T
+
+        else:
+            raise NotImplementedError("MappingAffine.normals() not implemented for the used mesh type.")
+
+        return n # n[0] etc. are of size Nfacets x Nqp
         
     def invDF(self,X,tind=None):
         invA=copy.deepcopy(self.invA)
