@@ -29,7 +29,7 @@ The author and the code of sp.fem has strongly been influenced by the finite ele
 ## Installation: Windows 
 
 1. Install Anaconda
-3. triangle.exe is already found under ./fem/triangle/
+2. triangle.exe is already found under ./fem/triangle/
 
 ## Documentation
 
