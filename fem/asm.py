@@ -72,13 +72,17 @@ class Assembler:
 
 class AssemblerElement(Assembler):
     """A quasi-fast assembler for arbitrary element/mesh/mapping."""
-    def __init__(self,mesh,mapping,elem_u,elem_v=None):
+    def __init__(self,mesh,elem_u,elem_v=None,mapping=None):
         # TODO check consistency between (mesh,mapping,elem)
-        # TODO add fallback to default mapping as given by mesh
         if not isinstance(elem_u,fem.element.Element):
             raise Exception("AssemblerElement: elem_u must be an instance of Element!")
 
-        self.mapping=mapping(mesh)
+        # get default mapping from the mesh or initialize the given
+        if mapping is None:
+            self.mapping=mesh.mapping()
+        else:
+            self.mapping=mapping # assumes an already initialized mapping
+
         self.mesh=mesh
 
         self.elem_u=elem_u
@@ -177,6 +181,8 @@ class AssemblerElement(Assembler):
                 cols[ixs]=np.zeros(nt)
         
             return coo_matrix((data,(rows,cols)),shape=(self.dofnum_v.N,1)).toarray().T[0]
+
+    # TODO add ifasm (interior facet assembly) for DG methods etc.
             
     def fasm(self,form,find=None,intorder=None,normals=False): # TODO fix and test
         """Facet assembly on all exterior facets."""
@@ -205,7 +211,6 @@ class AssemblerElement(Assembler):
         
         # boundary element indices
         tind=self.mesh.f2t[0,find]
-        #h=np.tile(np.sqrt(np.abs(self.detB[tind,None])),(1,W.shape[0]))
 
         # mappings
         x=self.mapping.G(X,find=find) # reference facet to global facet

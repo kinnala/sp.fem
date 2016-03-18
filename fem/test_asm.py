@@ -36,7 +36,7 @@ class AssemblerTriP1Poisson(AssemblerTriP1BasicTest):
         bilin=lambda u,v,du,dv,x,h: du[0]*dv[0]+du[1]*dv[1]
         lin=lambda v,dv,x,h: 1*v
 
-        a=fasm.AssemblerElement(self.mesh,fmap.MappingAffine,felem.ElementTriP1())
+        a=fasm.AssemblerElement(self.mesh,felem.ElementTriP1())
 
         A=a.iasm(bilin)
         f=a.iasm(lin)
@@ -56,7 +56,7 @@ class AssemblerTriP1AnalyticWithXY(AssemblerTriP1BasicTest):
         I=self.I
         D=self.D
 
-        a=fasm.AssemblerElement(self.mesh,fmap.MappingAffine,felem.ElementTriP1())
+        a=fasm.AssemblerElement(self.mesh,felem.ElementTriP1())
 
         def dudv(du,dv):
             return du[0]*dv[0]+du[1]*dv[1]
@@ -85,7 +85,7 @@ class AssemblerTriP1FullPoisson(AssemblerTriP1BasicTest):
         F=lambda x,y: 100.0*((x>=0.4)&(x<=0.6)&(y>=0.4)&(y<=0.6))
         G=lambda x,y: (y==0)*1.0+(y==1)*(-1.0)
 
-        a=fasm.AssemblerElement(self.mesh,fmap.MappingAffine,felem.ElementTriP1())
+        a=fasm.AssemblerElement(self.mesh,felem.ElementTriP1())
 
         dudv=lambda du,dv: du[0]*dv[0]+du[1]*dv[1]
         K=a.iasm(dudv)
@@ -111,7 +111,7 @@ class AssemblerTriP1Interp(AssemblerTriP1BasicTest):
     """Compare A*u with f(u) for some u, where A is the mass matrix and f(u)=(u,v)."""
     def runTest(self):
         mesh=self.mesh
-        a=fasm.AssemblerElement(self.mesh,fmap.MappingAffine,felem.ElementTriP1())
+        a=fasm.AssemblerElement(self.mesh,felem.ElementTriP1())
         D=self.D
         I=self.I
 

@@ -21,9 +21,9 @@ class RT0Test(unittest.TestCase):
         mesh=fmsh.MeshTri()
         mesh.refine(2)
         
-        a=fasm.AssemblerElement(mesh,fmap.MappingAffine,felem.ElementTriRT0())
-        b=fasm.AssemblerElement(mesh,fmap.MappingAffine,felem.ElementTriRT0(),felem.ElementP0())
-        c=fasm.AssemblerElement(mesh,fmap.MappingAffine,felem.ElementP0())
+        a=fasm.AssemblerElement(mesh,felem.ElementTriRT0())
+        b=fasm.AssemblerElement(mesh,felem.ElementTriRT0(),felem.ElementP0())
+        c=fasm.AssemblerElement(mesh,felem.ElementP0())
         
         def sigtau(u,v):
             sig=u
@@ -48,9 +48,9 @@ class RT0Test(unittest.TestCase):
             
         for itr in range(1,4):
             mesh.refine()
-            a=fasm.AssemblerElement(mesh,fmap.MappingAffine,felem.ElementTriRT0())
-            b=fasm.AssemblerElement(mesh,fmap.MappingAffine,felem.ElementTriRT0(),felem.ElementP0())
-            c=fasm.AssemblerElement(mesh,fmap.MappingAffine,felem.ElementP0())
+            a=fasm.AssemblerElement(mesh,felem.ElementTriRT0())
+            b=fasm.AssemblerElement(mesh,felem.ElementTriRT0(),felem.ElementP0())
+            c=fasm.AssemblerElement(mesh,felem.ElementP0())
             
             A=a.iasm(sigtau)
             B=b.iasm(divsigv)
@@ -130,7 +130,7 @@ class TetP2Test(unittest.TestCase):
             mesh=fmsh.MeshTet()
             mesh.refine(itr)
         
-            a=fasm.AssemblerElement(mesh,fmap.MappingAffine,felem.ElementTetP2())
+            a=fasm.AssemblerElement(mesh,felem.ElementTetP2())
         
             A=a.iasm(dudv)
             f=a.iasm(fv)
@@ -204,7 +204,7 @@ class Q1Q2Test(unittest.TestCase):
         for itr in range(3):
             mesh.refine()
         
-            a=fasm.AssemblerElement(mesh,fmap.MappingQ1,felem.ElementQ1())
+            a=fasm.AssemblerElement(mesh,felem.ElementQ1())
         
             A=a.iasm(dudv)
             f=a.iasm(fv)
@@ -234,7 +234,7 @@ class Q1Q2Test(unittest.TestCase):
         for itr in range(3):
             mesh.refine()
         
-            a=fasm.AssemblerElement(mesh,fmap.MappingQ1,felem.ElementQ2())
+            a=fasm.AssemblerElement(mesh,felem.ElementQ2())
         
             A=a.iasm(dudv)
             f=a.iasm(fv)
@@ -307,7 +307,7 @@ class TriPpTest(unittest.TestCase):
             for itr in range(4):
                 mesh.refine()
 
-                a=fasm.AssemblerElement(mesh,fmap.MappingAffine,felem.ElementTriPp(p))
+                a=fasm.AssemblerElement(mesh,felem.ElementTriPp(p))
 
                 A=a.iasm(dudv)
                 f=a.iasm(fv)
@@ -378,7 +378,7 @@ class TetP1Test(unittest.TestCase):
             mesh=fmsh.MeshTet()
             mesh.refine(itr)
 
-            a=fasm.AssemblerElement(mesh,fmap.MappingAffine,felem.ElementTetP1())
+            a=fasm.AssemblerElement(mesh,felem.ElementTetP1())
 
             A=a.iasm(dudv)
             f=a.iasm(fv)
@@ -443,7 +443,7 @@ class AssemblerTriP1Nitsche(unittest.TestCase):
 
         for itr in range(4):
             mesh.refine()
-            a=fasm.AssemblerElement(mesh,fmap.MappingAffine,felem.ElementTriP1())
+            a=fasm.AssemblerElement(mesh,felem.ElementTriP1())
             D=mesh.boundary_nodes()
             I=mesh.interior_nodes()
 

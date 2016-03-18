@@ -13,6 +13,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.tri as mtri
 import scipy.interpolate as spi
+import fem.mapping as fmap
 try:
     from mayavi import mlab
     opt_mayavi=True
@@ -34,6 +35,9 @@ class Mesh:
 
     def dim(self):
         return float(self.p.shape[0])
+
+    def mapping(self):
+        raise NotImplementedError("Mesh.mapping() not implemented!")
         
 class MeshLine(Mesh):
     """One-dimensional mesh."""
@@ -83,6 +87,9 @@ class MeshLine(Mesh):
             ys.append(y2)
             ys.append(None)
         plt.plot(xs,ys,color)
+
+    def mapping(self):
+        return fmap.MappingAffine(self)
 
 class MeshQuad(Mesh):
     """Quadrilateral mesh."""
@@ -232,6 +239,9 @@ class MeshQuad(Mesh):
             ys.append(None)
         plt.plot(xs,ys,'k')
         return fig
+
+    def mapping(self):
+        return fmap.MappingQ1(self)
         
 class MeshTet(Mesh):
     """Tetrahedral mesh."""
@@ -407,6 +417,9 @@ class MeshTet(Mesh):
     def param(self):
         """Return mesh parameter."""
         return np.max(np.sqrt(np.sum((self.p[:,self.edges[0,:]]-self.p[:,self.edges[1,:]])**2,axis=0)))
+
+    def mapping(self):
+        return fmap.MappingAffine(self)
 
 class MeshTri(Mesh):
     """Triangular mesh."""
@@ -586,4 +599,7 @@ class MeshTri(Mesh):
         self.t=newt
 
         self.build_mappings()
+
+    def mapping(self):
+        return fmap.MappingAffine(self)
 
