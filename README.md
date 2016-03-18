@@ -35,6 +35,7 @@ Currently doxygen must be run by the user. Use Doxyfile that is included in the 
 * Composition of elements for multiple scalar equations: vectorial, sum of elements.
 * Adding more test cases, documentation, guards and speed tests.
 * Adaptive 2D triangle meshing.
+* Interpolation support in facet assembly.
 * Assembly on subsets of elements
 * Normal vectors in 3D facet assembly (2D works)
 * Adding optimization flags to AssemblyElement (e.g. precompute global du,dv to save time in elements with large local stiffness matrix, or caching in Mapping and ElementH1 etc.)
