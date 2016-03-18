@@ -4,6 +4,14 @@ In this repository you find the working draft of a flexible, fully-interpreted a
 
 The code is initially (c) Tom Gustafsson but the license will change in the future. Triangle is (c) Jonathan Shewchuk.
 
+## Acknowledgements
+
+The author and the code of sp.fem has strongly been influenced by the finite element knowledge shared by the following fellow scientists
+
+* [A. Hannukainen](https://math.aalto.fi/en/current/publications/articles/?a%5b%5d=antti.hannukainen)
+* [M. Juntunen](https://scholar.google.fi/citations?user=iKVJMwIAAAAJ)
+* [A. Huhtala](http://arxiv.org/find/math/1/au:+Huhtala_A/0/1/0/all/0/1)
+
 ## Dependencies
 
 * Python 2.7
