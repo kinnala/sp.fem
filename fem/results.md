@@ -50,3 +50,35 @@ Assemble Poisson facet mass matrix with P1 elements in 2D triangular mesh.
 |66049|0.0229099550803|
 |263169|0.0952333994079|
 
+## pe  1. huhtikuuta 2016 14.51.21
+
+('Linux', 'valdemar', '3.13.0-66-generic', '#108-Ubuntu SMP Wed Oct 7 15:20:27 UTC 2015', 'x86_64', 'x86_64')
+
+### PoissonTriP1InteriorAssemble
+
+Assemble standard Poisson stiffness matrix with P1 elements in 2D triangular mesh.
+
+|N|time|
+|---|---|
+|81|0.00229199727376|
+|289|0.00334803263346|
+|1089|0.00793806711833|
+|4225|0.0259166558584|
+|16641|0.110887050629|
+|66049|0.486977974574|
+|263169|2.13086930911|
+
+### PoissonTriP1FacetAssemble
+
+Assemble Poisson facet mass matrix with P1 elements in 2D triangular mesh.
+
+|N|time|
+|---|---|
+|81|0.00182898839315|
+|289|0.00181333223979|
+|1089|0.00192435582479|
+|4225|0.0023029645284|
+|16641|0.00364836057027|
+|66049|0.00884866714478|
+|263169|0.0357150236766|
+

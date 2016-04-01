@@ -101,6 +101,8 @@ class ElementH1(Element):
             
         invDF=mapping.invDF(X,tind) # investigate if 'x' should used after else
 
+        self.dim=mapping.dim
+
         if mapping.dim==1:
             du=np.outer(invDF,dphi)
         elif mapping.dim==2:
@@ -115,6 +117,64 @@ class ElementH1(Element):
         ddu=None # TODO fix ddu (for H1 element, Laplacian?)
 
         return u,du,ddu
+
+class ElementH1Vec(ElementH1):
+    """H1 element -> vectorial H1 element."""
+    def __init__(self,elem):
+        self.elem=elem
+        # multiplicate the amount of DOF's with dim
+        self.n_dofs*=self.dim
+        self.f_dofs*=self.dim
+        self.i_dofs*=self.dim
+        self.e_dofs*=self.dim
+        self.maxdeg=elem.maxdeg
+
+    def gbasis(self,mapping,X,i,tind):
+        self.dim=mapping.dim
+
+        ind=np.ceil(float(i)/float(self.dim))
+        n=i-self.dim*ind
+
+        if isinstance(X,dict):
+            [phi,dphi]=self.elem.lbasis(X,ind)
+            u={}
+            du={}
+            # fill appropriate slots of u and du (u[0] -> x-component of u etc.)
+            for itr in self.dim:
+                if itr==n:
+                    u[itr]=phi
+                    du[itr]=dphi
+                else:
+                    u[itr]=0*phi
+                    du[itr]={}
+                    for jtr in self.dim:
+                        du[itr][jtr]=0*phi
+        else:
+            x={}
+            x[0]=X[0,:]
+            if mapping.dim>=2:
+                x[1]=X[1,:]
+            if mapping.dim>=3:
+                x[2]=X[2,:]
+            [phi,dphi]=self.lbasis(x,i)
+            u=np.tile(phi,(len(tind),1))
+            du={}
+            
+        invDF=mapping.invDF(X,tind) # investigate if 'x' should used after else
+
+        if mapping.dim==2:
+            du[0]=invDF[0][0]*dphi[0]+invDF[1][0]*dphi[1]
+            du[1]=invDF[0][1]*dphi[0]+invDF[1][1]*dphi[1]
+        elif mapping.dim==3:
+            du[0]=invDF[0][0]*dphi[0]+invDF[1][0]*dphi[1]+invDF[2][0]*dphi[2]
+            du[1]=invDF[0][1]*dphi[0]+invDF[1][1]*dphi[1]+invDF[2][1]*dphi[2]
+            du[2]=invDF[0][2]*dphi[0]+invDF[1][2]*dphi[1]+invDF[2][2]*dphi[2]
+        else:
+            raise NotImplementedError("ElementH1Vec.gbasis: not implemented for the given dim.")
+        ddu=None # TODO fix ddu (for H1 element, Laplacian?)
+
+        return u,du,ddu
+
         
 class ElementQ1(ElementH1):
     """Simplest quadrilateral element."""
