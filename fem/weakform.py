@@ -222,6 +222,7 @@ class TensorFunction(object):
 
         wf=wf.replace("(x, y, z)","")
         wf=wf.replace("(x, y)","")
+        wf=wf.replace("(x)","")
 
         wf=re.sub(r"("+sym1+r"|"+sym2+r")1","\\1[0]",wf)
         wf=re.sub(r"("+sym1+r"|"+sym2+r")2","\\1[1]",wf)
@@ -233,3 +234,23 @@ class TensorFunction(object):
 
         print wf
 
+        return eval("lambda u,v,du,dv,x: "+wf)
+
+def IdentityMatrix(d):
+    t=TensorFunction(dim=d,torder=2)
+    for itr in range(t.tdim):
+        for jtr in range(t.tdim):
+            if itr==jtr:
+                t.expr[itr][jtr]=1.0
+            else:
+                t.expr[itr][jtr]=0.0
+    return t
+
+def div(W):
+    return W.div()
+
+def grad(W):
+    return W.grad()
+
+def inner(A,B):
+    return (A*B).sum()
