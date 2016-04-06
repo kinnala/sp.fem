@@ -149,6 +149,12 @@ class TensorFunction(object):
                     other=ConstantTensor(other.expr,dim=new.dim,tdim=new.tdim,torder=new.torder)
                 elif self.torder==0:
                     new=ConstantTensor(self.expr,dim=other.dim,tdim=other.tdim,torder=other.torder)
+                elif self.torder==2 and other.torder==1:
+                    new=ConstantTensor(0.0,dim=self.dim,tdim=self.dim,torder=1)
+                    for itr in range(new.tdim):
+                        for jtr in range(new.tdim):
+                            new.expr[itr]+=self.expr[itr][jtr]*other.expr[jtr]
+                    return new
                 else:
                     raise Exception("TensorFunction.__mul__(): The given tensors not compatible (different tensorial orders and neither is scalar)!")
             if self.tdim!=other.tdim:
@@ -274,6 +280,27 @@ class ConstantTensor(TensorFunction):
                     self.expr[itr][jtr]=const
         else:
             raise NotImplementedError("ConstantTensor.__init__(): Not implemented for torder>2!")
+
+class BasisTensor(TensorFunction):
+    def __init__(self,i,j=None,dim=2):
+        if j is None:
+            TensorFunction.__init__(self,dim=dim,torder=1)
+        else:
+            TensorFunction.__init__(self,dim=dim,torder=2)
+
+        if j is None:
+            for itr in range(self.tdim):
+                if i==itr:
+                    self.expr[itr]=1.0
+                else:
+                    self.expr[itr]=0.0
+        else:
+            for itr in range(self.tdim):
+                for jtr in range(self.tdim):
+                    if i==itr and j==jtr:
+                        self.expr[itr][jtr]=1.0
+                    else:
+                        self.expr[itr][jtr]=0.0
 
 def div(W):
     return W.div()

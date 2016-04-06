@@ -314,6 +314,10 @@ class MeshTet(Mesh):
         for itr in range(N):
             self.single_refine()
 
+    def nodes_satisfying(self,test):
+        """Return nodes that satisfy some condition."""
+        return np.nonzero(test(self.p[0,:],self.p[1,:],self.p[2,:]))[0]
+
     def single_refine(self):
         """Perform a single mesh refine."""
         # rename variables
@@ -603,3 +607,16 @@ class MeshTri(Mesh):
     def mapping(self):
         return fmap.MappingAffine(self)
 
+class MeshPyTri(MeshTri):
+    """Simple wrapper for reading MeshPy triangular mesh."""
+    def __init__(self,meshpy):
+        p=np.array(meshpy.points).T
+        t=np.array(meshpy.elements).T
+        MeshTri.__init__(self,p,t)
+
+class MeshPyTet(MeshTet):
+    """Simple wrapper for reading MeshPy tetrahedral mesh."""
+    def __init__(self,meshpy):
+        p=np.array(meshpy.points).T
+        t=np.array(meshpy.elements).T
+        MeshTet.__init__(self,p,t)
