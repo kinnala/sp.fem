@@ -17,6 +17,7 @@ The author and the code of sp.fem has strongly been influenced by the finite ele
 * Python 2.7
 * Numpy
 * Scipy
+* Sympy (Weakform module)
 * Matplotlib
 * Triangle (recommended; for 2D meshing)
 * Mayavi (optional; for 3D mesh plots)
