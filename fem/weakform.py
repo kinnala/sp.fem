@@ -8,9 +8,6 @@ import sympy as s
 import copy
 import re
 
-class BilinearForm(object):
-    pass
-
 class TensorFunction(object):
     """Wrapper around SymPy for better (more concise) weak form support."""
 
@@ -148,24 +145,29 @@ class TensorFunction(object):
         new=copy.deepcopy(self)
         if isinstance(other,TensorFunction):
             if self.torder!=other.torder:
-                raise Exception("TensorFunction.__mul__(): The given tensors not compatible (different tensorial orders)!")
+                if other.torder==0:
+                    other=ConstantTensor(other.expr,dim=new.dim,tdim=new.tdim,torder=new.torder)
+                elif self.torder==0:
+                    new=ConstantTensor(self.expr,dim=other.dim,tdim=other.tdim,torder=other.torder)
+                else:
+                    raise Exception("TensorFunction.__mul__(): The given tensors not compatible (different tensorial orders and neither is scalar)!")
             if self.tdim!=other.tdim:
                 raise Exception("TensorFunction.__mul__(): The given tensors not compatible (different target dims)!")
 
-        if self.torder==0:
+        if new.torder==0:
             if isinstance(other,TensorFunction):
                 new.expr*=other.expr
             else:
                 new.expr*=other
-        elif self.torder==1:
-            for itr in range(self.tdim):
+        elif new.torder==1:
+            for itr in range(new.tdim):
                 if isinstance(other,TensorFunction):
                     new.expr[itr]*=other.expr[itr]
                 else:
                     new.expr[itr]*=other
-        elif self.torder==2:
-            for itr in range(self.tdim):
-                for jtr in range(self.tdim):
+        elif new.torder==2:
+            for itr in range(new.tdim):
+                for jtr in range(new.tdim):
                     if isinstance(other,TensorFunction):
                         new.expr[itr][jtr]*=other.expr[itr][jtr]
                     else:
@@ -214,11 +216,19 @@ class TensorFunction(object):
     def __str__(self):
         return self.serialize()
 
-    def handlify(self,sym1='u',sym2='v'):
+    def handlify(self,sym1='u',sym2='v',simplify=True,verbose=False):
         if self.torder!=0:
             raise Exception("TensorFunction.handlify(): Tensor must be reduced to scalar (bilinear form) before handlifying!")
 
+        if simplify:
+            self.expr=self.expr.simplify()
+
         wf=self.expr.__str__()
+
+        if "u" in wf:
+            bilinear=True
+        else:
+            bilinear=False
 
         wf=wf.replace("(x, y, z)","")
         wf=wf.replace("(x, y)","")
@@ -232,19 +242,38 @@ class TensorFunction(object):
         wf=re.sub(r"Derivative\((("+sym1+r"|"+sym2+r")(\[\d\])?), y\)","d\\1[1]",wf)
         wf=re.sub(r"Derivative\((("+sym1+r"|"+sym2+r")(\[\d\])?), z\)","d\\1[2]",wf)
 
-        print wf
+        if verbose:
+            print wf
 
-        return eval("lambda u,v,du,dv,x: "+wf)
+        if bilinear:
+            return eval("lambda u,v,du,dv,x: "+wf)
+        else:
+            return eval("lambda v,dv,x: "+wf)
 
-def IdentityMatrix(d):
-    t=TensorFunction(dim=d,torder=2)
-    for itr in range(t.tdim):
-        for jtr in range(t.tdim):
-            if itr==jtr:
-                t.expr[itr][jtr]=1.0
-            else:
-                t.expr[itr][jtr]=0.0
-    return t
+class IdentityMatrix(TensorFunction):
+    def __init__(self,d):
+        TensorFunction.__init__(self,dim=d,torder=2)
+        for itr in range(self.tdim):
+            for jtr in range(self.tdim):
+                if itr==jtr:
+                    self.expr[itr][jtr]=1.0
+                else:
+                    self.expr[itr][jtr]=0.0
+
+class ConstantTensor(TensorFunction):
+    def __init__(self,const,dim=1,tdim=1,torder=0):
+        TensorFunction.__init__(self,dim=dim,tdim=tdim,torder=torder)
+        if torder==0:
+            self.expr=const
+        elif torder==1:
+            for itr in range(self.tdim):
+                self.expr[itr]=const
+        elif torder==2:
+            for itr in range(self.tdim):
+                for jtr in range(self.tdim):
+                    self.expr[itr][jtr]=const
+        else:
+            raise NotImplementedError("ConstantTensor.__init__(): Not implemented for torder>2!")
 
 def div(W):
     return W.div()
@@ -252,5 +281,5 @@ def div(W):
 def grad(W):
     return W.grad()
 
-def inner(A,B):
+def dotp(A,B):
     return (A*B).sum()
