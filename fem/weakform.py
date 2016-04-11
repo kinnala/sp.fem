@@ -5,6 +5,7 @@ Helper functions to generate weak formulations using SymPy.
 @author: Tom Gustafsson
 """
 import sympy as s
+import numpy as np
 import copy
 import re
 
@@ -260,6 +261,15 @@ class TensorFunction(object):
         wf=re.sub(r"Derivative\((("+sym1+r"|"+sym2+r")(\[\d\])?), x\)","d\\1[0]",wf)
         wf=re.sub(r"Derivative\((("+sym1+r"|"+sym2+r")(\[\d\])?), y\)","d\\1[1]",wf)
         wf=re.sub(r"Derivative\((("+sym1+r"|"+sym2+r")(\[\d\])?), z\)","d\\1[2]",wf)
+
+        wf=wf.replace("x","x[0]")
+        wf=wf.replace("y","x[1]")
+        wf=wf.replace("z","x[2]")
+
+        wf=wf.replace("sin","np.sin")
+        wf=wf.replace("cos","np.cos")
+
+        wf=wf.replace("pi","np.pi")
 
         if verbose:
             print wf

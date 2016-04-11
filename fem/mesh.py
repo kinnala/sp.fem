@@ -431,6 +431,10 @@ class MeshTet(Mesh):
     def boundary_facets(self):
         """Return an array of boundary facet indices."""
         return np.nonzero(self.f2t[1,:]==-1)[0]
+
+    def interior_nodes(self):
+        """Return an array of interior node indices."""
+        return np.setdiff1d(np.arange(0,self.p.shape[1]),self.boundary_nodes())
         
     def param(self):
         """Return mesh parameter."""
