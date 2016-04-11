@@ -382,13 +382,15 @@ class Dofnum():
         
         self.N=np.max(self.t_dof)+1
         
-    def getdofs(self,N=None,F=None,T=None):
+    def getdofs(self,N=None,F=None,E=None,T=None):
         """Return global DOF numbers corresponding to each node(N), facet(F) and triangle(T)"""
         dofs=np.zeros(0,dtype=np.int64)        
         if N is not None:
             dofs=np.hstack((dofs,self.n_dof[:,N].flatten()))
         if F is not None:
             dofs=np.hstack((dofs,self.f_dof[:,F].flatten()))
+        if E is not None:
+            dofs=np.hstack((dofs,self.e_dof[:,E].flatten()))
         if T is not None:
             dofs=np.hstack((dofs,self.i_dof[:,T].flatten()))
         return dofs.flatten()

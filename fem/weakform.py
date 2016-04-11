@@ -222,6 +222,19 @@ class TensorFunction(object):
     def __str__(self):
         return self.serialize()
 
+    def __getitem__(self,index):
+        if isinstance(index,slice):
+            return self.sum().expr
+        if isinstance(index,tuple) and len(index)==2:
+            if self.torder!=2:
+                raise Exception("TensorFunction.__getitem__(): Faulty index, 2-tuple for torder!=2.")
+            return self.expr[index[0]][index[1]]
+        else:
+            try:
+                return self.expr[index]
+            except:
+                raise Exception("TensorFunction.__getitem__(): Cannot index scalar. Use slice ':' instead!")
+
     def handlify(self,sym1='u',sym2='v',simplify=True,verbose=False):
         if self.torder!=0:
             raise Exception("TensorFunction.handlify(): Tensor must be reduced to scalar (bilinear form) before handlifying!")

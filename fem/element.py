@@ -121,6 +121,8 @@ class ElementH1(Element):
 class ElementH1Vec(ElementH1):
     """H1 element -> vectorial H1 element."""
     def __init__(self,elem):
+        if elem.dim==0:
+            print "ElementH1Vec.__init__(): Warning! Parent element has no dim-variable!"
         self.dim=elem.dim
         self.elem=elem
         # multiplicate the amount of DOF's with dim
@@ -417,6 +419,7 @@ class ElementP0(ElementH1):
 
             
 class ElementTriMini(ElementH1):
+    dim=2
     n_dofs=1
     i_dofs=1
     max_deg=3
@@ -446,6 +449,7 @@ class ElementTriMini(ElementH1):
         
 class ElementTetP2(ElementH1):
     
+    dim=3
     n_dofs=1
     e_dofs=1
     maxdeg=2

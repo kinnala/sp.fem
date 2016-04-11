@@ -318,6 +318,20 @@ class MeshTet(Mesh):
         """Return nodes that satisfy some condition."""
         return np.nonzero(test(self.p[0,:],self.p[1,:],self.p[2,:]))[0]
 
+    def facets_satisfying(self,test):
+        """Return facets whose midpoints satisfy some condition."""
+        mx=0.3333333*(self.p[0,self.facets[0,:]]+self.p[0,self.facets[1,:]]+self.p[0,self.facets[2,:]])
+        my=0.3333333*(self.p[1,self.facets[0,:]]+self.p[1,self.facets[1,:]]+self.p[1,self.facets[2,:]])
+        mz=0.3333333*(self.p[2,self.facets[0,:]]+self.p[2,self.facets[1,:]]+self.p[2,self.facets[2,:]])
+        return np.nonzero(test(mx,my,mz))[0]
+
+    def edges_satisfying(self,test):
+        """Return edges whose midpoints satisfy some condition."""
+        mx=0.5*(self.p[0,self.edges[0,:]]+self.p[0,self.edges[1,:]])
+        my=0.5*(self.p[1,self.edges[0,:]]+self.p[1,self.edges[1,:]])
+        mz=0.5*(self.p[2,self.edges[0,:]]+self.p[2,self.edges[1,:]])
+        return np.nonzero(test(mx,my,mz))[0]
+
     def single_refine(self):
         """Perform a single mesh refine."""
         # rename variables
