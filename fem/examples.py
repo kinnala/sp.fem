@@ -42,3 +42,33 @@
 #     import fem.examples_poisson
 #     t=fem.examples_poisson.ExamplePoisson()
 #     t.runTest(verbose=True)
+#
+
+## \example examples_elasticity.py
+#
+# Here we solve the linear elasticity equations in a three-dimensional box domain.
+# In order to build the function handles representing the weak formulation of the
+# problem, we apply the included module `fem.weakform`.
+#
+# Now domain is \f$\Omega=[0,1]^3\f$ and we want to solve
+# \f[
+#   \text{div}\,\sigma(u)=f,
+# \f]
+# where \f$\sigma(u)\f$ is the stress tensor corresponding to displacement \f$u\f$
+# and \f$f\f$ is the vector that represents body loading.
+#
+# We have the typical linear elastic constitutive relationship
+# \f[
+#   \sigma(u) = 2 \mu \varepsilon(u) + \lambda \text{tr}\,\varepsilon(u) I
+# \f]
+# with the infinitesimal strain
+# \f[
+#   \varepsilon(u)=\frac12(\nabla u + \nabla u^T).
+# \f]
+#
+# Using SymPy, we construct a loading that corresponds to the displacement field
+# \f[
+#   u(x,y,z)=\left(0,0,\frac{1}{10}\sin(\pi x)\sin(\pi y) \sin(\pi z)\right)^T. 
+# \f]
+
+
