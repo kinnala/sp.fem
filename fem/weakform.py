@@ -269,6 +269,7 @@ class TensorFunction(object):
         wf=wf.replace("sin","np.sin")
         wf=wf.replace("cos","np.cos")
 
+        wf=wf.replace("sqrt","np.sqrt")
         wf=wf.replace("pi","np.pi")
 
         if verbose:
