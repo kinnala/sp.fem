@@ -19,3 +19,16 @@
 # Simplest way is to discover all the tests using unittest as follows:
 #
 # `ipython -m unittest discover ./fem`
+#
+# \section tip3 Coverage
+#
+# In order to estimate test coverage, install coverage.py using `pip install coverage` and
+# then run
+#
+# `coverage run -m unittest discover ./fem`
+#
+# followed by
+#
+# `coverage html`
+#
+# The report can be found in `PWD/htmlcov/index.html`.
