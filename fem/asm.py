@@ -224,7 +224,7 @@ class AssemblerElement(Assembler):
         # compute normal vectors
         n={}
         if normals:
-            n=self.mapping.normals(X,tind,find,self.mesh.t2f)
+            n=self.mapping.normals(Y,tind,find,self.mesh.t2f)
 
         # compute the mesh parameter from jacobian determinant
         if self.mesh.dim()>=1.0:
