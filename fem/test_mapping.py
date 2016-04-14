@@ -35,6 +35,26 @@ class MappingAffineNormalOrientation2D(unittest.TestCase):
 
         vec1=np.ones(N1.shape[0])
         vec2=np.zeros(N1.shape[0])
+        self.assertAlmostEqual(N1.dot(vec1)+N2.dot(vec2),0.0)
+        self.assertAlmostEqual(N1.dot(vec2)+N2.dot(vec1),0.0)
+        self.assertAlmostEqual(N1.dot(vec1)+N2.dot(vec1),0.0)
+        self.assertAlmostEqual(N1.dot(vec2)+N2.dot(vec2),0.0)
 
-        print N1.dot(vec1)+N2.dot(vec2)
+class MappingAffineNormalOrientation3D(unittest.TestCase):
+    """Check that the normal vectors are correctly oriented in 3D."""
+    def runTest(self):
+        m=fem.mesh.MeshTet()
+        m.refine(2)
 
+        e=felem.ElementTetP1()
+
+        a=fasm.AssemblerElement(m,e)
+
+        N1=a.fasm(lambda v,n: n[0]*v,normals=True)
+        N2=a.fasm(lambda v,n: n[1]*v,normals=True)
+        N3=a.fasm(lambda v,n: n[2]*v,normals=True)
+
+        vec1=np.ones(N1.shape[0])
+        vec2=np.zeros(N1.shape[0])
+
+        self.assertAlmostEqual(N1.dot(vec1)+N2.dot(vec1)+N3.dot(vec1),0.0)
