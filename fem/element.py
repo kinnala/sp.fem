@@ -397,10 +397,31 @@ class ElementTriDG(ElementH1):
         # change all dofs to interior dofs
         self.elem=elem
         self.i_dofs=3*elem.n_dofs+3*elem.f_dofs+elem.i_dofs
+        self.dim=2
     def lbasis(self,X,i):
         return self.elem.lbasis(X,i)
+    
+class ElementTetP0(ElementH1):
+    i_dofs=1
+    max_deg=1
 
-class ElementP0(ElementH1):
+    def lbasis(self,X,i):
+        phi={
+            0:lambda x,y,z: 1+0*x
+            }[i](X[0],X[1],X[2])
+        dphi={}
+        dphi[0]={
+                0:lambda x,y,z: 0*x
+                }[i](X[0],X[1],X[2])
+        dphi[1]={
+                0:lambda x,y,z: 0*x
+                }[i](X[0],X[1],X[2])
+        dphi[2]={
+                0:lambda x,y,z: 0*x
+                }[i](X[0],X[1],X[2])
+        return phi,dphi
+
+class ElementTriP0(ElementH1):
     i_dofs=1
     max_deg=1
 
@@ -417,7 +438,9 @@ class ElementP0(ElementH1):
                 }[i](X[0],X[1])
         return phi,dphi
 
-            
+class ElementP0(ElementTriP0):
+    pass
+
 class ElementTriMini(ElementH1):
     dim=2
     n_dofs=1

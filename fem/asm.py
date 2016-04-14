@@ -184,7 +184,7 @@ class AssemblerElement(Assembler):
 
     # TODO add ifasm (interior facet assembly) for DG methods etc.
             
-    def fasm(self,form,find=None,intorder=None,normals=False): # TODO fix and test
+    def fasm(self,form,find=None,intorder=None,normals=True): # TODO fix and test
         """Facet assembly on all exterior facets."""
         if find is None:
             find=self.mesh.boundary_facets()

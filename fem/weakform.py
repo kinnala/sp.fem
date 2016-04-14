@@ -236,7 +236,7 @@ class TensorFunction(object):
             except:
                 raise Exception("TensorFunction.__getitem__(): Cannot index scalar. Use slice ':' instead!")
 
-    def handlify(self,sym1='u',sym2='v',simplify=True,verbose=False):
+    def handlify(self,sym1='u',sym2='v',simplify=True,verbose=False,boundary=False):
         if self.torder!=0:
             raise Exception("TensorFunction.handlify(): Tensor must be reduced to scalar (bilinear form) before handlifying!")
 
@@ -258,6 +258,11 @@ class TensorFunction(object):
         wf=re.sub(r"("+sym1+r"|"+sym2+r")2","\\1[1]",wf)
         wf=re.sub(r"("+sym1+r"|"+sym2+r")3","\\1[2]",wf)
 
+        if boundary:
+            wf=wf.replace("n1","n[0]")
+            wf=wf.replace("n2","n[1]")
+            wf=wf.replace("n3","n[2]")
+
         wf=re.sub(r"Derivative\((("+sym1+r"|"+sym2+r")(\[\d\])?), x\)","d\\1[0]",wf)
         wf=re.sub(r"Derivative\((("+sym1+r"|"+sym2+r")(\[\d\])?), y\)","d\\1[1]",wf)
         wf=re.sub(r"Derivative\((("+sym1+r"|"+sym2+r")(\[\d\])?), z\)","d\\1[2]",wf)
@@ -275,10 +280,16 @@ class TensorFunction(object):
         if verbose:
             print wf
 
-        if bilinear:
-            return eval("lambda u,v,du,dv,x: "+wf)
+        if not boundary:
+            if bilinear:
+                return eval("lambda u,v,du,dv,x: "+wf)
+            else:
+                return eval("lambda v,dv,x: "+wf)
         else:
-            return eval("lambda v,dv,x: "+wf)
+            if bilinear:
+                return eval("lambda u,v,du,dv,x,n: "+wf)
+            else:
+                return eval("lambda v,dv,x,n: "+wf)
 
 class IdentityMatrix(TensorFunction):
     def __init__(self,d):
