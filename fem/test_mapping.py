@@ -58,3 +58,6 @@ class MappingAffineNormalOrientation3D(unittest.TestCase):
         vec2=np.zeros(N1.shape[0])
 
         self.assertAlmostEqual(N1.dot(vec1)+N2.dot(vec1)+N3.dot(vec1),0.0)
+
+        self.assertTrue((N1[m.p[0,:]==1.0]>=0).all())
+        self.assertTrue((N1[m.p[0,:]==0.0]<=0).all())
