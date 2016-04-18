@@ -239,8 +239,8 @@ class Q1Q2Test(unittest.TestCase):
             A=a.iasm(dudv)
             f=a.iasm(fv)
         
-            B=a.fasm(uv)
-            g=a.fasm(gv)
+            B=a.fasm(uv,normals=False)
+            g=a.fasm(gv,normals=False)
         
             u=np.zeros(a.dofnum_u.N)
             u=spsolve(A+B,f+g)
