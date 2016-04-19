@@ -82,6 +82,17 @@ class PoissonTetP2InteriorAssemble(PerformanceTest):
         return _run
     def values(self):
         return [2,3,4]
+
+class TetrahedralRefine(PerformanceTest):
+    """Perform tetrahedral refines."""
+    def init(self,N):
+        m=fmsh.MeshTet()
+        def _run():
+            m.refine(N)
+            return m.p.shape[1]
+        return _run
+    def values(self):
+        return [1,2]
         
 # ****************************
 # Write tests before this line
