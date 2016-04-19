@@ -70,18 +70,18 @@ class PoissonTriP1FacetAssemble(PerformanceTest):
     def values(self):
         return [3,4,5,6,7,8,9]
 
-class PoissonTriP2InteriorAssemble(PerformanceTest):
-    """Assemble standard Poisson stiffness matrix with P2 elements in 2D triangular mesh."""
+class PoissonTetP2InteriorAssemble(PerformanceTest):
+    """Assemble standard Poisson stiffness matrix with P2 elements in 3D tetrahedral mesh."""
     def init(self,N):
-        m=fmsh.MeshTri()
+        m=fmsh.MeshTet()
         m.refine(N)
-        a=fasm.AssemblerElement(m,felem.ElementTriP2())
+        a=fasm.AssemblerElement(m,felem.ElementTetP2())
         def _run():
             a.iasm(lambda du,dv: du[0]*dv[0]+du[1]*dv[1])
             return a.dofnum_u.N
         return _run
     def values(self):
-        return [3,4,5,6,7,8]
+        return [2,3,4]
         
 # ****************************
 # Write tests before this line
