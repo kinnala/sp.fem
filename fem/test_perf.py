@@ -64,6 +64,7 @@ class PoissonTriP1FacetAssemble(PerformanceTest):
         m.refine(N)
         a=fasm.AssemblerElement(m,felem.ElementTriP1())
         def _run():
+            time.sleep(1)
             a.fasm(lambda u,v: u*v)
             return a.dofnum_u.N
         return _run
