@@ -462,4 +462,3 @@ class AssemblerTriP1Nitsche(unittest.TestCase):
         
         # check that the convergence rate matches theory
         self.assertTrue(pfit[0]>=0.99)
-        self.assertTrue(1==0)
