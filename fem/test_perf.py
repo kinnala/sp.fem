@@ -75,18 +75,18 @@ class PoissonTriP1FacetAssemble(PerformanceTest):
 # ****************************
 
 if __name__ == '__main__':
-    with open("fem/results.md", "a") as rfile:
-        rfile.write("## "+time.strftime("%c")+"\n\n"+str(platform.uname())+"\n\n")
-        # loop over subclasses of PerformanceTest and run the tests
-        for t in vars()['PerformanceTest'].__subclasses__():
-            tname=t.__name__
-            test=t()
-            rfile.write("### "+tname+"\n\n"+t.__doc__+"\n\n|N|time|\n|---|---|\n")
-            print tname
-            for N in test.values():
-                timer=timeit.Timer(test.init(N))
-                result=timer.timeit(3)
-                rfile.write("|"+str(result[1])+"|"+str(result[0]/3.0)+"|\n")
-                print result
-            rfile.write("\n")
-
+    verbose=False
+    for t in vars()['PerformanceTest'].__subclasses__():
+        tname=t.__name__
+        test=t()
+        Ns=np.array([])
+        Times=np.array([])
+        for N in test.values():
+            timer=timeit.Timer(test.init(N))
+            result=timer.timeit(3)
+            if verbose:
+                print str(result[1])+","+str(result[0]/3.0)
+            Ns=np.append(Ns,result[1])
+            Times=np.append(Times,result[0]/3.0)
+        pfit=np.polyfit(np.log10(Ns),np.log10(Times),1)
+        print tname+","+str(pfit[0])+","+str(pfit[1])
