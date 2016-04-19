@@ -69,6 +69,19 @@ class PoissonTriP1FacetAssemble(PerformanceTest):
         return _run
     def values(self):
         return [3,4,5,6,7,8,9]
+
+class PoissonTriP2InteriorAssemble(PerformanceTest):
+    """Assemble standard Poisson stiffness matrix with P2 elements in 2D triangular mesh."""
+    def init(self,N):
+        m=fmsh.MeshTri()
+        m.refine(N)
+        a=fasm.AssemblerElement(m,felem.ElementTriP2())
+        def _run():
+            a.iasm(lambda du,dv: du[0]*dv[0]+du[1]*dv[1])
+            return a.dofnum_u.N
+        return _run
+    def values(self):
+        return [3,4,5,6,7,8]
         
 # ****************************
 # Write tests before this line
