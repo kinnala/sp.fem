@@ -4,6 +4,7 @@ import fem.geometry
 import numpy as np
 import copy
 
+
 class MeshFaultyInputs(unittest.TestCase):
     """Check that faulty meshes are detected by constructors."""
     def runTest(self):
@@ -25,21 +26,37 @@ class MeshFaultyInputs(unittest.TestCase):
                                t=np.array([[0,1,2],[1,2,3]]))
 
 
+class MeshRefineMeshParameter(unittest.TestCase):
+    """Refine various meshes and check shape regularity."""
+    def runTest(self):
+        # triangular mesh
+        m=fem.mesh.MeshTri()
+        for itr in range(4):
+            m.refine()
+
+        # tetrahedral mesh
+        m=fem.mesh.MeshTet()
+        for itr in range(5):
+            m.refine()
+            # check that shape regularity stays bounded
+            self.assertTrue(m.shapereg()<3.0)
+
+
 class MeshTriBasicTest(unittest.TestCase):
     def setUp(self):
         self.mesh=fem.mesh.MeshTri()
         self.mesh.refine()
+
 
 class MeshTriSanityCheck(MeshTriBasicTest):
     """Perform a sanity check on the indexing, etc."""
     def runTest(self):
         mesh=copy.deepcopy(self.mesh)
         mesh.refine(4)
-        
+
         # check that maximum vertex index in mesh.t exists in mesh.p
         self.assertEqual(np.max(mesh.t),mesh.p.shape[1]-1)
 
-        # TODO add uniqueness test
 
 class MeshTriFacetIndexing(MeshTriBasicTest):
     """Test facet indexing"""
@@ -64,7 +81,3 @@ class MeshTriFacetIndexing(MeshTriBasicTest):
             curts=np.append(curts,toaddts)
             curts=np.unique(curts)
         self.assertEqual(curts.shape[0]-1,mesh.t.shape[1])
-                 
-
-
-

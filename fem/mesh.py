@@ -6,6 +6,7 @@ Try the following subclasses of Mesh:
     * MeshTri
     * MeshTet
     * MeshQuad
+    * MeshLine
 
 @author: Tom Gustafsson
 """
@@ -45,17 +46,12 @@ class Mesh:
         # check that vertex matrix has "correct" size
         if(self.p.shape[0]>3):
             msg=("Mesh.validate(): We do not allow meshes "
-                 "embedded to larger than 3-dimensional "
+                 "embedded into larger than 3-dimensional "
                  "Euclidean space! Please check that "
                  "the given vertex matrix is of size Ndim x Nvertices.")
             raise Exception(msg)
         # check that element connectivity matrix has correct size
-        nvertices={
-                'line':2,
-                'tri':3,
-                'quad':4,
-                'tet':4,
-                }
+        nvertices={'line':2,'tri':3,'quad':4,'tet':4}
         if(self.t.shape[0]!=nvertices[self.refdom]):
             msg=("Mesh.validate(): The given connectivity "
                  "matrix has wrong shape!")
@@ -100,12 +96,9 @@ class MeshLine(Mesh):
         self.p=newp
         self.t=newt
 
-        #self.build_mappings()
-
     def plot(self,u,color='ko-'):
         """Plot a function defined on the nodes of the mesh."""
         plt.figure()
-        #plt.plot(self.p[0,:],u,color)
 
         xs=[]
         ys=[]
@@ -178,7 +171,7 @@ class MeshQuad(Mesh):
         self.f2t[0,e_first]=t_tmp[ix_first]
         self.f2t[1,e_last]=t_tmp[ix_last]
 
-        # second row to zero if repeated (i.e., on boundary)
+        # second row to -1 if repeated (i.e., on boundary)
         self.f2t[1,np.nonzero(self.f2t[0,:]==self.f2t[1,:])[0]]=-1
 
     def boundary_nodes(self):
@@ -322,9 +315,7 @@ class MeshTet(Mesh):
 
     def build_mappings(self):
         """Build element-to-facet, element-to-edges, etc. mappings."""
-        # dont sort to get RED refinement
-        # TODO investigate whether sorting is needed or not in 3D
-        # could use additional data structure to achieve red
+        # Do not sort to get RED refinement
         # self.t=np.sort(self.t,axis=0)
 
         # define edges: in the order (0,1) (1,2) (0,2) (0,3) (1,3) (2,3)
@@ -452,7 +443,7 @@ class MeshTet(Mesh):
                                  self.facets.T,representation='wireframe',
                                  color=(0,0,0))
         else:
-            raise ImportError("MeshTet: Mayavi not supported"
+            raise ImportError("MeshTet: Mayavi not supported "
                               "by the host system!")
 
     def draw_facets(self,test=None,u=None):
@@ -481,8 +472,8 @@ class MeshTet(Mesh):
                                      representation='wireframe',color=(0,0,0))
             else:
                 if u.shape[0]!=self.facets.shape[1]:
-                    raise Exception("MeshTet.draw_facets: scalar data must"
-                                    " have one value for each facet!")
+                    raise Exception("MeshTet.draw_facets: scalar data must "
+                                    "have one value for each facet!")
                 newp=np.vstack((self.p[0,self.facets].flatten(order='F'),
                                 self.p[1,self.facets].flatten(order='F')))
                 newp=np.vstack((newp,self.p[2,self.facets].flatten(order='F')))
@@ -545,9 +536,18 @@ class MeshTet(Mesh):
         return np.setdiff1d(np.arange(0,self.p.shape[1]),self.boundary_nodes())
 
     def param(self):
-        """Return mesh parameter."""
+        """Return (maximum) mesh parameter."""
         return np.max(np.sqrt(np.sum((self.p[:,self.edges[0,:]]-
                                       self.p[:,self.edges[1,:]])**2,axis=0)))
+
+    def shapereg(self):
+        """Return the largest shape-regularity constant."""
+        def edgelen(n):
+            return np.sqrt(np.sum((self.p[:,self.edges[0,self.t2e[n,:]]]-
+                                   self.p[:,self.edges[1,self.t2e[n,:]]])**2,
+                                  axis=0))
+        edgelenmat=np.vstack(tuple(edgelen(i) for i in range(6)))
+        return np.max(np.max(edgelenmat,axis=0)/np.min(edgelenmat,axis=0))
 
     def mapping(self):
         return fmap.MappingAffine(self)
