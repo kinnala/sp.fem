@@ -44,10 +44,10 @@ class Mesh:
         """Perform mesh validity checks."""
         # check that vertex matrix has "correct" size
         if(self.p.shape[0]>3):
-            msg=("Mesh.validate(): We do not allow meshes"
-                 " embedded to larger than 3-dimensional"
-                 " Euclidean space! Please check that"
-                 " the given vertex matrix is of size Ndim x Nvertices.")
+            msg=("Mesh.validate(): We do not allow meshes "
+                 "embedded to larger than 3-dimensional "
+                 "Euclidean space! Please check that "
+                 "the given vertex matrix is of size Ndim x Nvertices.")
             raise Exception(msg)
         # check that element connectivity matrix has correct size
         nvertices={
@@ -57,12 +57,12 @@ class Mesh:
                 'tet':4,
                 }
         if(self.t.shape[0]!=nvertices[self.refdom]):
-            msg=("Mesh.validate(): The given connectivity"
+            msg=("Mesh.validate(): The given connectivity "
                  "matrix has wrong shape!")
             raise Exception(msg)
         # check that all points are at least in some element
         if(len(np.setdiff1d(np.arange(self.p.shape[1]),np.unique(self.t)))!=0):
-            msg=("Mesh.validate(): Mesh contains a vertex"
+            msg=("Mesh.validate(): Mesh contains a vertex "
                  "not belonging to any element.")
             raise Exception(msg)
 
