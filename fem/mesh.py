@@ -691,7 +691,7 @@ class MeshTri(Mesh):
                 if opt_mayavi:
                     mlab.triangular_mesh(self.p[0,:],self.p[1,:],z,self.t.T)
                 else:
-                    raise ImportError("MeshTri: Mayavi not supported"
+                    raise ImportError("MeshTri: Mayavi not supported "
                                       "by the host system!")
             else:
                 # use matplotlib
