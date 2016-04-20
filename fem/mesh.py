@@ -38,6 +38,27 @@ class Mesh:
 
     def mapping(self):
         raise NotImplementedError("Mesh.mapping() not implemented!")
+
+    def validate(self):
+        """Perform mesh validity checks."""
+        # check that vertex matrix has "correct" size
+        if(self.p.shape[0]>3):
+            msg="Mesh.validate(): We do not allow meshes embedded to larger than 3-dimensional Euclidean space! Please check that the given vertex matrix is of size Ndim x Nvertices."
+            raise Exception(msg)
+        # check that element connectivity matrix has correct size
+        nvertices={
+                'line':2,
+                'tri':3,
+                'quad':4,
+                'tet':4,
+                }
+        if(self.t.shape[0]!=nvertices[self.refdom]):
+            msg="Mesh.validate(): The given connectivity matrix has wrong shape!"
+            raise Exception(msg)
+        # check that all points are at least in some element
+        if(len(np.setdiff1d(np.arange(self.p.shape[1]),np.unique(self.t)))!=0):
+            msg="Mesh.validate(): Mesh contains a vertex not belonging to any element."
+            raise Exception(msg)
         
 class MeshLine(Mesh):
     """One-dimensional mesh."""
@@ -45,10 +66,12 @@ class MeshLine(Mesh):
     brefdom="point"
     
     def __init__(self,p=np.array([[0,1]]),\
-                      t=np.array([[0],[1]])):
+                      t=np.array([[0],[1]]),
+                      validate=True):
         self.p=p
         self.t=t
-        # self.build_mappings()
+        if validate:
+            self.validate()
         
     def refine(self,N=1):
         """Perform one or more refines on the mesh."""
@@ -97,9 +120,12 @@ class MeshQuad(Mesh):
     brefdom="line"
     
     def __init__(self,p=np.array([[0,0],[1,0],[1,1],[0,1]]).T,\
-                      t=np.array([[0,1,2,3]]).T):
+                      t=np.array([[0,1,2,3]]).T,
+                      validate=True):
         self.p=p
         self.t=t
+        if validate:
+            self.validate()
         self.build_mappings()
         
     def build_mappings(self):
@@ -257,9 +283,12 @@ class MeshTet(Mesh):
     brefdom="tri"
 
     def __init__(self,p=np.array([[0,0,0],[0,0,1],[0,1,0],[1,0,0],[0,1,1],[1,0,1],[1,1,0],[1,1,1]]).T,\
-                      t=np.array([[0,1,2,3],[3,5,1,7],[2,3,6,7],[2,3,1,7],[1,2,4,7]]).T):
+                      t=np.array([[0,1,2,3],[3,5,1,7],[2,3,6,7],[2,3,1,7],[1,2,4,7]]).T,
+                      validate=True):
         self.p=p
         self.t=t
+        if validate:
+            self.validate()
         self.build_mappings()
 
     def build_mappings(self):
@@ -465,9 +494,12 @@ class MeshTri(Mesh):
     brefdom="line"
 
     def __init__(self,p=np.array([[0,1,0,1],[0,0,1,1]],dtype=np.float_),\
-                      t=np.array([[0,1,2],[1,3,2]],dtype=np.intp).T):
+                      t=np.array([[0,1,2],[1,3,2]],dtype=np.intp).T,
+                      validate=True):
         self.p=p
         self.t=t
+        if validate:
+            self.validate()
         self.build_mappings()
   
     def build_mappings(self):

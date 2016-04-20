@@ -4,7 +4,26 @@ import fem.geometry
 import numpy as np
 import copy
 
-# TODO add tests for MeshTet
+class MeshFaultyInputs(unittest.TestCase):
+    """Check that faulty meshes are detected by constructors."""
+    def runTest(self):
+        with self.assertRaises(Exception):
+            # point belonging to no element
+            m=fem.mesh.MeshTri(p=np.array([[0,0],[0,1],[1,0],[1,1]]).T,
+                               t=np.array([[0,1,2]]).T)
+        with self.assertRaises(Exception):
+            # wrong size inputs (t not matching to Mesh type)
+            m=fem.mesh.MeshTet(p=np.array([[0,0],[0,1],[1,0],[1,1]]).T,
+                               t=np.array([[0,1,2]]).T)
+        with self.assertRaises(Exception):
+            # wrong size inputs (t not matching to Mesh type)
+            m=fem.mesh.MeshLine(p=np.array([[0,0],[0,1],[1,0],[1,1]]).T,
+                               t=np.array([[0,1,2]]).T)
+        with self.assertRaises(Exception):
+            # inputting trasposes
+            m=fem.mesh.MeshTri(p=np.array([[0,0],[0,1],[1,0],[1,1]]),
+                               t=np.array([[0,1,2],[1,2,3]]))
+
 
 class MeshTriBasicTest(unittest.TestCase):
     def setUp(self):
