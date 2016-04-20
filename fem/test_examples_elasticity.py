@@ -10,7 +10,7 @@ from fem.weakform import *
 
 class ExampleElasticity(unittest.TestCase):
     """Solving the linear elasticity equations (stress) in 3D box
-    and comparing to an analytical solution."""
+    and comparing to a manufactured analytical solution."""
     def runTest(self,verbose=False):
         U=TensorFunction(dim=3,torder=1)
         V=TensorFunction(dim=3,torder=1,sym='v')

@@ -1,4 +1,4 @@
-## \example examples_poisson.py
+## \example test_examples_poisson.py
 #
 # In the following example we solve the Poisson equation in a three-dimensional
 # box domain \f$\Omega=[0,1]^3\f$. We construct a simple manufactured solution
@@ -44,7 +44,7 @@
 #     t.runTest(verbose=True)
 #
 
-## \example examples_elasticity.py
+## \example test_examples_elasticity.py
 #
 # Here we solve the linear elasticity equations in a three-dimensional box domain.
 # In order to build the function handles representing the weak formulation of the
@@ -68,7 +68,9 @@
 #
 # Using SymPy, we construct a loading that corresponds to the displacement field
 # \f[
-#   u(x,y,z)=\left(0,0,\frac{1}{10}\sin(\pi x)\sin(\pi y) \sin(\pi z)\right)^T. 
+#   u_0(x,y,z)=\left(0,0,\frac{1}{10}\sin(\pi x)\sin(\pi y) \sin(\pi z)\right)^T. 
 # \f]
+# Then we solve the linear elasticity equations with
+# the boundary condition \f$u|_{\partial \Omega}=u_0\f$.
 
 

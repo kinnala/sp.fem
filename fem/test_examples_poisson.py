@@ -63,7 +63,7 @@ class ExamplePoisson(unittest.TestCase):
         # loop over mesh refinement levels
         for itr in range(3):
             # compute with P2 element
-            b=fasm.AssemblerElement(mesh,fmap.MappingAffine,felem.ElementTetP2())
+            b=fasm.AssemblerElement(mesh,felem.ElementTetP2())
             
             # assemble the matrices and vectors related to P2
             A2=b.iasm(dudv)
@@ -85,7 +85,7 @@ class ExamplePoisson(unittest.TestCase):
             mesh.refine()
 
             # create a finite element assembler = mesh + mapping + element
-            a=fasm.AssemblerElement(mesh,fmap.MappingAffine,felem.ElementTetP1())
+            a=fasm.AssemblerElement(mesh,felem.ElementTetP1())
 
             # assemble the matrices and vectors related to P1
             A1=a.iasm(dudv)
