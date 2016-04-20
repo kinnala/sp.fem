@@ -297,7 +297,7 @@ class TriPpTest(unittest.TestCase):
         H1errs={}
         L2errs={}
 
-        for p in range(1,4):
+        for p in range(1,3):
             mesh=fmsh.MeshTri()
             mesh.refine(1)
             hs[p-1]=np.array([])
