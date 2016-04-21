@@ -26,21 +26,14 @@ class MeshFaultyInputs(unittest.TestCase):
                                t=np.array([[0,1,2],[1,2,3]]))
 
 
-class MeshRefineMeshParameter(unittest.TestCase):
-    """Refine various meshes and check shape regularity."""
+class MeshTetRefineShapeRegularity(unittest.TestCase):
+    """Refine tetrahedral mesh and check shape regularity."""
     def runTest(self):
-        # triangular mesh
-        m=fem.mesh.MeshTri()
-        #for itr in range(4):
-        #    m.refine()
-
-        # tetrahedral mesh
         m=fem.mesh.MeshTet()
         for itr in range(5):
             m.refine()
             # check that shape regularity stays bounded
-            #print m.shapereg()
-            self.assertTrue(m.shapereg()<3.0)
+            self.assertTrue(m.shapereg()<2.5)
 
 
 class MeshTriBasicTest(unittest.TestCase):
