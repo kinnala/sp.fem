@@ -23,11 +23,8 @@ except:
 from mpl_toolkits.mplot3d import Axes3D
 
 
-class Mesh:
+class Mesh(object):
     """Finite element mesh."""
-
-    p=np.empty([0,0],dtype=np.float_)
-    t=np.empty([0,0],dtype=np.intp)
 
     def __init__(self,p,t):
         raise NotImplementedError("Mesh constructor not implemented!")
@@ -65,6 +62,7 @@ class Mesh:
 
 class MeshLine(Mesh):
     """One-dimensional mesh."""
+    
     refdom="line"
     brefdom="point"
 
@@ -120,6 +118,7 @@ class MeshLine(Mesh):
 
 class MeshQuad(Mesh):
     """Quadrilateral mesh."""
+    
     refdom="quad"
     brefdom="line"
 
@@ -291,14 +290,7 @@ class MeshQuad(Mesh):
 
 class MeshTet(Mesh):
     """Tetrahedral mesh."""
-    p=np.empty([3,0],dtype=np.float_)
-    t=np.empty([4,0],dtype=np.intp)
-    facets=np.empty([3,0],dtype=np.intp)
-    edges=np.empty([2,0],dtype=np.intp)
-    t2f=np.empty([4,0],dtype=np.intp)
-    f2t=np.empty([2,0],dtype=np.intp)
-    t2e=np.empty([6,0],dtype=np.intp)
-    f2e=np.empty([3,0],dtype=np.intp)
+    
     refdom="tet"
     brefdom="tri"
 
@@ -555,11 +547,7 @@ class MeshTet(Mesh):
 
 class MeshTri(Mesh):
     """Triangular mesh."""
-    p=np.empty([2,0],dtype=np.float_)
-    t=np.empty([3,0],dtype=np.intp)
-    facets=np.empty([2,0],dtype=np.intp)
-    t2f=np.empty([3,0],dtype=np.intp)
-    f2t=np.empty([2,0],dtype=np.intp)
+
     refdom="tri"
     brefdom="line"
 

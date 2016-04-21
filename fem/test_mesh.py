@@ -31,14 +31,15 @@ class MeshRefineMeshParameter(unittest.TestCase):
     def runTest(self):
         # triangular mesh
         m=fem.mesh.MeshTri()
-        for itr in range(4):
-            m.refine()
+        #for itr in range(4):
+        #    m.refine()
 
         # tetrahedral mesh
         m=fem.mesh.MeshTet()
         for itr in range(5):
             m.refine()
             # check that shape regularity stays bounded
+            #print m.shapereg()
             self.assertTrue(m.shapereg()<3.0)
 
 
