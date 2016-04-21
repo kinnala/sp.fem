@@ -103,12 +103,14 @@ class AssemblerTriP1FullPoisson(AssemblerTriP1BasicTest):
         I=np.setdiff1d(np.arange(0,self.mesh.p.shape[1]),D)
 
         x=np.zeros(K.shape[0])
-        x[I]=scipy.sparse.linalg.spsolve(K[np.ix_(I,I)]+B[np.ix_(I,I)],f[I]+g[I])
+        x[I]=scipy.sparse.linalg.spsolve(K[np.ix_(I,I)]+B[np.ix_(I,I)],
+                                         f[I]+g[I])
 
         self.assertAlmostEqual(np.max(x),1.89635971369,places=2)
 
 class AssemblerTriP1Interp(AssemblerTriP1BasicTest):
-    """Compare A*u with f(u) for some u, where A is the mass matrix and f(u)=(u,v)."""
+    """Compare A*u with f(u) for some u,
+    where A is the mass matrix and f(u)=(u,v)."""
     def runTest(self):
         mesh=self.mesh
         a=fasm.AssemblerElement(self.mesh,felem.ElementTriP1())
@@ -128,4 +130,35 @@ class AssemblerTriP1Interp(AssemblerTriP1BasicTest):
         A=a.iasm(v2)
 
         self.assertAlmostEqual(np.linalg.norm(f-A*u),0.0,places=10)
+
+
+class AssemblerTriSubset(unittest.TestCase):
+    """Test the subset assembly."""
+    def runTest(self):
+        m=fmsh.MeshTri()
+        m.refine(4)
+        # split mesh into two sets of triangles
+        I1=np.arange(m.t.shape[1]/2)
+        I2=np.setdiff1d(np.arange(m.t.shape[1]),I1)
+
+        a=fasm.AssemblerElement(m,felem.ElementTriP1())
+
+        def dudv(du,dv):
+            return du[0]*dv[0]+du[1]*dv[1]
+
+        A=a.iasm(dudv)
+        A1=a.iasm(dudv,tind=I1)
+        A2=a.iasm(dudv,tind=I2)
+
+        f=a.iasm(lambda v: 1*v)
+
+        I=m.interior_nodes()
+
+        x=np.zeros(A.shape[0])
+        x[I]=scipy.sparse.linalg.spsolve(A[I].T[I].T,f[I])
+
+        X=np.zeros(A.shape[0])
+        X[I]=scipy.sparse.linalg.spsolve(A1[I].T[I].T+A2[I].T[I].T,f[I])
+
+        self.assertAlmostEqual(np.linalg.norm(x-X),0.0,places=10)
 

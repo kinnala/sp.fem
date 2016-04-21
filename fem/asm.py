@@ -52,42 +52,51 @@ class Assembler:
                 return oldform(x[y[0]],x[y[1]],x[y[2]],x[y[3]],x[y[4]])
         elif len(oldargs)==6:
             def newform(*x):
-                return oldform(x[y[0]],x[y[1]],x[y[2]],x[y[3]],x[y[4]],x[y[5]])
+                return oldform(x[y[0]],x[y[1]],x[y[2]],x[y[3]],x[y[4]],
+                               x[y[5]])
         elif len(oldargs)==7:
             def newform(*x):
-                return oldform(x[y[0]],x[y[1]],x[y[2]],x[y[3]],x[y[4]],x[y[5]],x[y[6]])
+                return oldform(x[y[0]],x[y[1]],x[y[2]],x[y[3]],x[y[4]],
+                               x[y[5]],x[y[6]])
         elif len(oldargs)==8:
             def newform(*x):
-                return oldform(x[y[0]],x[y[1]],x[y[2]],x[y[3]],x[y[4]],x[y[5]],x[y[6]],x[y[7]])
+                return oldform(x[y[0]],x[y[1]],x[y[2]],x[y[3]],x[y[4]],
+                               x[y[5]],x[y[6]],x[y[7]])
         elif len(oldargs)==9:
             def newform(*x):
-                return oldform(x[y[0]],x[y[1]],x[y[2]],x[y[3]],x[y[4]],x[y[5]],x[y[6]],x[y[7]],x[y[8]])
+                return oldform(x[y[0]],x[y[1]],x[y[2]],x[y[3]],x[y[4]],
+                               x[y[5]],x[y[6]],x[y[7]],x[y[8]])
         elif len(oldargs)==10:
             def newform(*x):
-                return oldform(x[y[0]],x[y[1]],x[y[2]],x[y[3]],x[y[4]],x[y[5]],x[y[6]],x[y[7]],x[y[8]],x[y[9]])
+                return oldform(x[y[0]],x[y[1]],x[y[2]],x[y[3]],x[y[4]],
+                               x[y[5]],x[y[6]],x[y[7]],x[y[8]],x[y[9]])
         else:
-            raise NotImplementedError("Assembler.fillargs: the maximum number of arguments reached")
+            raise NotImplementedError("Assembler.fillargs(): the maximum "
+                                      "number of arguments reached!")
 
         return newform
 
 class AssemblerElement(Assembler):
     """A quasi-fast assembler for arbitrary element/mesh/mapping."""
     def __init__(self,mesh,elem_u,elem_v=None,mapping=None):
-        # TODO check consistency between (mesh,mapping,elem)
+        if not isinstance(mesh,fem.mesh.Mesh):
+            raise Exception("AssemblerElement.__init__(): first parameter "
+                            "must be an instance of fem.mesh.Mesh!")
         if not isinstance(elem_u,fem.element.Element):
-            raise Exception("AssemblerElement: elem_u must be an instance of Element!")
+            raise Exception("AssemblerElement.__init__(): second parameter "
+                            "must be an instance of fem.element.Element!")
 
-        # get default mapping from the mesh or initialize the given
+        # get default mapping from the mesh
         if mapping is None:
             self.mapping=mesh.mapping()
         else:
             self.mapping=mapping # assumes an already initialized mapping
 
         self.mesh=mesh
-
         self.elem_u=elem_u
         self.dofnum_u=Dofnum(mesh,elem_u)
 
+        # duplicate test function element type if None is given
         if elem_v is None:
             self.elem_v=elem_u
             self.dofnum_v=self.dofnum_u
@@ -97,11 +106,12 @@ class AssemblerElement(Assembler):
      
     def iasm(self,form,intorder=None,tind=None,interp=None):
         """Interior assembly."""
-        nt=self.mesh.t.shape[1]
         if tind is None:
-            # Assemble on all elements by default
-            tind=range(nt)
+            # assemble on all elements by default
+            tind=range(self.mesh.t.shape[1])
+        nt=len(tind)
         if intorder is None:
+            # compute the maximum polynomial degree from elements
             intorder=self.elem_u.maxdeg+self.elem_v.maxdeg
         
         # check and fix parameters of form
@@ -114,8 +124,7 @@ class AssemblerElement(Assembler):
             bilinear=False
         fform=self.fillargs(form,paramlist)
         
-        # TODO add support for assembling on a subset
-        
+        # quadrature points and weights
         X,W=get_quadrature(self.mesh.refdom,intorder)
 
         # global quadrature points
@@ -158,8 +167,8 @@ class AssemblerElement(Assembler):
                     
                     # compute entries of local stiffness matrices
                     data[ixs]=np.dot(fform(u,v,du,dv,ddu,ddv,x,w,h)*np.abs(detDF),W)
-                    rows[ixs]=self.dofnum_v.t_dof[i,:]
-                    cols[ixs]=self.dofnum_u.t_dof[j,:]
+                    rows[ixs]=self.dofnum_v.t_dof[i,tind]
+                    cols[ixs]=self.dofnum_u.t_dof[j,tind]
         
             return coo_matrix((data,(rows,cols)),shape=(self.dofnum_v.N,self.dofnum_u.N)).tocsr()
             
