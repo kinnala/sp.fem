@@ -390,11 +390,32 @@ class MeshTet(Mesh):
     def single_refine(self):
         """Perform a single mesh refine.
         
-        It is assumed that the edges are defined in the order
+        Let the nodes of a tetrahedron be numbered as 0, 1, 2 and 3.
+        It is assumed that the edges in self.t2e are given in the order
 
-         (0,1) (1,2) (0,2) (0,3) (1,3) (2,3)
+          I=(0,1), II=(1,2), III=(0,2), IV=(0,3), V=(1,3), VI=(2,3)
 
-        by self.build_mappings().
+        by self.build_mappings(). Let I denote the midpoint of the edge
+        (0,1), II denote the midpoint of the edge (1,2), etc. Then each
+        tetrahedron is split into eight smaller subtetrahedra as follows.
+
+        The first four subtetrahedra have the following nodes:
+
+          1. (0,I,III,IV)
+          2. (1,I,II,V)
+          3. (2,II,III,VI)
+          4. (3,IV,V,VI)
+
+        The remaining middle-portion of the original tetrahedron consists
+        of a union of two mirrored pyramids. This bi-pyramid can be splitted
+        into four tetrahedra in a three different ways by connecting the
+        midpoints of two opposing edges (there are three different pairs
+        of opposite edges).
+
+        For each tetrahedra in the original mesh, we split the bi-pyramid
+        in such a way that the connection between the opposite edges
+        is shortest. This minimizes the shape-regularity constant of
+        the resulting mesh family.
         """
         # rename variables
         t=self.t
@@ -413,9 +434,12 @@ class MeshTet(Mesh):
         newt=np.hstack((newt,np.vstack((t[2,:],t2e[1,:],t2e[2,:],t2e[5,:]))))
         newt=np.hstack((newt,np.vstack((t[3,:],t2e[3,:],t2e[4,:],t2e[5,:]))))
         # compute middle pyramid diagonal lengths and choose shortest
-        d1=(newp[0,t2e[2,:]]-newp[0,t2e[4,:]])**2+(newp[1,t2e[2,:]]-newp[1,t2e[4,:]])**2
-        d2=(newp[0,t2e[1,:]]-newp[0,t2e[3,:]])**2+(newp[1,t2e[1,:]]-newp[1,t2e[3,:]])**2
-        d3=(newp[0,t2e[0,:]]-newp[0,t2e[5,:]])**2+(newp[1,t2e[0,:]]-newp[1,t2e[5,:]])**2
+        d1=((newp[0,t2e[2,:]]-newp[0,t2e[4,:]])**2+
+            (newp[1,t2e[2,:]]-newp[1,t2e[4,:]])**2)
+        d2=((newp[0,t2e[1,:]]-newp[0,t2e[3,:]])**2+
+            (newp[1,t2e[1,:]]-newp[1,t2e[3,:]])**2)
+        d3=((newp[0,t2e[0,:]]-newp[0,t2e[5,:]])**2+
+            (newp[1,t2e[0,:]]-newp[1,t2e[5,:]])**2)
         I1=d1<d2
         I2=d1<d3
         I3=d2<d3
@@ -425,20 +449,32 @@ class MeshTet(Mesh):
         # splitting the pyramid in the middle.
         # diagonals are [2,4], [1,3] and [0,5]
         # CASE 1: diagonal [2,4]
-        newt=np.hstack((newt,np.vstack((t2e[2,c1],t2e[4,c1],t2e[0,c1],t2e[1,c1]))))
-        newt=np.hstack((newt,np.vstack((t2e[2,c1],t2e[4,c1],t2e[0,c1],t2e[3,c1]))))
-        newt=np.hstack((newt,np.vstack((t2e[2,c1],t2e[4,c1],t2e[1,c1],t2e[5,c1]))))
-        newt=np.hstack((newt,np.vstack((t2e[2,c1],t2e[4,c1],t2e[3,c1],t2e[5,c1]))))
+        newt=np.hstack((newt,np.vstack((t2e[2,c1],t2e[4,c1],
+                                        t2e[0,c1],t2e[1,c1]))))
+        newt=np.hstack((newt,np.vstack((t2e[2,c1],t2e[4,c1],
+                                        t2e[0,c1],t2e[3,c1]))))
+        newt=np.hstack((newt,np.vstack((t2e[2,c1],t2e[4,c1],
+                                        t2e[1,c1],t2e[5,c1]))))
+        newt=np.hstack((newt,np.vstack((t2e[2,c1],t2e[4,c1],
+                                        t2e[3,c1],t2e[5,c1]))))
         # CASE 2: diagonal [1,3]
-        newt=np.hstack((newt,np.vstack((t2e[1,c2],t2e[3,c2],t2e[0,c2],t2e[4,c2]))))
-        newt=np.hstack((newt,np.vstack((t2e[1,c2],t2e[3,c2],t2e[4,c2],t2e[5,c2]))))
-        newt=np.hstack((newt,np.vstack((t2e[1,c2],t2e[3,c2],t2e[5,c2],t2e[2,c2]))))
-        newt=np.hstack((newt,np.vstack((t2e[1,c2],t2e[3,c2],t2e[2,c2],t2e[0,c2]))))
+        newt=np.hstack((newt,np.vstack((t2e[1,c2],t2e[3,c2],
+                                        t2e[0,c2],t2e[4,c2]))))
+        newt=np.hstack((newt,np.vstack((t2e[1,c2],t2e[3,c2],
+                                        t2e[4,c2],t2e[5,c2]))))
+        newt=np.hstack((newt,np.vstack((t2e[1,c2],t2e[3,c2],
+                                        t2e[5,c2],t2e[2,c2]))))
+        newt=np.hstack((newt,np.vstack((t2e[1,c2],t2e[3,c2],
+                                        t2e[2,c2],t2e[0,c2]))))
         # CASE 3: diagonal [0,5]
-        newt=np.hstack((newt,np.vstack((t2e[0,c3],t2e[5,c3],t2e[1,c3],t2e[4,c3]))))
-        newt=np.hstack((newt,np.vstack((t2e[0,c3],t2e[5,c3],t2e[4,c3],t2e[3,c3]))))
-        newt=np.hstack((newt,np.vstack((t2e[0,c3],t2e[5,c3],t2e[3,c3],t2e[2,c3]))))
-        newt=np.hstack((newt,np.vstack((t2e[0,c3],t2e[5,c3],t2e[2,c3],t2e[1,c3]))))
+        newt=np.hstack((newt,np.vstack((t2e[0,c3],t2e[5,c3],
+                                        t2e[1,c3],t2e[4,c3]))))
+        newt=np.hstack((newt,np.vstack((t2e[0,c3],t2e[5,c3],
+                                        t2e[4,c3],t2e[3,c3]))))
+        newt=np.hstack((newt,np.vstack((t2e[0,c3],t2e[5,c3],
+                                        t2e[3,c3],t2e[2,c3]))))
+        newt=np.hstack((newt,np.vstack((t2e[0,c3],t2e[5,c3],
+                                        t2e[2,c3],t2e[1,c3]))))
         # update fields
         self.p=newp
         self.t=newt
