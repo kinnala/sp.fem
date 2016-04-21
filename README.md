@@ -2,7 +2,7 @@
 
 In this repository you find the working draft of a flexible, fully-interpreted and yet well-performing finite element code written in SciPy/Python.
 
-The code is initially (c) Tom Gustafsson but the license will change in the future. Triangle is (c) Jonathan Shewchuk.
+The code is (c) Tom Gustafsson and licensed under AGPLv3. Windows binary of Triangle mesh generator is included for convenience. Triangle is (c) Jonathan Shewchuk and the license can be found in ./fem/triangle/LICENSE.
 
 ## Acknowledgements
 
@@ -25,12 +25,17 @@ The author and the code of sp.fem has strongly been influenced by the finite ele
 ## Intallation: Linux
 
 1. Install all dependencies (package manager of choice)
-2. Compile Triangle binary to ./fem/triangle/triangle (https://www.cs.cmu.edu/~quake/triangle.html)
+2. Compile Triangle binary to ./fem/triangle/triangle (https://www.cs.cmu.edu/~quake/triangle.html).
+   An automatic installation and compilation script is provided for convenience under ./fem/triangle/.
 
 ## Installation: Windows 
 
 1. Install Anaconda
 2. triangle.exe is already found under ./fem/triangle/
+
+## Automatic unit and performance tests
+
+Tests are run automatically and can be found in [sp.fem-tests](https://github.com/kinnala/sp.fem-tests/) repository.
 
 ## Documentation
 
