@@ -554,6 +554,7 @@ class MeshTet(Mesh):
                 mlab.triangular_mesh(newp[0,:],newp[1,:],newp[2,:],newt.T,
                                      representation='wireframe',color=(0,0,0))
                 mlab.axes()
+                mlab.colorbar()
         else:
             raise ImportError("MeshTet: Mayavi not supported "
                               "by the host system!")
