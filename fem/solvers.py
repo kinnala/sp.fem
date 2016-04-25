@@ -40,25 +40,34 @@ def direct(A,b,x=None,I=None,use_umfpack=True):
 
     return x
 
-def cg(A,b,tol,maxiter,pc="diag",verbose=True):
+def cg(A,b,tol,maxiter,x0=None,I=None,pc="diag",verbose=True,viewiters=False):
     print "Starting conjugate gradient with preconditioner \""+pc+"\"..."
     
     def callback(x):
-        print "- Vector-2 norm: "+str(np.linalg.norm(x))
+        if viewiters:
+            print "- Vector-2 norm: "+str(np.linalg.norm(x))
 
     if pc=="diag":
         # diagonal preconditioner
-        M=sp.spdiags(1/(A.diagonal()),0,A.shape[0],A.shape[1])
+        M=sp.spdiags(1/(A[I].T[I].diagonal()),0,I.shape[0],I.shape[0])
     
-    if verbose:
-        u=spl.cg(A,b,maxiter=maxiter,M=M,tol=tol,callback=callback)
+    if I is None:
+        u=spl.cg(A,b,x0=x0,maxiter=maxiter,M=M,tol=tol,callback=callback)
     else:
-        u=spl.cg(A,b,maxiter=maxiter,M=M,tol=tol)
+        if x0 is None:
+            u=spl.cg(A[I].T[I].T,b[I],maxiter=maxiter,M=M,tol=tol,callback=callback)
+        else:
+            u=spl.cg(A[I].T[I].T,b[I],x0=x0[I],maxiter=maxiter,M=M,tol=tol,callback=callback)
 
     if verbose:
         if u[1]==0:
-            print "Achieved tolerance "+str(tol)+"."
+            print "* Achieved tolerance "+str(tol)+"."
         elif u[1]>0:
-            print "Maximum number of iterations "+str(maxiter)+" reached."
-        
-    return u[0]
+            print "* WARNING! Maximum number of iterations "+str(maxiter)+" reached."
+
+    if I is None: 
+        return u[0]
+    else:
+        U=np.zeros(A.shape[0])
+        U[I]=u[0]
+        return U
