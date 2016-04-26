@@ -601,6 +601,12 @@ class MeshTet(Mesh):
         """Return an array of boundary facet indices."""
         return np.nonzero(self.f2t[1,:]==-1)[0]
 
+    def boundary_edges(self):
+        """Return an array of boundary edge indices."""
+        bnodes=self.boundary_nodes()[:,None]
+        return np.nonzero(np.sum(self.edges[0,:]==bnodes,axis=0)*
+                          np.sum(self.edges[1,:]==bnodes,axis=0))[0]
+
     def interior_nodes(self):
         """Return an array of interior node indices."""
         return np.setdiff1d(np.arange(0,self.p.shape[1]),self.boundary_nodes())
