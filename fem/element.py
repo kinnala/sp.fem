@@ -278,6 +278,7 @@ class ElementTriPp(ElementH1):
         self.n_dofs=1
         self.f_dofs=np.max([p-1,0])
         self.i_dofs=np.max([(p-1)*(p-2)/2,0])
+        self.dim=2
 
         self.nbdofs=3*self.n_dofs+3*self.f_dofs+self.i_dofs
 
