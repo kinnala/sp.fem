@@ -32,8 +32,6 @@ class TensorFunction(object):
 
         if dim>3:
             raise NotImplementedError("TensorFunction.init(): Given dimension not supported!")
-        if tdim>3:
-            raise NotImplementedError("TensorFunction.init(): Given target dimension not supported!")
         if torder>2:
             raise NotImplementedError("TensorFunction.init(): Given tensorial order not supported!")
 
@@ -167,7 +165,7 @@ class TensorFunction(object):
                 elif self.torder==0:
                     new=ConstantTensor(self.expr,dim=other.dim,tdim=other.tdim,torder=other.torder)
                 elif self.torder==2 and other.torder==1:
-                    new=ConstantTensor(0.0,dim=self.dim,tdim=self.dim,torder=1)
+                    new=ConstantTensor(0.0,dim=self.dim,tdim=self.tdim,torder=1)
                     for itr in range(new.tdim):
                         for jtr in range(new.tdim):
                             new.expr[itr]+=self.expr[itr][jtr]*other.expr[jtr]
