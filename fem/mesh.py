@@ -26,16 +26,16 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with sp.fem.  If not, see <http://www.gnu.org/licenses/>. 
 """
-import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.tri as mtri
-import scipy.interpolate as spi
-import fem.mapping as fmap
 try:
     from mayavi import mlab
     opt_mayavi=True
 except:
     opt_mayavi=False
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.tri as mtri
+import scipy.interpolate as spi
+import fem.mapping as fmap
 from mpl_toolkits.mplot3d import Axes3D
 
 
