@@ -705,8 +705,12 @@ class MeshTri(Mesh):
 
     def interpolator(self,x):
         """Return a function which interpolates values with P1 basis."""
-        # TODO make this faster (i.e. use the mesh in self)
-        return spi.LinearNDInterpolator(self.p.T,x)
+        triang=mtri.Triangulation(self.p[0,:],self.p[1,:],self.t.T)
+        interpf=mtri.LinearTriInterpolator(triang,x)
+        # contruct an interpolator handle
+        def handle(X,Y):
+            return interpf(X,Y).data
+        return handle
 
     def param(self):
         """Return mesh parameter."""
