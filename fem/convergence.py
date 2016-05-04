@@ -33,7 +33,7 @@ class ConvergenceStudy(object):
     def __init__(self,fname):
         self.fname=fname+".plk"
 
-    def add_point(self,x,y,label='default',data=None):
+    def add_point(self,x,y,tag='default'):
         # open datastore if exists
         try:
             with open(self.fname,'rb') as fh:
@@ -44,15 +44,15 @@ class ConvergenceStudy(object):
         # save point to datastore
         tmp=ConvergencePoint()
         tmp.y=y
-        tmp.label=label
-        tmp.data=data
+        tmp.tag=tag
         datastore[x]=tmp
 
         # save datastore to file
         with open(self.fname,'wb') as fh:
             pickle.dump(datastore,fh)
 
-    def plot(self,show_labels=False,exclude_labels=None):
+    def plot(self,xlabel='Mesh parameter',ylabel='Error',
+             show_labels=False,loc='upper right',exclude_tags=None,draw_fit=True):
         try:
             with open(self.fname,'rb') as fh:
                 datastore=pickle.load(fh)
@@ -63,20 +63,42 @@ class ConvergenceStudy(object):
         graphs_y={}
         for key in datastore:
             pt=datastore[key]
-            label=pt.label
-            if exclude_labels is not None and label in exclude_labels:
+            tag=pt.tag
+            if exclude_tags is not None and tag in exclude_tags:
                 pass
             else:
-                if label in graphs_x:
-                    graphs_x[label]=np.append(graphs_x[label],key)
-                    graphs_y[label]=np.append(graphs_y[label],pt.y)
+                if tag in graphs_x:
+                    graphs_x[tag]=np.append(graphs_x[tag],key)
+                    graphs_y[tag]=np.append(graphs_y[tag],pt.y)
                 else:
-                    graphs_x[label]=np.array([key])
-                    graphs_y[label]=np.array([pt.y])
+                    graphs_x[tag]=np.array([key])
+                    graphs_y[tag]=np.array([pt.y])
 
-        fig=plt.figure()
-        for g in graphs_x:
-            plt.loglog(graphs_x[g],graphs_y[g],'bo-')
+        fig,ax=plt.subplots()
+        for tag in graphs_x:
+            I=np.argsort(graphs_x[tag])
+            ax.loglog(graphs_x[tag][I],graphs_y[tag][I],'o',
+                      label=tag)
+            if draw_fit:
+                fitcoeffs=np.polyfit(np.log10(graphs_x[tag]),np.log10(graphs_y[tag]),1)
+                def fitmap(x):
+                    return 10.0**(fitcoeffs[0]*np.log10(x)+fitcoeffs[1])
+                def default_fit_label(tag,rate):
+                    ratestr='%.2f'%round(rate,2)
+                    return "polynomial fit ("+tag+"), slope: "+ratestr
+                pts=np.array([graphs_x[tag][I[0]],graphs_x[tag][I[-1]]])
+                ax.loglog(pts,fitmap(pts),'-',label=default_fit_label(tag,fitcoeffs[0]))
 
-        return fig
+        if show_labels:
+            ax.legend(loc=loc)
+
+        ax.grid(b=True,which='major',color='k',linestyle='-')
+        ax.grid(b=True,which='minor',color='y',linestyle='--')
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel)
+
+        return fig,ax
+
+    def show(self):
+        plt.show()
 
