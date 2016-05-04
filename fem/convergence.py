@@ -93,7 +93,7 @@ class ConvergenceStudy(object):
             ax.legend(loc=loc)
 
         ax.grid(b=True,which='major',color='k',linestyle='-')
-        ax.grid(b=True,which='minor',color='y',linestyle='--')
+        ax.grid(b=True,which='minor',color='0.5',linestyle='--')
         ax.set_xlabel(xlabel)
         ax.set_ylabel(ylabel)
 
