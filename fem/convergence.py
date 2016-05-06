@@ -42,10 +42,7 @@ class ConvergenceStudy(object):
             datastore={}
 
         # save point to datastore
-        tmp=ConvergencePoint()
-        tmp.y=y
-        tmp.tag=tag
-        datastore[x]=tmp
+        datastore[(tag,x)]=y
 
         # save datastore to file
         with open(self.fname,'wb') as fh:
@@ -63,16 +60,16 @@ class ConvergenceStudy(object):
         graphs_y={}
         for key in datastore:
             pt=datastore[key]
-            tag=pt.tag
+            tag=key[0]
             if exclude_tags is not None and tag in exclude_tags:
                 pass
             else:
                 if tag in graphs_x:
-                    graphs_x[tag]=np.append(graphs_x[tag],key)
-                    graphs_y[tag]=np.append(graphs_y[tag],pt.y)
+                    graphs_x[tag]=np.append(graphs_x[tag],key[1])
+                    graphs_y[tag]=np.append(graphs_y[tag],pt)
                 else:
-                    graphs_x[tag]=np.array([key])
-                    graphs_y[tag]=np.array([pt.y])
+                    graphs_x[tag]=np.array([key[1]])
+                    graphs_y[tag]=np.array([pt])
 
         fig,ax=plt.subplots()
         for tag in graphs_x:

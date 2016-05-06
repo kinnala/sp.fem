@@ -540,21 +540,22 @@ class MeshTet(Mesh):
                                      self.facets[:,fset].T,
                                      representation='wireframe',color=(0,0,0))
             else:
-                if u.shape[0]!=self.facets.shape[1]:
-                    raise Exception("MeshTet.draw_facets: scalar data must "
-                                    "have one value for each facet!")
-                newp=np.vstack((self.p[0,self.facets].flatten(order='F'),
-                                self.p[1,self.facets].flatten(order='F')))
-                newp=np.vstack((newp,self.p[2,self.facets].flatten(order='F')))
-                newt=np.arange(newp.shape[1]).reshape((3,newp.shape[1]/3),
-                                                      order='F')
-                newu=np.tile(u,(3,1)).flatten(order='F')
-                mlab.triangular_mesh(newp[0,:],newp[1,:],newp[2,:],newt.T,
-                                     scalars=newu)
-                mlab.triangular_mesh(newp[0,:],newp[1,:],newp[2,:],newt.T,
-                                     representation='wireframe',color=(0,0,0))
-                mlab.axes()
-                mlab.colorbar()
+                if u.shape[0]==self.facets.shape[1]:
+                    newp=np.vstack((self.p[0,self.facets].flatten(order='F'),
+                                    self.p[1,self.facets].flatten(order='F')))
+                    newp=np.vstack((newp,self.p[2,self.facets].flatten(order='F')))
+                    newt=np.arange(newp.shape[1]).reshape((3,newp.shape[1]/3),
+                                                          order='F')
+                    newu=np.tile(u,(3,1)).flatten(order='F')
+                    mlab.triangular_mesh(newp[0,:],newp[1,:],newp[2,:],newt.T,
+                                         scalars=newu)
+                    mlab.triangular_mesh(newp[0,:],newp[1,:],newp[2,:],newt.T,
+                                         representation='wireframe',color=(0,0,0))
+                    mlab.axes()
+                    mlab.colorbar()
+                else:
+                    raise Exception("MeshTet.draw_facets: given scalar data "+
+                                    "shape not supported")
         else:
             raise ImportError("MeshTet: Mayavi not supported "
                               "by the host system!")

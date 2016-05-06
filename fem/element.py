@@ -416,14 +416,25 @@ class ElementTriDG(ElementH1):
     def __init__(self,elem):
         # change all dofs to interior dofs
         self.elem=elem
+        self.maxdeg=elem.maxdeg
         self.i_dofs=3*elem.n_dofs+3*elem.f_dofs+elem.i_dofs
         self.dim=2
+    def lbasis(self,X,i):
+        return self.elem.lbasis(X,i)
+
+class ElementTetDG(ElementH1):
+    def __init__(self,elem):
+        # change all dofs to interior dofs
+        self.elem=elem
+        self.maxdeg=elem.maxdeg
+        self.i_dofs=4*elem.n_dofs+4*elem.f_dofs+6*elem.e_dofs+elem.i_dofs
+        self.dim=3
     def lbasis(self,X,i):
         return self.elem.lbasis(X,i)
     
 class ElementTetP0(ElementH1):
     i_dofs=1
-    max_deg=1
+    maxdeg=1
 
     def lbasis(self,X,i):
         phi={
@@ -443,7 +454,7 @@ class ElementTetP0(ElementH1):
 
 class ElementTriP0(ElementH1):
     i_dofs=1
-    max_deg=1
+    maxdeg=1
 
     def lbasis(self,X,i):
         phi={
@@ -465,7 +476,7 @@ class ElementTriMini(ElementH1):
     dim=2
     n_dofs=1
     i_dofs=1
-    max_deg=3
+    maxdeg=3
 
     def lbasis(self,X,i):
         phi={
