@@ -74,6 +74,12 @@ class Mesh(object):
             msg=("Mesh.validate(): Mesh contains a vertex "
                  "not belonging to any element.")
             raise Exception(msg)
+        # check that there are no duplicate points
+        tmp=np.ascontiguousarray(self.p.T)
+        if(self.p.shape[1]!=np.unique(tmp.view([('',tmp.dtype)]*tmp.shape[1])).shape[0]):
+            msg=("Mesh.validate(): Mesh contains duplicate "
+                 "vertices.")
+            raise Exception(msg)
 
 
 class MeshLine(Mesh):
