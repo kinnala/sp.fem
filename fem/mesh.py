@@ -759,10 +759,11 @@ class MeshTri(Mesh):
         """Visualize nodal or elemental function (2d)."""
         fig=plt.figure()
         if smooth:
-            return plt.tripcolor(self.p[0,:],self.p[1,:],self.t.T,z,
+            plt.tripcolor(self.p[0,:],self.p[1,:],self.t.T,z,
                                  shading='gouraud')
         else:
-            return plt.tripcolor(self.p[0,:],self.p[1,:],self.t.T,z)
+            plt.tripcolor(self.p[0,:],self.p[1,:],self.t.T,z)
+        return fig
 
     def plot3(self,z,smooth=False):
         """Visualize nodal function (3d i.e. three axes)."""
