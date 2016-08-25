@@ -1,0 +1,7 @@
+###### Package requirements for sp.fem
+###### Create a new virtualenv and use "pip install -r requirements.txt" to install
+ipython
+numpy
+scipy
+sympy
+matplotlib
