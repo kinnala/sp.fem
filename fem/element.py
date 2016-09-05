@@ -352,8 +352,6 @@ class ElementTriPp(ElementH1):
                 
                 # generate integrated Legendre polynomials
                 [P,dP]=self.intlegpoly(eta,p-2)
-                   #print len(P)
-                   #print len(dP)
                 
                 for j in range(len(P)):
                     phi[offset]=phi[e[0,i]]*phi[e[1,i]]*P[j]
@@ -413,6 +411,9 @@ class ElementTriPp(ElementH1):
         raise IndexError("ElementTriPp.lbasis: reached end of lbasis without returning anything.")
 
 class ElementTriDG(ElementH1):
+    """Transform a H1 conforming triangular element
+    into a discontinuous one by turning all DOFs into
+    interior DOFs."""
     def __init__(self,elem):
         # change all dofs to interior dofs
         self.elem=elem

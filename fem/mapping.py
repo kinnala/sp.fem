@@ -198,7 +198,7 @@ class MappingQ1(Mapping):
         return invJ
         
     def G(self,X,find=None):
-        """Boundary mapping G(X)=Bx+c."""
+        """Boundary mapping :math:`G(X)=BX+c`."""
         y={}
         if find is None:
             y[0]=np.outer(self.B[0],X).T+self.c[0]
