@@ -1,14 +1,21 @@
 # -*- coding: utf-8 -*-
 """
-Tools for various finite element meshes.
+Classes that represent different types of meshes.
 
-Try the following subclasses of Mesh:
-    * MeshTri
-    * MeshTet
-    * MeshQuad
-    * MeshLine
+Currently implemented mesh types are
 
-@author: Tom Gustafsson
+    * MeshTri, a triangular mesh
+    * MeshTet, a tetrahedral mesh
+    * MeshQuad, a mesh consisting of quadrilaterals
+    * MeshLine, one-dimensional mesh
+
+Example 1. Obtain a three times refined mesh of the unit square:
+
+.. code-block:: none
+
+    import fem.mesh as fmsh
+    m=fmsh.MeshTri()
+    m.refine(3)
 """
 try:
     from mayavi import mlab
@@ -24,7 +31,7 @@ from mpl_toolkits.mplot3d import Axes3D
 
 
 class Mesh(object):
-    """Finite element mesh."""
+    """Abstract finite element mesh class."""
 
     def __init__(self,p,t):
         raise NotImplementedError("Mesh constructor not implemented!")
@@ -38,11 +45,11 @@ class Mesh(object):
     def mapping(self):
         raise NotImplementedError("Mesh.mapping() not implemented!")
 
-    def validate(self):
+    def _validate(self):
         """Perform mesh validity checks."""
         # check that vertex matrix has "correct" size
         if(self.p.shape[0]>3):
-            msg=("Mesh.validate(): We do not allow meshes "
+            msg=("Mesh._validate(): We do not allow meshes "
                  "embedded into larger than 3-dimensional "
                  "Euclidean space! Please check that "
                  "the given vertex matrix is of size Ndim x Nvertices.")
@@ -50,18 +57,18 @@ class Mesh(object):
         # check that element connectivity matrix has correct size
         nvertices={'line':2,'tri':3,'quad':4,'tet':4}
         if(self.t.shape[0]!=nvertices[self.refdom]):
-            msg=("Mesh.validate(): The given connectivity "
+            msg=("Mesh._validate(): The given connectivity "
                  "matrix has wrong shape!")
             raise Exception(msg)
         # check that all points are at least in some element
         if(len(np.setdiff1d(np.arange(self.p.shape[1]),np.unique(self.t)))!=0):
-            msg=("Mesh.validate(): Mesh contains a vertex "
+            msg=("Mesh._validate(): Mesh contains a vertex "
                  "not belonging to any element.")
             raise Exception(msg)
         # check that there are no duplicate points
         tmp=np.ascontiguousarray(self.p.T)
         if(self.p.shape[1]!=np.unique(tmp.view([('',tmp.dtype)]*tmp.shape[1])).shape[0]):
-            msg=("Mesh.validate(): Mesh contains duplicate "
+            msg=("Mesh._validate(): Mesh contains duplicate "
                  "vertices.")
             raise Exception(msg)
 
@@ -78,7 +85,7 @@ class MeshLine(Mesh):
         self.p=p
         self.t=t
         if validate:
-            self.validate()
+            self._validate()
 
     def refine(self,N=1):
         """Perform one or more refines on the mesh."""
@@ -134,7 +141,7 @@ class MeshQuad(Mesh):
         self.p=p
         self.t=t
         if validate:
-            self.validate()
+            self._validate()
         self.build_mappings()
 
     def build_mappings(self):
@@ -308,7 +315,7 @@ class MeshTet(Mesh):
         self.p=p
         self.t=t
         if validate:
-            self.validate()
+            self._validate()
         self.build_mappings()
 
     def build_mappings(self):
@@ -636,7 +643,7 @@ class MeshTri(Mesh):
         self.p=p
         self.t=t
         if validate:
-            self.validate()
+            self._validate()
         self.build_mappings()
 
     def build_mappings(self):
