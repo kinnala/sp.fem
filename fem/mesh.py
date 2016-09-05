@@ -9,22 +9,6 @@ Try the following subclasses of Mesh:
     * MeshLine
 
 @author: Tom Gustafsson
-
-
-This file is part of sp.fem.
-
-sp.fem is free software: you can redistribute it and/or modify
-it under the terms of the GNU Affero General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-sp.fem is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Affero General Public License for more details.
-
-You should have received a copy of the GNU Affero General Public License
-along with sp.fem.  If not, see <http://www.gnu.org/licenses/>. 
 """
 try:
     from mayavi import mlab
@@ -806,10 +790,7 @@ class MeshTri(Mesh):
 
     def show(self):
         """Call after plot functions."""
-        if opt_mayavi:
-            mlab.show()
-        else:
-            plt.show()
+        plt.show()
 
     def refine(self,N=1):
         """Perform one or more refines on the mesh."""

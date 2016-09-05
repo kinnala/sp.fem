@@ -9,7 +9,7 @@ install-triangle: ## Download and compile Triangle
 	@make -C fem/triangle
 
 dev-scripts: ## Create scripts that are useful while developing (with) sp.fem
-	@printf "#!/bin/bash\ntmux -2 new-session -d 'TERM=screen-256color vim fem/*'\ntmux -2 split-window -h '. activate spfemenv && ipython'\ntmux split-window -v\ntmux -2 attach-session -d" > dev-tmux
+	@printf "#!/bin/bash\ntmux -2 new-session -d 'TERM=screen-256color vim fem/*'\ntmux split-window -h \ntmux split-window -v\ntmux -2 attach-session -d" > dev-tmux
 	@chmod 744 dev-tmux
 
 dev-install: ## Create a development environment to conda
