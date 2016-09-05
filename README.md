@@ -2,7 +2,7 @@
 
 In this repository you find the working draft of a flexible, fully-interpreted and yet well-performing finite element code written in SciPy/Python.
 
-The code is (c) Tom Gustafsson and licensed under AGPLv3. Windows binary of Triangle mesh generator is included for convenience. Triangle is (c) Jonathan Shewchuk and the license can be found in ./fem/triangle/LICENSE.
+The code is (c) Tom Gustafsson and licensed under AGPLv3. Triangle is (c) Jonathan Shewchuk and the license can be found in ./fem/triangle/LICENSE.
 
 ## Acknowledgements
 
@@ -12,34 +12,11 @@ The author and the code of sp.fem has strongly been influenced by the finite ele
 * [M. Juntunen](https://scholar.google.fi/citations?user=iKVJMwIAAAAJ)
 * [A. Huhtala](http://arxiv.org/find/math/1/au:+Huhtala_A/0/1/0/all/0/1)
 
-## Dependencies
-
-* Python 2.7
-* Numpy
-* Scipy
-* Sympy (Weakform module)
-* Matplotlib
-* Triangle (recommended; for 2D meshing)
-* Mayavi (optional; for 3D mesh plots)
-
-## Intallation: Linux
-
-1. Install all dependencies (package manager of choice)
-2. Compile Triangle binary to ./fem/triangle/triangle (https://www.cs.cmu.edu/~quake/triangle.html).
-   An automatic installation and compilation script is provided for convenience under ./fem/triangle/.
-
-## Installation: Windows 
-
-1. Install Anaconda
-2. triangle.exe is already found under ./fem/triangle/
-
-## Automatic unit and performance tests
-
-Tests are run automatically and can be found in [sp.fem-tests](https://github.com/kinnala/sp.fem-tests/) repository.
+Some parts of the vectorized code are more or less directly influenced by the efficient vectorized Matlab implementations written by these people. This library would either not exists or at least be ten times slower if not for them.
 
 ## Documentation
 
-Currently doxygen must be run by the user. Use Doxyfile that is included in the repository.
+The documentation is built using Sphinx and can currently be found under /docs.
 
 ## TODO list
 

@@ -1,5 +1,5 @@
-sp.fem!
-=======
+Hello, sp.fem!
+==============
 
 This is the documentation of a simple finite element assembler library written in good old Python 2.7. The library is useful for quickly creating numerical solvers for various PDE-based models.
 

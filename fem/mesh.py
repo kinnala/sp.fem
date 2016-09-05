@@ -600,6 +600,10 @@ class MeshTet(Mesh):
             raise ImportError("MeshTet: Mayavi not supported "
                               "by the host system!")
 
+    def show(self):
+        """Run mayavi's mlab.show() function to draw."""
+        mlab.show()
+
     def boundary_nodes(self):
         """Return an array of boundary node indices."""
         return np.unique(self.facets[:,self.boundary_facets()])
