@@ -3,6 +3,13 @@ Hello, sp.fem!
 
 This is the documentation of a simple finite element assembler library written in Python 2.7. The library is useful for quickly creating numerical solvers for various PDE-based models.
 
+What the hell is a finite element?
+==================================
+
+You might remember computing derivatives in high school. Unfortunately, back then the practice was not motivated that much (same applies to many university-level mathematics courses) and probably you ended up forgetting most of what you learned.
+
+This is unfortunate since the derivatives are used to build very useful and detailed models of physics, engineering and economics. These models are known as *differential equations* and very often can be robustly solved using a computer and the so-called *finite element method*.
+
 Getting started
 ===============
 
@@ -12,16 +19,6 @@ Tutorial
 ========
 
 first usage example
-
-Other examples
-==============
-
-
-.. toctree::
-   :maxdepth: 2
-
-   example1
-   example2
 
 Classes
 =======

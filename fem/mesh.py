@@ -4,18 +4,20 @@ Classes that represent different types of meshes.
 
 Currently implemented mesh types are
 
-    * MeshTri, a triangular mesh
-    * MeshTet, a tetrahedral mesh
-    * MeshQuad, a mesh consisting of quadrilaterals
-    * MeshLine, one-dimensional mesh
+    * **MeshTri**, a triangular mesh
+    * **MeshTet**, a tetrahedral mesh
+    * **MeshQuad**, a mesh consisting of quadrilaterals
+    * **MeshLine**, one-dimensional mesh
 
-Example 1. Obtain a three times refined mesh of the unit square:
+*Example 1*. Obtain a three times refined mesh of the unit square and draw it.
 
 .. code-block:: none
 
     import fem.mesh as fmsh
     m=fmsh.MeshTri()
     m.refine(3)
+    m.draw()
+    m.show()
 """
 try:
     from mayavi import mlab
@@ -88,11 +90,11 @@ class MeshLine(Mesh):
             self._validate()
 
     def refine(self,N=1):
-        """Perform one or more refines on the mesh."""
+        """Perform one or more uniform refines on the mesh."""
         for itr in range(N):
-            self.single_refine()
+            self._single_refine()
 
-    def single_refine(self):
+    def _single_refine(self):
         """Perform a single mesh refine that halves 'h'."""
         # rename variables
         t=self.t
@@ -125,12 +127,17 @@ class MeshLine(Mesh):
             ys.append(None)
         plt.plot(xs,ys,color)
 
+    def show(self):
+        """Calls pyplot.show() in order to display the figure
+        after running a plot command."""
+        plt.show()
+
     def mapping(self):
         return fmap.MappingAffine(self)
 
 
 class MeshQuad(Mesh):
-    """Quadrilateral mesh."""
+    """A mesh consisting of quadrilateral elements."""
     
     refdom="quad"
     brefdom="line"
@@ -211,9 +218,9 @@ class MeshQuad(Mesh):
     def refine(self,N=1):
         """Perform one or more refines on the mesh."""
         for itr in range(N):
-            self.single_refine()
+            self._single_refine()
 
-    def single_refine(self):
+    def _single_refine(self):
         """Perform a single mesh refine that halves 'h'."""
         # rename variables
         t=self.t
@@ -240,7 +247,7 @@ class MeshQuad(Mesh):
         self.build_mappings()
 
     def splitquads(self,z):
-        """Split each quad to triangle."""
+        """Split each quad into a triangle and return MeshTri."""
         if len(z)==self.t.shape[1]:
             # preserve elemental constant functions
             Z=np.concatenate((z,z))
