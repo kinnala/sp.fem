@@ -13,12 +13,32 @@ This is unfortunate since the derivatives are used to build very useful and deta
 Getting started
 ===============
 
-installation instructions
+You can install the library by running the following commands
+
+.. code-block:: none
+
+    git clone https://github.com/kinnala/sp.fem
+    cd sp.fem
+    make install
+
+Now you can either resolve the requirements yourself by looking into the contents of requirements.txt or you can install a development environment by first installing `miniconda <http://conda.pydata.org/miniconda.html>`_ and then writing
+
+.. code-block:: none
+
+    make dev-install
+
+This will create a conda environment with the name *spfemenv* that contains all the required Python packages.
 
 Tutorial
 ========
 
-first usage example
+Derivative describes the change. For example, the rate of change in the location of a particle is called the particle's velocity. In technical terms we say that the derivative of the location (with respect to time) is the velocity. Similarly, the derivative of the velocity is called acceleration.
+
+One can consider an infinite lattice of point masses and springs. Let :math:`u(x,y,t)` be. The movement of the points is described by the so-called wave equation which states that the acceleration of a point is proportional to the curvature, that is,
+
+.. math::
+
+    u_{tt}=\Delta u
 
 Classes
 =======
