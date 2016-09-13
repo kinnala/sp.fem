@@ -48,6 +48,48 @@ class Element:
         """Returns global basis functions evaluated at some local points."""
         raise NotImplementedError("Element.gbasis: local basis (lbasis) not implemented!")
 
+class ElementGlobal(Element):
+    """An element defined through DOF's."""
+
+    def gdofs(self,mapping,i,j):
+        """Return the (i,j)'th entry of the Vandermonde matrix in
+        all elements. Here i corresponds to the DOF and j corresponds
+        to the generic global basis.
+        
+        Note! self.C must be a dictionary containing a generic global
+        basis."""
+        raise NotImplementedError("ElementGlobal.gdofs not implemented!")
+
+class ElementGlobalTriP1(ElementGlobal):
+    n_dofs=1
+
+    C={
+            0:np.array([[1.0,0.0],[0.0,0.0]]),
+            1:np.array([[0.0,0.0],[1.0,0.0]]),
+            2:np.array([[0.0,1.0],[0.0,0.0]])
+            }
+
+    def gdofs(self,mapping,i,j):
+        C=self.C[j]
+
+        xglob1=mapping.F(np.array([[0],[0]]))
+        X0=xglob1[0].flatten()
+        Y0=xglob1[1].flatten()
+
+        xglob2=mapping.F(np.array([[1],[0]]))
+        X1=xglob2[0].flatten()
+        Y1=xglob2[1].flatten()
+
+        xglob3=mapping.F(np.array([[0],[1]]))
+        X2=xglob3[0].flatten()
+        Y2=xglob3[1].flatten()
+
+        return {
+               0:lambda foo: polyval2d(X0,Y0,C),
+               1:lambda foo: polyval2d(X1,Y1,C),
+               2:lambda foo: polyval2d(X2,Y2,C),
+               }[i](0)
+
 class ElementHdiv(Element):
     """Hdiv conforming finite element."""
 
