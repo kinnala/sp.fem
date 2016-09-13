@@ -11,7 +11,6 @@ install:
   - conda update -q conda
   - conda info -a
   - conda create -q -n spfemenv python=$TRAVIS_PYTHON_VERSION nomkl numpy scipy matplotlib sympy ipython
-  - conda remove mkl mkl-service
   - source activate spfemenv
   - make install
 script:
