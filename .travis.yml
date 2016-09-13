@@ -10,7 +10,7 @@ install:
   - conda config --set always_yes yes --set changeps1 no
   - conda update -q conda
   - conda info -a
-  - conda create -q -n spfemenv python=$TRAVIS_PYTHON_VERSION numpy scipy matplotlib sympy
+  - conda create -q -n spfemenv python=$TRAVIS_PYTHON_VERSION numpy scipy matplotlib sympy ipython
   - source activate spfemenv
   - make install
 script:
