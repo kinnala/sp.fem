@@ -117,18 +117,34 @@ class AssemblerGlobal(Assembler):
                 V[itr,jtr]=self.elem_u.gdofs(self.mapping,itr,jtr)
         Vinv=quick_inverse(np.transpose(V,(2,1,0))) 
 
-        # construct basis function matrices
+        # construct basis function matrices (and all derivatives up to second order)
         tind=np.arange(self.mesh.t.shape[1])
         self.bfuns_u={}
+        self.bfuns_du={}
+        self.bfuns_ddu={}
+        import numpy.polynomial.polynomial as npp
         for k in tind:
             self.bfuns_u[k]={}
+            self.bfuns_du[k]={}
+            self.bfuns_ddu[k]={}
             for jtr in range(self.Nbfun_u):
                 self.bfuns_u[k][jtr]=self.elem_u.C[0]*0.0
                 for itr in range(self.Nbfun_u):
                     self.bfuns_u[k][jtr]+=Vinv[k,jtr,itr]*self.elem_u.C[itr]
+                self.bfuns_du[k][jtr]={}
+                self.bfuns_ddu[k][jtr]={}
+                for ltr in range(self.mesh.p.shape[0]):
+                    # compute first derivatives
+                    self.bfuns_du[k][jtr][ltr]=npp.polyder(self.bfuns_u[k][jtr],axis=ltr)
+                    self.bfuns_ddu[k][jtr][ltr]={}
+                    for mtr in range(self.mesh.p.shape[0]):
+                        # compute second derivatives
+                        self.bfuns_ddu[k][jtr][ltr][mtr]=npp.polyder(self.bfuns_du[k][jtr][ltr],axis=mtr)
 
         if elem_v is None:
             self.bfuns_v=self.bfuns_u
+            self.bfuns_dv=self.bfuns_du
+            self.bfuns_ddv=self.bfuns_ddu
             self.Nbfun_v=self.Nbfun_u
         else:
             raise NotImplementedError("Two separate elements not yet supported!")
@@ -138,7 +154,7 @@ class AssemblerGlobal(Assembler):
 
         # check and fix parameters of form
         oldparams=inspect.getargspec(form).args
-        if 'u' in oldparams or 'du' in oldparams:
+        if 'u' in oldparams or 'du' in oldparams or 'ddu' in oldparams:
             paramlist=['u','v','du','dv','ddu','ddv','x','w','h']
             bilinear=True
         else:
@@ -166,8 +182,15 @@ class AssemblerGlobal(Assembler):
                 if dim==2:
                     u=npp.polyval2d(x[0][k,:],x[1][k,:],self.bfuns_u[k][jtr])
                     du={}
-                    du[0]=npp.polyval2d(x[0][k,:],x[1][k,:],npp.polyder(self.bfuns_u[k][jtr],axis=0))
-                    du[1]=npp.polyval2d(x[0][k,:],x[1][k,:],npp.polyder(self.bfuns_u[k][jtr],axis=1))
+                    du[0]=npp.polyval2d(x[0][k,:],x[1][k,:],self.bfuns_du[k][jtr][0])
+                    du[1]=npp.polyval2d(x[0][k,:],x[1][k,:],self.bfuns_du[k][jtr][1])
+                    ddu={}
+                    ddu[0]={}
+                    ddu[1]={}
+                    ddu[0][0]=npp.polyval2d(x[0][k,:],x[1][k,:],self.bfuns_ddu[k][jtr][0][0])
+                    ddu[1][0]=npp.polyval2d(x[0][k,:],x[1][k,:],self.bfuns_ddu[k][jtr][1][0])
+                    ddu[0][1]=npp.polyval2d(x[0][k,:],x[1][k,:],self.bfuns_ddu[k][jtr][0][1])
+                    ddu[1][1]=npp.polyval2d(x[0][k,:],x[1][k,:],self.bfuns_ddu[k][jtr][1][1])
                 else:
                     raise NotImplementedError("Used dimension not supported!")
                 for itr in range(self.Nbfun_v):
@@ -176,10 +199,17 @@ class AssemblerGlobal(Assembler):
                         dv={}
                         dv[0]=npp.polyval2d(x[0][k,:],x[1][k,:],npp.polyder(self.bfuns_v[k][itr],axis=0))
                         dv[1]=npp.polyval2d(x[0][k,:],x[1][k,:],npp.polyder(self.bfuns_v[k][itr],axis=1))
+                        ddv={}
+                        ddv[0]={}
+                        ddv[1]={}
+                        ddv[0][0]=npp.polyval2d(x[0][k,:],x[1][k,:],self.bfuns_ddv[k][jtr][0][0])
+                        ddv[1][0]=npp.polyval2d(x[0][k,:],x[1][k,:],self.bfuns_ddv[k][jtr][1][0])
+                        ddv[0][1]=npp.polyval2d(x[0][k,:],x[1][k,:],self.bfuns_ddv[k][jtr][0][1])
+                        ddv[1][1]=npp.polyval2d(x[0][k,:],x[1][k,:],self.bfuns_ddv[k][jtr][1][1])
                     else:
                         raise NotImplementedError("Used dimension not supported!")
 
-                    data[ktr]=np.dot(fform(u,v,du,dv,0*u,0*u,0*u,0*u,0*u),W*np.abs(detDF[k]))
+                    data[ktr]=np.dot(fform(u,v,du,dv,ddu,ddv,0*u,0*u,0*u),W*np.abs(detDF[k]))
                     rows[ktr]=self.dofnum_v.t_dof[itr,k]
                     cols[ktr]=self.dofnum_u.t_dof[jtr,k]
                     ktr+=1

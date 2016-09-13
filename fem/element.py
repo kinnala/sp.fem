@@ -60,6 +60,67 @@ class ElementGlobal(Element):
         basis."""
         raise NotImplementedError("ElementGlobal.gdofs not implemented!")
 
+class ElementGlobalMorley(ElementGlobal):
+    n_dofs=1
+    f_dofs=1
+
+    C={
+            0:np.array([[1.0,0.0,0.0],
+                        [0.0,0.0,0.0],
+                        [0.0,0.0,0.0]]),
+            1:np.array([[0.0,1.0,0.0],
+                        [0.0,0.0,0.0],
+                        [0.0,0.0,0.0]]),
+            2:np.array([[0.0,0.0,1.0],
+                        [0.0,0.0,0.0],
+                        [0.0,0.0,0.0]]),
+            3:np.array([[0.0,0.0,0.0],
+                        [1.0,0.0,0.0],
+                        [0.0,0.0,0.0]]),
+            4:np.array([[0.0,0.0,0.0],
+                        [0.0,1.0,0.0],
+                        [0.0,0.0,0.0]]),
+            5:np.array([[0.0,0.0,0.0],
+                        [0.0,0.0,0.0],
+                        [1.0,0.0,0.0]]),
+            }
+
+    def gdofs(self,mapping,i,j):
+        C=self.C[j]
+
+        xglob1=mapping.F(np.array([[0],[0]]))
+        X1=xglob1[0].flatten()
+        Y1=xglob1[1].flatten()
+
+        xglob2=mapping.F(np.array([[1],[0]]))
+        X2=xglob2[0].flatten()
+        Y2=xglob2[1].flatten()
+
+        xglob3=mapping.F(np.array([[0],[1]]))
+        X3=xglob3[0].flatten()
+        Y3=xglob3[1].flatten()
+
+        xglob12=mapping.F(np.array([[0.5],[0]]))
+        X12=xglob12[0].flatten()
+        Y12=xglob12[1].flatten()
+
+        xglob23=mapping.F(np.array([[0.5],[0.5]]))
+        X23=xglob23[0].flatten()
+        Y23=xglob23[1].flatten()
+
+        xglob13=mapping.F(np.array([[0],[0.5]]))
+        X13=xglob13[0].flatten()
+        Y13=xglob13[1].flatten()
+
+        return {
+               0:lambda foo: polyval2d(X1,Y1,C),
+               1:lambda foo: polyval2d(X2,Y2,C),
+               2:lambda foo: polyval2d(X3,Y3,C),
+               3:lambda foo: polyval2d(X12,Y12,C),
+               4:lambda foo: polyval2d(X23,Y23,C),
+               5:lambda foo: polyval2d(X13,Y13,C),
+               }[i](0)
+
 class ElementGlobalTriP1(ElementGlobal):
     n_dofs=1
 
