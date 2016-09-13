@@ -68,5 +68,4 @@ traitsui=4.4.0=py27_0
 vtk=5.10.1=py27_1
 wcwidth=0.1.7=py27_0
 wheel=0.29.0=py27_0
-wxpython=3.0.0.0=py27_2
 zlib=1.2.8=3

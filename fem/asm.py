@@ -76,6 +76,42 @@ class Assembler:
 
         return newform
 
+class AssemblerGlobal(Assembler):
+    """A slowish assembler for globally defined elements."""
+    def __init__(self,mesh,elem_u,elem_v=None):
+        # TODO check that elem is globally defined (has dof functionals)
+
+        self.mesh=mesh
+        self.elem_u=elem_u
+        self.mapping=mesh.mapping()
+
+        if elem_v is None:
+            self.elem_v=elem_u
+        else:
+            self.elem_v=elem_v
+
+    def iasm(self,form):
+        tind=range(self.mesh.t.shape[1])
+
+        # check and fix parameters of form
+        oldparams=inspect.getargspec(form).args
+        if 'u' in oldparams or 'du' in oldparams:
+            paramlist=['u','v','du','dv','ddu','ddv','x','w','h']
+            bilinear=True
+        else:
+            paramlist=['v','dv','ddv','x','w','h']
+            bilinear=False
+        fform=self.fillargs(form,paramlist)
+
+        # quadrature points and weights
+        X,W=get_quadrature(self.mesh.refdom,intorder)
+
+        # global quadrature points
+        x=self.mapping.F(X,tind)
+
+        # loop over elements
+        for k in tind:
+
 class AssemblerElement(Assembler):
     """A quasi-fast assembler for arbitrary element/mesh/mapping."""
     def __init__(self,mesh,elem_u,elem_v=None,mapping=None):
