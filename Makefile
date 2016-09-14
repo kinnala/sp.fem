@@ -8,6 +8,11 @@ install-triangle: ## Download and compile Triangle
 	@unzip fem/triangle/triangle.zip -d fem/triangle
 	@make -C fem/triangle
 
+install-conda: ## Download and install miniconda
+	@curl -o miniconda.sh https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh
+	@bash miniconda.sh
+	@rm miniconda.sh
+
 dev-scripts: ## Create scripts that are useful while developing (with) sp.fem
 	@printf "#!/bin/bash\ntmux -2 new-session -d 'TERM=screen-256color vim fem/*'\ntmux split-window -h \ntmux split-window -v\ntmux -2 attach-session -d" > dev-tmux
 	@chmod 744 dev-tmux
