@@ -1,5 +1,7 @@
 # sp.fem
 
+[![Build Status](https://travis-ci.org/kinnala/sp.fem.svg)](https://travis-ci.org/kinnala/sp.fem)
+
 In this repository you find the working draft of a flexible, fully-interpreted and yet well-performing finite element code written in SciPy/Python.
 
 The code is (c) Tom Gustafsson and licensed under AGPLv3. Triangle is (c) Jonathan Shewchuk and the license can be found in ./fem/triangle/LICENSE.

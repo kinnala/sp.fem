@@ -84,70 +84,19 @@ class AssemblerGlobal(Assembler):
     in the constructor and the assembly is performed by looping
     over elements and computing local stiffness matrices.
     """
-    def __init__(self,mesh,elem_u,elem_v=None):
+    def __init__(self,mesh,elem):
         if not isinstance(mesh,fem.mesh.Mesh):
             raise Exception("AssemblerGlobal.__init__(): first parameter "
                             "must be an instance of fem.mesh.Mesh!")
-        if not isinstance(elem_u,fem.element.ElementGlobal):
+        if not isinstance(elem,fem.element.ElementGlobal):
             raise Exception("AssemblerGlobal.__init__(): second parameter "
                             "must be an instance of fem.element.ElementGlobal!")
 
         self.mesh=mesh
-        self.elem_u=elem_u
-        self.dofnum_u=Dofnum(mesh,elem_u)
+        self.elem=elem
+        self.dofnum=Dofnum(mesh,elem)
         self.mapping=mesh.mapping()
-
-        if elem_v is None:
-            self.elem_v=elem_u
-            self.dofnum_v=self.dofnum_u
-        else:
-            self.elem_v=elem_v
-            self.dofnum_v=Dofnum(mesh,elem_v)
-
-        def quick_inverse(A):
-            # quick inversion of an array of matrices
-            identity=np.identity(A.shape[2],dtype=A.dtype)
-            return np.array([np.linalg.solve(x,identity) for x in A])
-
-        # solve basis functions
-        self.Nbfun_u=len(self.elem_u.C)
-        V=np.zeros((self.Nbfun_u,self.Nbfun_u,mesh.t.shape[1]))
-        for itr in range(self.Nbfun_u):
-            for jtr in range(self.Nbfun_u):
-                V[itr,jtr]=self.elem_u.gdofs(self.mapping,itr,jtr)
-        Vinv=quick_inverse(np.transpose(V,(2,1,0))) 
-
-        # construct basis function matrices (and all derivatives up to second order)
-        tind=np.arange(self.mesh.t.shape[1])
-        self.bfuns_u={}
-        self.bfuns_du={}
-        self.bfuns_ddu={}
-        import numpy.polynomial.polynomial as npp
-        for k in tind:
-            self.bfuns_u[k]={}
-            self.bfuns_du[k]={}
-            self.bfuns_ddu[k]={}
-            for jtr in range(self.Nbfun_u):
-                self.bfuns_u[k][jtr]=self.elem_u.C[0]*0.0
-                for itr in range(self.Nbfun_u):
-                    self.bfuns_u[k][jtr]+=Vinv[k,jtr,itr]*self.elem_u.C[itr]
-                self.bfuns_du[k][jtr]={}
-                self.bfuns_ddu[k][jtr]={}
-                for ltr in range(self.mesh.p.shape[0]):
-                    # compute first derivatives
-                    self.bfuns_du[k][jtr][ltr]=npp.polyder(self.bfuns_u[k][jtr],axis=ltr)
-                    self.bfuns_ddu[k][jtr][ltr]={}
-                    for mtr in range(self.mesh.p.shape[0]):
-                        # compute second derivatives
-                        self.bfuns_ddu[k][jtr][ltr][mtr]=npp.polyder(self.bfuns_du[k][jtr][ltr],axis=mtr)
-
-        if elem_v is None:
-            self.bfuns_v=self.bfuns_u
-            self.bfuns_dv=self.bfuns_du
-            self.bfuns_ddv=self.bfuns_ddu
-            self.Nbfun_v=self.Nbfun_u
-        else:
-            raise NotImplementedError("Two separate elements not yet supported!")
+        self.Nbfun=self.dofnum.t_dof.shape[0]
 
     def iasm(self,form,intorder=2):
         tind=np.arange(self.mesh.t.shape[1])
@@ -170,51 +119,28 @@ class AssemblerGlobal(Assembler):
         # jacobian at quadrature points
         detDF=self.mapping.detDF(X,tind)
 
-        data=np.zeros(tind.shape[0]*self.Nbfun_u*self.Nbfun_v)
-        rows=np.zeros(tind.shape[0]*self.Nbfun_u*self.Nbfun_v)
-        cols=np.zeros(tind.shape[0]*self.Nbfun_u*self.Nbfun_v)
+        # initialize sparse matrix
+        data=np.zeros(tind.shape[0]*self.Nbfun**2)
+        rows=np.zeros(tind.shape[0]*self.Nbfun**2)
+        cols=np.zeros(tind.shape[0]*self.Nbfun**2)
         ktr=0
+
         # loop over elements and do assembly
         dim=self.mesh.p.shape[0]
-        import numpy.polynomial.polynomial as npp
-        for k in tind:
-            for jtr in range(self.Nbfun_u):
-                if dim==2:
-                    u=npp.polyval2d(x[0][k,:],x[1][k,:],self.bfuns_u[k][jtr])
-                    du={}
-                    du[0]=npp.polyval2d(x[0][k,:],x[1][k,:],self.bfuns_du[k][jtr][0])
-                    du[1]=npp.polyval2d(x[0][k,:],x[1][k,:],self.bfuns_du[k][jtr][1])
-                    ddu={}
-                    ddu[0]={}
-                    ddu[1]={}
-                    ddu[0][0]=npp.polyval2d(x[0][k,:],x[1][k,:],self.bfuns_ddu[k][jtr][0][0])
-                    ddu[1][0]=npp.polyval2d(x[0][k,:],x[1][k,:],self.bfuns_ddu[k][jtr][1][0])
-                    ddu[0][1]=npp.polyval2d(x[0][k,:],x[1][k,:],self.bfuns_ddu[k][jtr][0][1])
-                    ddu[1][1]=npp.polyval2d(x[0][k,:],x[1][k,:],self.bfuns_ddu[k][jtr][1][1])
-                else:
-                    raise NotImplementedError("Used dimension not supported!")
-                for itr in range(self.Nbfun_v):
-                    if dim==2:
-                        v=npp.polyval2d(x[0][k,:],x[1][k,:],self.bfuns_v[k][itr])
-                        dv={}
-                        dv[0]=npp.polyval2d(x[0][k,:],x[1][k,:],npp.polyder(self.bfuns_v[k][itr],axis=0))
-                        dv[1]=npp.polyval2d(x[0][k,:],x[1][k,:],npp.polyder(self.bfuns_v[k][itr],axis=1))
-                        ddv={}
-                        ddv[0]={}
-                        ddv[1]={}
-                        ddv[0][0]=npp.polyval2d(x[0][k,:],x[1][k,:],self.bfuns_ddv[k][jtr][0][0])
-                        ddv[1][0]=npp.polyval2d(x[0][k,:],x[1][k,:],self.bfuns_ddv[k][jtr][1][0])
-                        ddv[0][1]=npp.polyval2d(x[0][k,:],x[1][k,:],self.bfuns_ddv[k][jtr][0][1])
-                        ddv[1][1]=npp.polyval2d(x[0][k,:],x[1][k,:],self.bfuns_ddv[k][jtr][1][1])
-                    else:
-                        raise NotImplementedError("Used dimension not supported!")
 
-                    data[ktr]=np.dot(fform(u,v,du,dv,ddu,ddv,0*u,0*u,0*u),W*np.abs(detDF[k]))
-                    rows[ktr]=self.dofnum_v.t_dof[itr,k]
-                    cols[ktr]=self.dofnum_u.t_dof[jtr,k]
+        for k in tind:
+            #u,du,ddu=npp.polyval2d(x[0][k,:],x[1][k,:],self.bfuns_u[k][jtr])
+            u,du,ddu=self.elem.gbasis(self.mesh,k,x[0][k,:],x[1][k,:])
+
+            # assemble local stiffness matrix
+            for jtr in range(self.Nbfun):
+                for itr in range(self.Nbfun):
+                    data[ktr]=np.dot(fform(u[jtr],u[itr],du[jtr],du[itr],ddu[jtr],ddu[itr],0*u[itr],0*u[itr],0*u[itr]),W*np.abs(detDF[k]))
+                    rows[ktr]=self.dofnum.t_dof[itr,k]
+                    cols[ktr]=self.dofnum.t_dof[jtr,k]
                     ktr+=1
 
-        return coo_matrix((data,(rows,cols)),shape=(self.dofnum_v.N,self.dofnum_u.N)).tocsr()
+        return coo_matrix((data,(rows,cols)),shape=(self.dofnum.N,self.dofnum.N)).tocsr()
 
 class AssemblerElement(Assembler):
     """A quasi-fast assembler for arbitrary element/mesh/mapping."""

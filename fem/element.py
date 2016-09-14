@@ -124,32 +124,32 @@ class ElementGlobalMorley(ElementGlobal):
 class ElementGlobalTriP1(ElementGlobal):
     n_dofs=1
 
-    C={
-            0:np.array([[1.0,0.0],[0.0,0.0]]),
-            1:np.array([[0.0,0.0],[1.0,0.0]]),
-            2:np.array([[0.0,1.0],[0.0,0.0]])
-            }
+    def gbasis(self,mesh,k,X,Y):
+        # solve local basis functions
+        V=np.zeros((3,3))
 
-    def gdofs(self,mapping,i,j):
-        C=self.C[j]
+        n1=mesh.p[:,mesh.t[0,k]]
+        n2=mesh.p[:,mesh.t[1,k]]
+        n3=mesh.p[:,mesh.t[2,k]]
 
-        xglob1=mapping.F(np.array([[0],[0]]))
-        X0=xglob1[0].flatten()
-        Y0=xglob1[1].flatten()
+        def pbasis(x,y):
+            return np.array([1,x,y])
 
-        xglob2=mapping.F(np.array([[1],[0]]))
-        X1=xglob2[0].flatten()
-        Y1=xglob2[1].flatten()
+        # evaluate dofs
+        V[0,:]=pbasis(n1[0],n1[1])
+        V[1,:]=pbasis(n2[0],n2[1])
+        V[2,:]=pbasis(n3[0],n3[1])
 
-        xglob3=mapping.F(np.array([[0],[1]]))
-        X2=xglob3[0].flatten()
-        Y2=xglob3[1].flatten()
+        Vinv=np.linalg.inv(V).T
 
-        return {
-               0:lambda foo: polyval2d(X0,Y0,C),
-               1:lambda foo: polyval2d(X1,Y1,C),
-               2:lambda foo: polyval2d(X2,Y2,C),
-               }[i](0)
+        u={0:0.0,1:0.0,2:0.0}
+        for itr in range(len(X)):
+            u[0]+=Vinv[0,:]*pbasis(X[itr],Y[itr])
+            u[1]+=Vinv[1,:]*pbasis(X[itr],Y[itr])
+            u[2]+=Vinv[2,:]*pbasis(X[itr],Y[itr])
+
+        return u,u,u
+
 
 class ElementHdiv(Element):
     """Hdiv conforming finite element."""
