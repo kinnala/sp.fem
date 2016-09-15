@@ -30,7 +30,7 @@ run-tests: ## Run the unit tests
 	@ipython -m unittest discover ./fem
 
 run-coverage: ## Run the unit tests with coverage.py
-	@coverage -m unittest discover ./fem
+	@coverage run -m unittest discover ./fem
 
 build-docs: ## Run Sphinx to build the documentation
 	@make -C docs html
