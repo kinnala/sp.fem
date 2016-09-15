@@ -142,12 +142,15 @@ class ElementGlobalTriP1(ElementGlobal):
 
         Vinv=np.linalg.inv(V).T
 
-        u={0:0.0,1:0.0,2:0.0}
+        u={0:np.zeros(len(X)),
+           1:np.zeros(len(X)),
+           2:np.zeros(len(X))}
         for itr in range(len(X)):
-            u[0]+=Vinv[0,:]*pbasis(X[itr],Y[itr])
-            u[1]+=Vinv[1,:]*pbasis(X[itr],Y[itr])
-            u[2]+=Vinv[2,:]*pbasis(X[itr],Y[itr])
+            u[0][itr]+=np.sum(Vinv[0,:]*pbasis(X[itr],Y[itr]))
+            u[1][itr]+=np.sum(Vinv[1,:]*pbasis(X[itr],Y[itr]))
+            u[2][itr]+=np.sum(Vinv[2,:]*pbasis(X[itr],Y[itr]))
 
+        # output u[i] for each i must be array of size Nqp
         return u,u,u
 
 

@@ -77,12 +77,15 @@ class Assembler:
         return newform
 
 class AssemblerGlobal(Assembler):
-    """A slowish assembler for globally defined elements.
+    """An assembler for globally defined elements.
     
-    The finite element given to this assembler is defined through
-    degrees-of-freedom. The actual basis functions are solved
-    in the constructor and the assembly is performed by looping
-    over elements and computing local stiffness matrices.
+    The finite element given to this assembler is defined
+    in such a way that given a (global) triangle and (global)
+    quadrature points, the element must be able to evaluate
+    the global basis functions at the given quadrature points. 
+
+    Note: This assembler is slow since it explicitly loops
+    over the elements in Python code.
     """
     def __init__(self,mesh,elem):
         if not isinstance(mesh,fem.mesh.Mesh):
@@ -129,7 +132,6 @@ class AssemblerGlobal(Assembler):
         dim=self.mesh.p.shape[0]
 
         for k in tind:
-            #u,du,ddu=npp.polyval2d(x[0][k,:],x[1][k,:],self.bfuns_u[k][jtr])
             u,du,ddu=self.elem.gbasis(self.mesh,k,x[0][k,:],x[1][k,:])
 
             # assemble local stiffness matrix
