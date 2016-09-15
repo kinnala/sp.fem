@@ -5,25 +5,16 @@ import numpy as np
 from numpy.polynomial.polynomial import polyder,polyval2d
 from fem.utils import const_cell
 
-class Element:
-    """Finite element."""
+class Element(object):
+    """A finite element."""
 
-    maxdeg=0 # maximum polynomial degree; for determining quadrature
-    dim=0 # spatial dimension
-    tdim=0 # target dimension
-    torder=0 # target tensorial order
+    maxdeg=0 #: Maximum polynomial degree
+    dim=0 #: Spatial dimension
 
-    """
-    The discretized field is a mapping
-       U : C^dim -> C^(tdim x ... x tdim)
-    where the product is taken 'torder' times.
-    """
-
-    # number of ...
-    n_dofs=0 # nodal dofs
-    i_dofs=0 # interior dofs
-    f_dofs=0 # facet dofs (2d and 3d only)
-    e_dofs=0 # edge dofs (3d only)
+    n_dofs=0 #: Number of nodal dofs
+    i_dofs=0 #: Number of interior dofs
+    f_dofs=0 #: Number of facet dofs (2d and 3d only)
+    e_dofs=0 #: Number of edge dofs (3d only)
 
     def lbasis(self,X,i):
         """Returns local basis functions evaluated at some local points."""
@@ -34,80 +25,99 @@ class Element:
         raise NotImplementedError("Element.gbasis: local basis (lbasis) not implemented!")
 
 class ElementGlobal(Element):
-    """An element defined globally.
-    
-    These elements are used by AssemblerGlobal."""
+    """An element defined globally. These elements are used by :class:`fem.asm.AssemblerGlobal`."""
 
-    def gbasis(self,mesh,k,X,Y):
-        """Return the global basis functions of element k evaluated at
-        the given quadrature points."""
+    def gbasis(self,mesh,qps,k):
+        """Return the global basis functions of an element evaluated at
+        the given quadrature points.
+        
+        Parameters
+        ----------
+        mesh
+            The mesh object
+        qps : dict of global quadrature points
+            The global quadrature points as given by fem.mapping.F
+        k : int
+            The index of the element in mesh structure.
+        """
         raise NotImplementedError("ElementGlobal.gbasis not implemented!")
 
-class ElementGlobalMorley(ElementGlobal):
+class ElementGlobalTriP2(ElementGlobal):
+    """Second-order triangular elements, globally
+    defined version. This should only be used for debugging purposes.
+    Use :class:`ElementTriP2` instead."""
+
     n_dofs=1
     f_dofs=1
+    dim=2
+    maxdeg=2
 
-    C={
-            0:np.array([[1.0,0.0,0.0],
-                        [0.0,0.0,0.0],
-                        [0.0,0.0,0.0]]),
-            1:np.array([[0.0,1.0,0.0],
-                        [0.0,0.0,0.0],
-                        [0.0,0.0,0.0]]),
-            2:np.array([[0.0,0.0,1.0],
-                        [0.0,0.0,0.0],
-                        [0.0,0.0,0.0]]),
-            3:np.array([[0.0,0.0,0.0],
-                        [1.0,0.0,0.0],
-                        [0.0,0.0,0.0]]),
-            4:np.array([[0.0,0.0,0.0],
-                        [0.0,1.0,0.0],
-                        [0.0,0.0,0.0]]),
-            5:np.array([[0.0,0.0,0.0],
-                        [0.0,0.0,0.0],
-                        [1.0,0.0,0.0]]),
-            }
+    def gbasis(self,mesh,qps,k):
+        X=qps[0][k,:]
+        Y=qps[1][k,:]
+        # solve local basis functions
+        V=np.zeros((6,6))
 
-    def gdofs(self,mapping,i,j):
-        C=self.C[j]
+        n1=mesh.p[:,mesh.t[0,k]]
+        n2=mesh.p[:,mesh.t[1,k]]
+        n3=mesh.p[:,mesh.t[2,k]]
 
-        xglob1=mapping.F(np.array([[0],[0]]))
-        X1=xglob1[0].flatten()
-        Y1=xglob1[1].flatten()
+        e1=0.5*(mesh.p[:,mesh.facets[0,mesh.t2f[0,k]]]+\
+                mesh.p[:,mesh.facets[1,mesh.t2f[0,k]]])
+        e2=0.5*(mesh.p[:,mesh.facets[0,mesh.t2f[1,k]]]+\
+                mesh.p[:,mesh.facets[1,mesh.t2f[1,k]]])
+        e3=0.5*(mesh.p[:,mesh.facets[0,mesh.t2f[2,k]]]+\
+                mesh.p[:,mesh.facets[1,mesh.t2f[2,k]]])
 
-        xglob2=mapping.F(np.array([[1],[0]]))
-        X2=xglob2[0].flatten()
-        Y2=xglob2[1].flatten()
+        if 1:
+            e1=0.5*(n1+n2)
+            e2=0.5*(n2+n3)
+            e3=0.5*(n1+n3)
 
-        xglob3=mapping.F(np.array([[0],[1]]))
-        X3=xglob3[0].flatten()
-        Y3=xglob3[1].flatten()
+        def pbasis(x):
+            return np.array([1.0,x[0],x[1],x[0]**2,x[0]*x[1],x[1]**2])
 
-        xglob12=mapping.F(np.array([[0.5],[0]]))
-        X12=xglob12[0].flatten()
-        Y12=xglob12[1].flatten()
+        def pbasisdx(x):
+            return np.array([0.0,1.0,0.0,2.0*x[0],x[1],0.0])
 
-        xglob23=mapping.F(np.array([[0.5],[0.5]]))
-        X23=xglob23[0].flatten()
-        Y23=xglob23[1].flatten()
+        def pbasisdy(x):
+            return np.array([0.0,0.0,1.0,0.0,x[0],2.0*x[1]])
 
-        xglob13=mapping.F(np.array([[0],[0.5]]))
-        X13=xglob13[0].flatten()
-        Y13=xglob13[1].flatten()
+        # evaluate dofs
+        V[0,:]=pbasis(n1)
+        V[1,:]=pbasis(n2)
+        V[2,:]=pbasis(n3)
+        V[3,:]=pbasis(e1)
+        V[4,:]=pbasis(e2)
+        V[5,:]=pbasis(e3)
 
-        return {
-               0:lambda foo: polyval2d(X1,Y1,C),
-               1:lambda foo: polyval2d(X2,Y2,C),
-               2:lambda foo: polyval2d(X3,Y3,C),
-               3:lambda foo: polyval2d(X12,Y12,C),
-               4:lambda foo: polyval2d(X23,Y23,C),
-               5:lambda foo: polyval2d(X13,Y13,C),
-               }[i](0)
+        Vinv=np.linalg.inv(V).T
+
+        u=const_cell(np.zeros(len(X)),6)
+        du=const_cell(np.zeros(len(X)),6,2)
+        ddu=u # TODO
+        for itr in range(len(X)):
+            for jtr in range(5):
+                u[jtr][itr]+=np.sum(Vinv[jtr,:]*pbasis([X[itr],Y[itr]]))
+            for jtr in range(5):
+                du[jtr][0][itr]+=np.sum(Vinv[jtr,:]*pbasisdx([X[itr],Y[itr]]))
+            for jtr in range(5):
+                du[jtr][1][itr]+=np.sum(Vinv[jtr,:]*pbasisdy([X[itr],Y[itr]]))
+
+        return u,du,ddu
 
 class ElementGlobalTriP1(ElementGlobal):
-    n_dofs=1
+    """The simplest possible globally defined elements.
+    This should only be used for debugging purposes.
+    Use :class:`ElementTriP1` instead."""
 
-    def gbasis(self,mesh,k,X,Y):
+    n_dofs=1
+    dim=2
+    maxdeg=1
+
+    def gbasis(self,mesh,qps,k):
+        X=qps[0][k,:]
+        Y=qps[1][k,:]
         # solve local basis functions
         V=np.zeros((3,3))
 
@@ -146,7 +156,7 @@ class ElementGlobalTriP1(ElementGlobal):
 
 
 class ElementHdiv(Element):
-    """Hdiv conforming finite element."""
+    """Abstract :math:`H_{div}` conforming finite element."""
 
     def gbasis(self,mapping,X,i,tind):
         if isinstance(X,dict):
@@ -175,6 +185,7 @@ class ElementTriRT0(ElementHdiv):
 
     maxdeg=1
     f_dofs=1
+    dim=2
 
     def lbasis(self,X,i):
         phi={}
@@ -197,7 +208,7 @@ class ElementTriRT0(ElementHdiv):
         return phi,dphi
 
 class ElementH1(Element):
-    """H1 conforming finite element."""
+    """Abstract :math:`H^1` conforming finite element."""
 
     def gbasis(self,mapping,X,i,tind):
         if isinstance(X,dict):
@@ -235,7 +246,7 @@ class ElementH1(Element):
         return u,du,ddu
 
 class ElementH1Vec(ElementH1):
-    """H1 element -> vectorial H1 element."""
+    """Convert :math:`H^1` element to vectorial :math:`H^1` element."""
     def __init__(self,elem):
         if elem.dim==0:
             print "ElementH1Vec.__init__(): Warning! Parent element has no dim-variable!"
@@ -295,9 +306,9 @@ class ElementH1Vec(ElementH1):
 class ElementQ1(ElementH1):
     """Simplest quadrilateral element."""
     
-    def __init__(self):
-        self.maxdeg=2
-        self.n_dofs=1
+    maxdeg=2
+    n_dofs=1
+    dim=2
         
     def lbasis(self,X,i):
         phi={
@@ -323,12 +334,12 @@ class ElementQ1(ElementH1):
         
 class ElementQ2(ElementH1):
     """Second order quadrilateral element."""
-    
-    def __init__(self):
-        self.maxdeg=3
-        self.n_dofs=1
-        self.f_dofs=1
-        self.i_dofs=1
+
+    maxdeg=3
+    n_dofs=1
+    f_dofs=1
+    i_dofs=1
+    dim=2
         
     def lbasis(self,X,i):
         phi={
@@ -368,19 +379,22 @@ class ElementQ2(ElementH1):
         return phi,dphi
 
 class ElementTriPp(ElementH1):
-    """A somewhat slow implementation of hierarchical p-basis for triangular mesh."""
+    """A somewhat slow implementation of hierarchical
+    p-basis for triangular mesh."""
+
+    dim=2
+
     def __init__(self,p):
         self.p=p
         self.maxdeg=p
         self.n_dofs=1
         self.f_dofs=np.max([p-1,0])
         self.i_dofs=np.max([(p-1)*(p-2)/2,0])
-        self.dim=2
 
         self.nbdofs=3*self.n_dofs+3*self.f_dofs+self.i_dofs
 
     def intlegpoly(self,x,n):
-        """Generate integrated Legendre polynomials."""
+        # Generate integrated Legendre polynomials.
         n=n+1
         
         P={}
@@ -407,7 +421,7 @@ class ElementTriPp(ElementH1):
         return iP,dP
         
     def lbasis(self,X,n):
-        """Evaluate n'th Lagrange basis of order self.p."""        
+        # Evaluate n'th Lagrange basis of order self.p.
         p=self.p
 
         if len(X)!=2:
@@ -521,6 +535,8 @@ class ElementTriDG(ElementH1):
         return self.elem.lbasis(X,i)
 
 class ElementTetDG(ElementH1):
+    """Convert a H1 tetrahedral element into a DG element.
+    All DOFs are converted to interior DOFs."""
     def __init__(self,elem):
         # change all dofs to interior dofs
         self.elem=elem
@@ -531,8 +547,11 @@ class ElementTetDG(ElementH1):
         return self.elem.lbasis(X,i)
     
 class ElementTetP0(ElementH1):
+    """Piecewise constant element for tetrahedral mesh."""
+
     i_dofs=1
     maxdeg=1
+    dim=3
 
     def lbasis(self,X,i):
         phi={
@@ -551,8 +570,11 @@ class ElementTetP0(ElementH1):
         return phi,dphi
 
 class ElementTriP0(ElementH1):
+    """Piecewise constant element for triangular mesh."""
+
     i_dofs=1
     maxdeg=1
+    dim=2
 
     def lbasis(self,X,i):
         phi={
@@ -567,10 +589,13 @@ class ElementTriP0(ElementH1):
                 }[i](X[0],X[1])
         return phi,dphi
 
+# this is for legacy
 class ElementP0(ElementTriP0):
     pass
 
 class ElementTriMini(ElementH1):
+    """The MINI-element for triangular mesh."""
+
     dim=2
     n_dofs=1
     i_dofs=1
@@ -600,6 +625,7 @@ class ElementTriMini(ElementH1):
         return phi,dphi
         
 class ElementTetP2(ElementH1):
+    """The quadratic tetrahedral element."""
     
     dim=3
     n_dofs=1
@@ -662,6 +688,8 @@ class ElementTetP2(ElementH1):
         return phi,dphi
         
 class ElementLineP1(ElementH1):
+    """Linear element for one dimension."""
+
     n_dofs=1
     dim=1
     maxdeg=1
@@ -681,6 +709,8 @@ class ElementLineP1(ElementH1):
         return phi,dphi        
         
 class ElementTriP1(ElementH1):
+    """The simplest triangular element."""
+
     n_dofs=1
     dim=2
     maxdeg=1
@@ -705,8 +735,47 @@ class ElementTriP1(ElementH1):
                 }[i](X[0],X[1])
                 
         return phi,dphi
+
+class ElementTriP2(ElementH1):
+    """The quadratic triangular element."""
+
+    n_dofs=1
+    f_dofs=1
+    dim=2
+    maxdeg=2
+    
+    def lbasis(self,X,i):
+        phi={
+            0:lambda x,y: 1-3*x-3*y+2*x**2+4*x*y+2*y**2,
+            1:lambda x,y: 2*x**2-x,
+            2:lambda x,y: 2*y**2-y,
+            3:lambda x,y: 4*x-4*x**2-4*x*y,
+            4:lambda x,y: 4*x*y,
+            5:lambda x,y: 4*y-4*x*y-4*y**2,
+            }[i](X[0],X[1])
+
+        dphi={}
+        dphi[0]={
+                0:lambda x,y: -3+4*x+4*y,
+                1:lambda x,y: 4*x-1,
+                2:lambda x,y: 0*x,
+                3:lambda x,y: 4-8*x-4*y,
+                4:lambda x,y: 4*y,
+                5:lambda x,y: -4*y,
+                }[i](X[0],X[1])
+        dphi[1]={
+                0:lambda x,y: -3+4*x+4*y,
+                1:lambda x,y: 0*x,
+                2:lambda x,y: 4*y-1,
+                3:lambda x,y: -4*x,
+                4:lambda x,y: 4*x,
+                5:lambda x,y: 4-4*x-8*y,
+                }[i](X[0],X[1])
+                
+        return phi,dphi
         
 class ElementTetP1(ElementH1):
+    """The simplest tetrahedral element."""
     
     n_dofs=1
     maxdeg=1

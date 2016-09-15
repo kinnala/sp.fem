@@ -254,6 +254,73 @@ class Q1Q2Test(unittest.TestCase):
         self.assertTrue(pfit[0]>=1.95)
         self.assertTrue(pfit[0]<=2.05)
 
+class TriP2Test(unittest.TestCase):
+    """Test triangular h-refinement.
+    Also test facet assembly."""
+    def runTest(self):
+
+        def U(x):
+            return 1+x[0]-x[0]**2*x[1]**2
+
+        def dUdx(x):
+            return 1-2*x[0]*x[1]**2
+
+        def dUdy(x):
+            return -2*x[0]**2*x[1]
+
+        def dudv(du,dv):
+            return du[0]*dv[0]+du[1]*dv[1]
+
+        def uv(u,v):
+            return u*v
+
+        def F(x,y):
+            return 2*x**2+2*y**2
+
+        def fv(v,x):
+            return F(x[0],x[1])*v
+
+        def G(x,y):
+            return (x==1)*(3-3*y**2)+\
+                    (x==0)*(0)+\
+                    (y==1)*(1+x-3*x**2)+\
+                    (y==0)*(1+x)
+
+        def gv(v,x):
+            return G(x[0],x[1])*v
+
+        dexact={}
+        dexact[0]=dUdx
+        dexact[1]=dUdy
+
+        mesh=fmsh.MeshTri()
+        mesh.refine(1)
+        hs=np.array([])
+        H1errs=np.array([])
+        L2errs=np.array([])
+
+        for itr in range(4):
+            mesh.refine()
+
+            a=fasm.AssemblerElement(mesh,felem.ElementTriP2())
+
+            A=a.iasm(dudv)
+            f=a.iasm(fv)
+
+            B=a.fasm(uv)
+            g=a.fasm(gv)
+
+            u=np.zeros(a.dofnum_u.N)
+            u=spsolve(A+B,f+g)
+
+            hs=np.append(hs,mesh.param())
+            L2errs=np.append(L2errs,a.L2error(u,U))
+            H1errs=np.append(H1errs,a.H1error(u,dexact))
+
+        pfit=np.polyfit(np.log10(hs),np.log10(H1errs),1)
+
+        self.assertGreater(pfit[0],0.95*2)
+
 class TriPpTest(unittest.TestCase):
     """Test triangular h-refinement with various p.
     Also test facet assembly."""

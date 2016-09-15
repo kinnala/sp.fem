@@ -77,7 +77,7 @@ class Assembler:
         return newform
 
 class AssemblerGlobal(Assembler):
-    """An assembler for globally defined elements.
+    """An assembler for globally defined elements, cf. :class:`fem.element.ElementGlobal`.
     
     The finite element given to this assembler is defined
     in such a way that given a (global) triangle and (global)
@@ -111,10 +111,10 @@ class AssemblerGlobal(Assembler):
         # check and fix parameters of form
         oldparams=inspect.getargspec(form).args
         if 'u' in oldparams or 'du' in oldparams or 'ddu' in oldparams:
-            paramlist=['u','v','du','dv','ddu','ddv','x','w','h']
+            paramlist=['u','v','du','dv','ddu','ddv']
             bilinear=True
         else:
-            paramlist=['v','dv','ddv','x','w','h']
+            paramlist=['v','dv','ddv']
             bilinear=False
         fform=self.fillargs(form,paramlist)
 
@@ -136,12 +136,12 @@ class AssemblerGlobal(Assembler):
         dim=self.mesh.p.shape[0]
 
         for k in tind:
-            u,du,ddu=self.elem.gbasis(self.mesh,k,x[0][k,:],x[1][k,:])
+            u,du,ddu=self.elem.gbasis(self.mesh,x,k)
 
             # assemble local stiffness matrix
             for jtr in range(self.Nbfun):
                 for itr in range(self.Nbfun):
-                    data[ktr]=np.dot(fform(u[jtr],u[itr],du[jtr],du[itr],ddu[jtr],ddu[itr],0*u[itr],0*u[itr],0*u[itr]),W*np.abs(detDF[k]))
+                    data[ktr]=np.dot(fform(u[jtr],u[itr],du[jtr],du[itr],ddu[jtr],ddu[itr]),W*np.abs(detDF[k]))
                     rows[ktr]=self.dofnum.t_dof[itr,k]
                     cols[ktr]=self.dofnum.t_dof[jtr,k]
                     ktr+=1
