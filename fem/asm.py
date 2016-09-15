@@ -84,8 +84,12 @@ class AssemblerGlobal(Assembler):
     quadrature points, the element must be able to evaluate
     the global basis functions at the given quadrature points. 
 
+    The assembler is useful for elements where the reference
+    triangle approach is not simple. Such elements include
+    for example plate elements (i.e. Argyris element).
+
     Note: This assembler is slow since it explicitly loops
-    over the elements in Python code.
+    over the elements using Python for-loop.
     """
     def __init__(self,mesh,elem):
         if not isinstance(mesh,fem.mesh.Mesh):

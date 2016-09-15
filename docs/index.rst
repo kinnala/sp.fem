@@ -15,7 +15,7 @@ Getting started
 
 You can install the library by running the following commands
 
-.. code-block:: none
+.. code-block:: bash
 
     git clone https://github.com/kinnala/sp.fem
     cd sp.fem
@@ -23,7 +23,7 @@ You can install the library by running the following commands
 
 Now you can either resolve the requirements yourself by looking into the contents of requirements.txt or you can install a development environment by first installing `miniconda <http://conda.pydata.org/miniconda.html>`_ and then writing
 
-.. code-block:: none
+.. code-block:: bash
 
     make dev-install
 
@@ -69,28 +69,34 @@ fem.mapping
 .. automodule:: fem.mapping
     :members:
 
+fem.utils
+#########
+
+.. automodule:: fem.utils
+    :members:
+
 Tips
 ====
 
 * Errors related to qt4, wx, mayavi, etc. can be sometimes fixed by simply changing environment variables or running ipython with the following flags:
 
-.. code-block:: none
+.. code-block:: bash
 
     ipython --gui=wx --pylab=wx
 
-.. code-block:: none
+.. code-block:: bash
 
     ETS_TOOLKIT=qt4 ipython --gui=wx --pylab=wx
 
 * Simplest way to run tests is to discover them all using unittest as follows:
 
-.. code-block:: none
+.. code-block:: bash
 
     ipython -m unittest discover ./fem
 
 * In order to estimate test coverage you can install coverage.py and run it
 
-.. code-block:: none
+.. code-block:: bash
 
     pip install coverage
     coverage run -m unittest discover ./fem

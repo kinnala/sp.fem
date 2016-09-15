@@ -11,7 +11,7 @@ Currently implemented mesh types are
 
 *Example 1*. Obtain a three times refined mesh of the unit square and draw it.
 
-.. code-block:: none
+.. code-block:: python
 
     import fem.mesh as fmsh
     m=fmsh.MeshTri()

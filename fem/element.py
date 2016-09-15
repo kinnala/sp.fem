@@ -1,24 +1,9 @@
 """
-@author: Tom Gustafsson
-
-
-This file is part of sp.fem.
-
-sp.fem is free software: you can redistribute it and/or modify
-it under the terms of the GNU Affero General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-sp.fem is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Affero General Public License for more details.
-
-You should have received a copy of the GNU Affero General Public License
-along with sp.fem.  If not, see <http://www.gnu.org/licenses/>. 
+The finite element definitions.
 """
 import numpy as np
 from numpy.polynomial.polynomial import polyder,polyval2d
+from fem.utils import const_cell
 
 class Element:
     """Finite element."""
@@ -49,16 +34,14 @@ class Element:
         raise NotImplementedError("Element.gbasis: local basis (lbasis) not implemented!")
 
 class ElementGlobal(Element):
-    """An element defined through DOF's."""
+    """An element defined globally.
+    
+    These elements are used by AssemblerGlobal."""
 
-    def gdofs(self,mapping,i,j):
-        """Return the (i,j)'th entry of the Vandermonde matrix in
-        all elements. Here i corresponds to the DOF and j corresponds
-        to the generic global basis.
-        
-        Note! self.C must be a dictionary containing a generic global
-        basis."""
-        raise NotImplementedError("ElementGlobal.gdofs not implemented!")
+    def gbasis(self,mesh,k,X,Y):
+        """Return the global basis functions of element k evaluated at
+        the given quadrature points."""
+        raise NotImplementedError("ElementGlobal.gbasis not implemented!")
 
 class ElementGlobalMorley(ElementGlobal):
     n_dofs=1
@@ -133,7 +116,7 @@ class ElementGlobalTriP1(ElementGlobal):
         n3=mesh.p[:,mesh.t[2,k]]
 
         def pbasis(x,y):
-            return np.array([1,x,y])
+            return np.array([1.0,x,y])
 
         # evaluate dofs
         V[0,:]=pbasis(n1[0],n1[1])
@@ -142,16 +125,24 @@ class ElementGlobalTriP1(ElementGlobal):
 
         Vinv=np.linalg.inv(V).T
 
-        u={0:np.zeros(len(X)),
-           1:np.zeros(len(X)),
-           2:np.zeros(len(X))}
+        u=const_cell(np.zeros(len(X)),3)
+        du=const_cell(np.zeros(len(X)),3,2)
+        ddu=u
         for itr in range(len(X)):
             u[0][itr]+=np.sum(Vinv[0,:]*pbasis(X[itr],Y[itr]))
             u[1][itr]+=np.sum(Vinv[1,:]*pbasis(X[itr],Y[itr]))
             u[2][itr]+=np.sum(Vinv[2,:]*pbasis(X[itr],Y[itr]))
 
+            du[0][0][itr]+=Vinv[0,1]
+            du[1][0][itr]+=Vinv[1,1]
+            du[2][0][itr]+=Vinv[2,1]
+
+            du[0][1][itr]+=Vinv[0,2]
+            du[1][1][itr]+=Vinv[1,2]
+            du[2][1][itr]+=Vinv[2,2]
+
         # output u[i] for each i must be array of size Nqp
-        return u,u,u
+        return u,du,ddu
 
 
 class ElementHdiv(Element):
