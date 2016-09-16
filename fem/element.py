@@ -2,6 +2,7 @@
 The finite element definitions.
 """
 import numpy as np
+import matplotlib.pyplot as plt
 from numpy.polynomial.polynomial import polyder,polyval2d
 from fem.utils import const_cell
 
@@ -42,6 +43,118 @@ class ElementGlobal(Element):
         """
         raise NotImplementedError("ElementGlobal.gbasis not implemented!")
 
+    def visualize_basis_2d(self,show_du=False,show_ddu=False):
+        """Draw the basis functions given by self.gbasis.
+        Only for 2D triangular elements. For debugging purposes."""
+        if self.dim!=2:
+            raise NotImplementedError("ElementGlobal.visualize_basis_2d supports "+
+                                      "only two dimensional triangular elements.")
+        import copy
+        import fem.mesh as fmsh
+        m=fmsh.MeshTri(np.array([[0.5,0.0,1.0],[0.0,1.0,1.0]]),
+                       np.array([[0],[1],[2]]))
+        M=copy.deepcopy(m)
+        m.refine(4)
+        qps={}
+        qps[0]=np.array([m.p[0,:]])
+        qps[1]=np.array([m.p[1,:]])
+        u,du,ddu=self.gbasis(M,qps,0)
+
+        for itr in range(len(u)):
+            m.plot3(u[itr])
+
+        if show_du:
+            for itr in range(len(u)):
+                m.plot3(du[itr][0])
+            for itr in range(len(u)):
+                m.plot3(du[itr][1])
+
+        if show_ddu:
+            for itr in range(len(u)):
+                m.plot3(ddu[itr][0][0])
+            for itr in range(len(u)):
+                m.plot3(ddu[itr][0][1])
+            for itr in range(len(u)):
+                m.plot3(ddu[itr][1][0])
+            for itr in range(len(u)):
+                m.plot3(ddu[itr][1][1])
+
+        m.show()
+
+class ElementGlobalMorley(ElementGlobal):
+    """Morley element for fourth-order problems."""
+
+    n_dofs=1
+    f_dofs=1
+    dim=2
+    maxdeg=2
+
+    def gbasis(self,mesh,qps,k):
+        X=qps[0][k,:]
+        Y=qps[1][k,:]
+        # solve local basis functions
+        V=np.zeros((6,6))
+
+        v1=mesh.p[:,mesh.t[0,k]]
+        v2=mesh.p[:,mesh.t[1,k]]
+        v3=mesh.p[:,mesh.t[2,k]]
+
+        e1=0.5*(v1+v2)
+        e2=0.5*(v2+v3)
+        e3=0.5*(v1+v3)
+
+        t1=v1-v2
+        t2=v2-v3
+        t3=v1-v3
+
+        n1=np.array([t1[1],-t1[0]])
+        n2=np.array([t2[1],-t2[0]])
+        n3=np.array([t3[1],-t3[0]])
+
+        n1/=np.linalg.norm(n1)
+        n2/=np.linalg.norm(n2)
+        n3/=np.linalg.norm(n3)
+
+        def pbasis(x):
+            return np.array([1.0,x[0],x[1],x[0]**2,x[0]*x[1],x[1]**2])
+
+        def pbasisdx(x):
+            return np.array([0.0,1.0,0.0,2.0*x[0],x[1],0.0])
+
+        def pbasisdy(x):
+            return np.array([0.0,0.0,1.0,0.0,x[0],2.0*x[1]])
+
+        dxx=np.array([0.0,0.0,0.0,2.0,0.0,0.0])
+        dxy=np.array([0.0,0.0,0.0,0.0,1.0,0.0])
+        dyx=np.array([0.0,0.0,0.0,0.0,1.0,0.0])
+        dyy=np.array([0.0,0.0,0.0,0.0,0.0,2.0])
+
+        # evaluate dofs
+        V[0,:]=pbasis(v1)
+        V[1,:]=pbasis(v2)
+        V[2,:]=pbasis(v3)
+        V[3,:]=pbasisdx(e1)*n1[0]+pbasisdy(e1)*n1[1]
+        V[4,:]=pbasisdx(e2)*n2[0]+pbasisdy(e2)*n2[1]
+        V[5,:]=pbasisdx(e3)*n3[0]+pbasisdy(e3)*n3[1]
+
+        Vinv=np.linalg.inv(V).T
+
+        u=const_cell(np.zeros(len(X)),6)
+        du=const_cell(np.zeros(len(X)),6,2)
+        ddu=const_cell(np.zeros(len(X)),6,2,2)
+        for itr in range(len(X)):
+            for jtr in range(6):
+                u[jtr][itr]+=np.sum(Vinv[jtr,:]*pbasis([X[itr],Y[itr]]))
+                du[jtr][0][itr]+=np.sum(Vinv[jtr,:]*pbasisdx([X[itr],Y[itr]]))
+                du[jtr][1][itr]+=np.sum(Vinv[jtr,:]*pbasisdy([X[itr],Y[itr]]))
+                ddu[jtr][0][0][itr]+=np.sum(Vinv[jtr,:]*dxx)
+                ddu[jtr][0][1][itr]+=np.sum(Vinv[jtr,:]*dxy)
+                ddu[jtr][1][0][itr]+=np.sum(Vinv[jtr,:]*dyx)
+                ddu[jtr][1][1][itr]+=np.sum(Vinv[jtr,:]*dyy)
+
+
+        return u,du,ddu
+
 class ElementGlobalTriP2(ElementGlobal):
     """Second-order triangular elements, globally
     defined version. This should only be used for debugging purposes.
@@ -62,17 +175,9 @@ class ElementGlobalTriP2(ElementGlobal):
         n2=mesh.p[:,mesh.t[1,k]]
         n3=mesh.p[:,mesh.t[2,k]]
 
-        e1=0.5*(mesh.p[:,mesh.facets[0,mesh.t2f[0,k]]]+\
-                mesh.p[:,mesh.facets[1,mesh.t2f[0,k]]])
-        e2=0.5*(mesh.p[:,mesh.facets[0,mesh.t2f[1,k]]]+\
-                mesh.p[:,mesh.facets[1,mesh.t2f[1,k]]])
-        e3=0.5*(mesh.p[:,mesh.facets[0,mesh.t2f[2,k]]]+\
-                mesh.p[:,mesh.facets[1,mesh.t2f[2,k]]])
-
-        if 1:
-            e1=0.5*(n1+n2)
-            e2=0.5*(n2+n3)
-            e3=0.5*(n1+n3)
+        e1=0.5*(n1+n2)
+        e2=0.5*(n2+n3)
+        e3=0.5*(n1+n3)
 
         def pbasis(x):
             return np.array([1.0,x[0],x[1],x[0]**2,x[0]*x[1],x[1]**2])
@@ -97,11 +202,11 @@ class ElementGlobalTriP2(ElementGlobal):
         du=const_cell(np.zeros(len(X)),6,2)
         ddu=u # TODO
         for itr in range(len(X)):
-            for jtr in range(5):
+            for jtr in range(6):
                 u[jtr][itr]+=np.sum(Vinv[jtr,:]*pbasis([X[itr],Y[itr]]))
-            for jtr in range(5):
+            for jtr in range(6):
                 du[jtr][0][itr]+=np.sum(Vinv[jtr,:]*pbasisdx([X[itr],Y[itr]]))
-            for jtr in range(5):
+            for jtr in range(6):
                 du[jtr][1][itr]+=np.sum(Vinv[jtr,:]*pbasisdy([X[itr],Y[itr]]))
 
         return u,du,ddu

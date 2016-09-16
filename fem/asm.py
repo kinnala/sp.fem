@@ -105,7 +105,7 @@ class AssemblerGlobal(Assembler):
         self.mapping=mesh.mapping()
         self.Nbfun=self.dofnum.t_dof.shape[0]
 
-    def iasm(self,form,intorder=2):
+    def iasm(self,form,intorder=None):
         tind=np.arange(self.mesh.t.shape[1])
 
         # check and fix parameters of form
@@ -117,6 +117,10 @@ class AssemblerGlobal(Assembler):
             paramlist=['v','dv','ddv']
             bilinear=False
         fform=self.fillargs(form,paramlist)
+
+        if intorder is None:
+            # compute the maximum polynomial degree from elements
+            intorder=2*self.elem.maxdeg
 
         # quadrature points and weights
         X,W=get_quadrature(self.mesh.refdom,intorder)
