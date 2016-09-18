@@ -77,7 +77,7 @@ class Mesh(object):
 
 class MeshLine(Mesh):
     """One-dimensional mesh."""
-    
+
     refdom="line"
     brefdom="point"
 
@@ -381,7 +381,7 @@ class MeshTet(Mesh):
     def refine(self,N=1):
         """Perform one or more refines on the mesh."""
         for itr in range(N):
-            self.single_refine()
+            self._single_refine()
 
     def nodes_satisfying(self,test):
         """Return nodes that satisfy some condition."""
@@ -407,7 +407,7 @@ class MeshTet(Mesh):
         mz=0.5*(self.p[2,self.edges[0,:]]+self.p[2,self.edges[1,:]])
         return np.nonzero(test(mx,my,mz))[0]
 
-    def single_refine(self):
+    def _single_refine(self):
         """Perform a single mesh refine.
         
         Let the nodes of a tetrahedron be numbered as 0, 1, 2 and 3.
@@ -809,9 +809,9 @@ class MeshTri(Mesh):
     def refine(self,N=1):
         """Perform one or more refines on the mesh."""
         for itr in range(N):
-            self.single_refine()
+            self._single_refine()
 
-    def single_refine(self):
+    def _single_refine(self):
         """Perform a single mesh refine."""
         # rename variables
         t=self.t
