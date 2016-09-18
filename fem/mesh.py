@@ -41,7 +41,15 @@ class Mesh(object):
     def plot(self):
         raise NotImplementedError("Mesh.plot() not implemented!")
 
+    def show(self):
+        """Call the correct pyplot/mayavi show commands after plotting."""
+        if self.dim()<=2:
+            plt.show()
+        else:
+            mlab.show()
+
     def dim(self):
+        """Return the spatial dimension of the mesh."""
         return float(self.p.shape[0])
 
     def mapping(self):
@@ -126,11 +134,6 @@ class MeshLine(Mesh):
             ys.append(y2)
             ys.append(None)
         plt.plot(xs,ys,color)
-
-    def show(self):
-        """Calls pyplot.show() in order to display the figure
-        after running a plot command."""
-        plt.show()
 
     def mapping(self):
         return fmap.MappingAffine(self)
@@ -598,10 +601,6 @@ class MeshTet(Mesh):
             raise ImportError("MeshTet: Mayavi not supported "
                               "by the host system!")
 
-    def show(self):
-        """Run mayavi's mlab.show() function to draw."""
-        mlab.show()
-
     def boundary_nodes(self):
         """Return an array of boundary node indices."""
         return np.unique(self.facets[:,self.boundary_facets()])
@@ -801,10 +800,6 @@ class MeshTri(Mesh):
         else:
             raise NotImplementedError("MeshTri.plot3: not implemented for "
                                       "the given shape of input vector!")
-
-    def show(self):
-        """Call after plot functions."""
-        plt.show()
 
     def refine(self,N=1):
         """Perform one or more refines on the mesh."""
