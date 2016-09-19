@@ -31,15 +31,33 @@ class ElementGlobal(Element):
     def gbasis(self,mesh,qps,k):
         """Return the global basis functions of an element evaluated at
         the given quadrature points.
-        
+
         Parameters
         ----------
         mesh
-            The mesh object
+            The :class:`fem.mesh.Mesh` object.
         qps : dict of global quadrature points
-            The global quadrature points as given by fem.mapping.F
+            The global quadrature points as given by :func:`fem.mapping.Mapping.F`.
         k : int
             The index of the element in mesh structure.
+
+        Returns
+        -------
+        u : dict
+            A dictionary with integer keys from 0 to Nbfun.
+            Here i'th dictionary entry contains the values
+            of the i'th basis function evaluated at the
+            quadrature points (np.array).
+        du : dict
+            The first derivatives. The actual contents
+            are fully defined by the element behavior
+            although du[i] should correspond to the
+            i'th basis function.
+        ddu : dict
+            The second derivatives. The actual contents
+            are fully defined by the element behavior
+            although ddu[i] should correspond to the i'th
+            basis function.
         """
         raise NotImplementedError("ElementGlobal.gbasis not implemented!")
 
@@ -141,16 +159,20 @@ class ElementGlobalMorley(ElementGlobal):
 
         u=const_cell(np.zeros(len(X)),6)
         du=const_cell(np.zeros(len(X)),6,2)
-        ddu=const_cell(np.zeros(len(X)),6,2,2)
+        #ddu=const_cell(np.zeros(len(X)),6,2,2)
+        ddu=const_cell(np.zeros(len(X)),6,3)
         for itr in range(len(X)):
             for jtr in range(6):
                 u[jtr][itr]+=np.sum(Vinv[jtr,:]*pbasis([X[itr],Y[itr]]))
                 du[jtr][0][itr]+=np.sum(Vinv[jtr,:]*pbasisdx([X[itr],Y[itr]]))
                 du[jtr][1][itr]+=np.sum(Vinv[jtr,:]*pbasisdy([X[itr],Y[itr]]))
-                ddu[jtr][0][0][itr]=np.sum(Vinv[jtr,:]*dxx)
-                ddu[jtr][0][1][itr]=np.sum(Vinv[jtr,:]*dxy)
-                ddu[jtr][1][0][itr]=np.sum(Vinv[jtr,:]*dyx)
-                ddu[jtr][1][1][itr]=np.sum(Vinv[jtr,:]*dyy)
+               #ddu[jtr][0][0][itr]=np.sum(Vinv[jtr,:]*dxx)
+               #ddu[jtr][0][1][itr]=np.sum(Vinv[jtr,:]*dxy)
+               #ddu[jtr][1][0][itr]=np.sum(Vinv[jtr,:]*dyx)
+               #ddu[jtr][1][1][itr]=np.sum(Vinv[jtr,:]*dyy)
+                ddu[jtr][0][itr]=np.sum(Vinv[jtr,:]*dxx)
+                ddu[jtr][1][itr]=np.sum(Vinv[jtr,:]*dxy)
+                ddu[jtr][2][itr]=np.sum(Vinv[jtr,:]*dyy)
 
 
         return u,du,ddu
