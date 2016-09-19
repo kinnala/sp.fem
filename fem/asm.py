@@ -145,7 +145,9 @@ class AssemblerGlobal(Assembler):
             # assemble local stiffness matrix
             for jtr in range(self.Nbfun):
                 for itr in range(self.Nbfun):
-                    data[ktr]=np.dot(fform(u[jtr],u[itr],du[jtr],du[itr],ddu[jtr],ddu[itr]),W*np.abs(detDF[k]))
+                    data[ktr]=np.dot(fform(u[jtr],u[itr],
+                                           du[jtr],du[itr],
+                                           ddu[jtr],ddu[itr]),W*np.abs(detDF[k]))
                     rows[ktr]=self.dofnum.t_dof[itr,k]
                     cols[ktr]=self.dofnum.t_dof[jtr,k]
                     ktr+=1
