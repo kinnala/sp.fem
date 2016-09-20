@@ -111,10 +111,10 @@ class AssemblerGlobal(Assembler):
         # check and fix parameters of form
         oldparams=inspect.getargspec(form).args
         if 'u' in oldparams or 'du' in oldparams or 'ddu' in oldparams:
-            paramlist=['u','v','du','dv','ddu','ddv']
+            paramlist=['u','v','du','dv','ddu','ddv','x']
             bilinear=True
         else:
-            paramlist=['v','dv','ddv']
+            paramlist=['v','dv','ddv','x']
             bilinear=False
         fform=self.fillargs(form,paramlist)
 
@@ -130,29 +130,57 @@ class AssemblerGlobal(Assembler):
         # jacobian at quadrature points
         detDF=self.mapping.detDF(X,tind)
 
-        # initialize sparse matrix
-        data=np.zeros(tind.shape[0]*self.Nbfun**2)
-        rows=np.zeros(tind.shape[0]*self.Nbfun**2)
-        cols=np.zeros(tind.shape[0]*self.Nbfun**2)
-        ktr=0
-
         # loop over elements and do assembly
         dim=self.mesh.p.shape[0]
+        ktr=0
 
-        for k in tind:
-            u,du,ddu=self.elem.gbasis(self.mesh,x,k)
+        if bilinear:
+            # initialize sparse matrix
+            data=np.zeros(tind.shape[0]*self.Nbfun**2)
+            rows=np.zeros(tind.shape[0]*self.Nbfun**2)
+            cols=np.zeros(tind.shape[0]*self.Nbfun**2)
 
-            # assemble local stiffness matrix
-            for jtr in range(self.Nbfun):
+            for k in tind:
+                u,du,ddu=self.elem.gbasis(self.mesh,x,k)
+
+                # quadrature points in current element
+                xk={}
+                for itr in range(dim):
+                    xk[itr]=x[itr][k,:]
+
+                # assemble local stiffness matrix
+                for jtr in range(self.Nbfun):
+                    for itr in range(self.Nbfun):
+                        data[ktr]=np.dot(fform(u[jtr],u[itr],
+                                               du[jtr],du[itr],
+                                               ddu[jtr],ddu[itr],xk),W*np.abs(detDF[k]))
+                        rows[ktr]=self.dofnum.t_dof[itr,k]
+                        cols[ktr]=self.dofnum.t_dof[jtr,k]
+                        ktr+=1
+
+            return coo_matrix((data,(rows,cols)),shape=(self.dofnum.N,self.dofnum.N)).tocsr()
+
+        else:
+            # initialize sparse matrix structures
+            data=np.zeros(tind.shape[0]*self.Nbfun)
+            rows=np.zeros(tind.shape[0]*self.Nbfun)
+            cols=np.zeros(tind.shape[0]*self.Nbfun)
+
+            for k in tind:
+                u,du,ddu=self.elem.gbasis(self.mesh,x,k)
+
+                # quadrature points in current element
+                xk={}
+                for itr in range(dim):
+                    xk[itr]=x[itr][k,:]
+
+                # assemble local laod vector
                 for itr in range(self.Nbfun):
-                    data[ktr]=np.dot(fform(u[jtr],u[itr],
-                                           du[jtr],du[itr],
-                                           ddu[jtr],ddu[itr]),W*np.abs(detDF[k]))
+                    data[ktr]=np.dot(fform(u[itr],du[itr],ddu[itr],xk),W*np.abs(detDF[k]))
                     rows[ktr]=self.dofnum.t_dof[itr,k]
-                    cols[ktr]=self.dofnum.t_dof[jtr,k]
                     ktr+=1
-
-        return coo_matrix((data,(rows,cols)),shape=(self.dofnum.N,self.dofnum.N)).tocsr()
+            
+            return coo_matrix((data,(rows,cols)),shape=(self.dofnum.N,1)).toarray().T[0]
 
 class AssemblerElement(Assembler):
     """A quasi-fast assembler for arbitrary element/mesh/mapping."""

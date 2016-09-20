@@ -3,6 +3,8 @@ Hello, sp.fem!
 
 This is the documentation of a simple finite element assembler library written in Python 2.7. The library is useful for quickly creating numerical solvers for various PDE-based models.
 
+The library is currently work-in-progress and there is a fair amount of work to be done until it can be considered complete. The current state is however more than usable.
+
 What the hell is a finite element?
 ==================================
 
@@ -10,24 +12,43 @@ You might remember computing derivatives in high school. Unfortunately, back the
 
 This is unfortunate since the derivatives are used to build very useful and detailed models of physics, engineering and economics. These models are known as *differential equations* and very often can be robustly solved using a computer and the so-called *finite element method*.
 
+This library contains tools to quickly build the matrices related to the finite element method. We support various types of finite elements out-of-the-box although defining completely new elements is also possible.
+
 Getting started
 ===============
 
-You can install the library by running the following commands
+You can download the library and get started by running the following commands
 
 .. code-block:: bash
 
     git clone https://github.com/kinnala/sp.fem
     cd sp.fem
-    make install
 
-Now you can either resolve the requirements yourself by looking into the contents of requirements.txt or you can install a development environment by first installing `miniconda <http://conda.pydata.org/miniconda.html>`_ and then writing
+Next you can download and install Triangle by running
+
+.. code-block:: bash
+
+    make install-triangle
+
+If you are a well-seasoned Python developer you may look into the contents of requirements.txt, check that you have all the required libraries and do whatever you wish.
+
+Otherwise, we suggest that you use *miniconda* for managing Python virtual environments and installing packages. You can download and install *miniconda* by running
+
+.. code-block:: bash
+
+    make install-conda
+
+Next you can create a new virtual environment and install the required packages by running
 
 .. code-block:: bash
 
     make dev-install
 
-This will create a conda environment with the name *spfemenv* that contains all the required Python packages.
+The newly created virtual environment can be activated by writing
+
+.. code-block:: bash
+
+    source activate spfemenv
 
 Tutorial
 ========

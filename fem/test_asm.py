@@ -10,6 +10,26 @@ import fem.mapping as fmap
 import fem.element as felem
 import matplotlib.pyplot as plt
 
+class AssemblerGlobalP2Comparison(unittest.TestCase):
+    """Build some matrices with AssemblerGlobal
+    and AssemblerElement. Compare the results."""
+    def runTest(self):
+        m=fmsh.MeshTri()
+        m.refine(5)
+
+        a=fasm.AssemblerGlobal(m,felem.ElementGlobalTriP2())
+        b=fasm.AssemblerElement(m,felem.ElementTriP2())
+
+        A=a.iasm(lambda u,v: u*v)
+        B=b.iasm(lambda u,v: u*v)
+
+        self.assertAlmostEqual(np.sum(A.data),np.sum(B.data),places=10)
+
+        C=a.iasm(lambda du,v: du[0]*v)
+        D=b.iasm(lambda du,v: du[0]*v)
+
+        self.assertAlmostEqual(C.data[0],D.data[0],places=10)
+
 class AssemblerGlobalP1Comparison(unittest.TestCase):
     """Build some matrices with AssemblerGlobal
     and AssemblerElement. Compare the results."""

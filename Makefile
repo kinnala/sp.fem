@@ -1,8 +1,5 @@
 SHELL:=/bin/bash
 
-install: install-triangle ## Install all manual dependencies
-	@echo "Done!"
-
 install-triangle: ## Download and compile Triangle
 	@curl -o fem/triangle/triangle.zip http://www.netlib.org/voronoi/triangle.zip
 	@unzip fem/triangle/triangle.zip -d fem/triangle
@@ -17,8 +14,11 @@ dev-scripts: ## Create scripts that are useful while developing (with) sp.fem
 	@printf "#!/bin/bash\ntmux -2 new-session -d 'TERM=screen-256color vim fem/*'\ntmux split-window -h \ntmux split-window -v\ntmux -2 attach-session -d" > dev-tmux
 	@chmod 744 dev-tmux
 
-dev-install: ## Create a development environment to conda
+dev-install-txt: ## Create a development environment from requirements.txt
 	@conda create --name spfemenv --file requirements.txt
+
+dev-install: ## Create a development environment
+	@conda create -q -n spfemenv python numpy scipy matplotlib sympy ipython pyqt=4.11.4 mayavi
 
 activate: ## Type ". activate spfemenv" to start the conda environment
 	@echo "Activate the development environment by typing: \". activate spfemenv\""

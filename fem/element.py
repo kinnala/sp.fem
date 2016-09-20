@@ -61,6 +61,37 @@ class ElementGlobal(Element):
         """
         raise NotImplementedError("ElementGlobal.gbasis not implemented!")
 
+    def _pbasis1(self,x):
+        """This function defines the initial power basis
+        up to p=1 for 2d elements."""
+        return np.array([1.0,x[0],x[1]])
+
+    def _pbasis1dx(self):
+        return np.array([0.0,1.0,0.0])
+
+    def _pbasis1dy(self):
+        return np.array([0.0,0.0,1.0])
+
+    def _pbasis2(self,x):
+        """This function defines the initial power basis
+        up to p=2 for 2d elements."""
+        return np.array([1.0,x[0],x[1],x[0]**2,x[0]*x[1],x[1]**2])
+
+    def _pbasis2dx(self,x):
+        return np.array([0.0,1.0,0.0,2.0*x[0],x[1],0.0])
+
+    def _pbasis2dy(self,x):
+        return np.array([0.0,0.0,1.0,0.0,x[0],2.0*x[1]])
+
+    def _pbasis2dxx(self):
+        return np.array([0.0,0.0,0.0,2.0,0.0,0.0])
+
+    def _pbasis2dxy(self):
+        return np.array([0.0,0.0,0.0,0.0,1.0,0.0])
+
+    def _pbasis2dyy(self):
+        return np.array([0.0,0.0,0.0,0.0,0.0,2.0])
+
     def visualize_basis_2d(self,show_du=False,show_ddu=False):
         """Draw the basis functions given by self.gbasis.
         Only for 2D triangular elements. For debugging purposes."""
@@ -133,47 +164,35 @@ class ElementGlobalMorley(ElementGlobal):
         n2/=np.linalg.norm(n2)
         n3/=np.linalg.norm(n3)
 
-        def pbasis(x):
-            return np.array([1.0,x[0],x[1],x[0]**2,x[0]*x[1],x[1]**2])
-
-        def pbasisdx(x):
-            return np.array([0.0,1.0,0.0,2.0*x[0],x[1],0.0])
-
-        def pbasisdy(x):
-            return np.array([0.0,0.0,1.0,0.0,x[0],2.0*x[1]])
-
-        dxx=np.array([0.0,0.0,0.0,2.0,0.0,0.0])
-        dxy=np.array([0.0,0.0,0.0,0.0,1.0,0.0])
-        dyx=np.array([0.0,0.0,0.0,0.0,1.0,0.0])
-        dyy=np.array([0.0,0.0,0.0,0.0,0.0,2.0])
-
         # evaluate dofs
-        V[0,:]=pbasis(v1)
-        V[1,:]=pbasis(v2)
-        V[2,:]=pbasis(v3)
-        V[3,:]=pbasisdx(e1)*n1[0]+pbasisdy(e1)*n1[1]
-        V[4,:]=pbasisdx(e2)*n2[0]+pbasisdy(e2)*n2[1]
-        V[5,:]=pbasisdx(e3)*n3[0]+pbasisdy(e3)*n3[1]
+        V[0,:]=self._pbasis2(v1)
+        V[1,:]=self._pbasis2(v2)
+        V[2,:]=self._pbasis2(v3)
+        V[3,:]=self._pbasis2dx(e1)*n1[0]+\
+               self._pbasis2dy(e1)*n1[1]
+        V[4,:]=self._pbasis2dx(e2)*n2[0]+\
+               self._pbasis2dy(e2)*n2[1]
+        V[5,:]=self._pbasis2dx(e3)*n3[0]+\
+               self._pbasis2dy(e3)*n3[1]
 
         Vinv=np.linalg.inv(V).T
 
+        dxx=self._pbasis2dxx()
+        dxy=self._pbasis2dxy()
+        dyy=self._pbasis2dyy()
+
         u=const_cell(np.zeros(len(X)),6)
         du=const_cell(np.zeros(len(X)),6,2)
-        #ddu=const_cell(np.zeros(len(X)),6,2,2)
-        ddu=const_cell(np.zeros(len(X)),6,3)
+        ddu=const_cell(np.zeros(len(X)),6,2,2)
         for itr in range(len(X)):
             for jtr in range(6):
-                u[jtr][itr]+=np.sum(Vinv[jtr,:]*pbasis([X[itr],Y[itr]]))
-                du[jtr][0][itr]+=np.sum(Vinv[jtr,:]*pbasisdx([X[itr],Y[itr]]))
-                du[jtr][1][itr]+=np.sum(Vinv[jtr,:]*pbasisdy([X[itr],Y[itr]]))
-               #ddu[jtr][0][0][itr]=np.sum(Vinv[jtr,:]*dxx)
-               #ddu[jtr][0][1][itr]=np.sum(Vinv[jtr,:]*dxy)
-               #ddu[jtr][1][0][itr]=np.sum(Vinv[jtr,:]*dyx)
-               #ddu[jtr][1][1][itr]=np.sum(Vinv[jtr,:]*dyy)
-                ddu[jtr][0][itr]=np.sum(Vinv[jtr,:]*dxx)
-                ddu[jtr][1][itr]=np.sum(Vinv[jtr,:]*dxy)
-                ddu[jtr][2][itr]=np.sum(Vinv[jtr,:]*dyy)
-
+                u[jtr][itr]=np.sum(Vinv[jtr,:]*self._pbasis2([X[itr],Y[itr]]))
+                du[jtr][0][itr]=np.sum(Vinv[jtr,:]*self._pbasis2dx([X[itr],Y[itr]]))
+                du[jtr][1][itr]=np.sum(Vinv[jtr,:]*self._pbasis2dy([X[itr],Y[itr]]))
+                ddu[jtr][0][0][itr]=np.sum(Vinv[jtr,:]*dxx)
+                ddu[jtr][0][1][itr]=np.sum(Vinv[jtr,:]*dxy)
+                ddu[jtr][1][0][itr]=np.sum(Vinv[jtr,:]*dxy)
+                ddu[jtr][1][1][itr]=np.sum(Vinv[jtr,:]*dyy)
 
         return u,du,ddu
 
@@ -193,30 +212,21 @@ class ElementGlobalTriP2(ElementGlobal):
         # solve local basis functions
         V=np.zeros((6,6))
 
-        n1=mesh.p[:,mesh.t[0,k]]
-        n2=mesh.p[:,mesh.t[1,k]]
-        n3=mesh.p[:,mesh.t[2,k]]
+        v1=mesh.p[:,mesh.t[0,k]]
+        v2=mesh.p[:,mesh.t[1,k]]
+        v3=mesh.p[:,mesh.t[2,k]]
 
-        e1=0.5*(n1+n2)
-        e2=0.5*(n2+n3)
-        e3=0.5*(n1+n3)
-
-        def pbasis(x):
-            return np.array([1.0,x[0],x[1],x[0]**2,x[0]*x[1],x[1]**2])
-
-        def pbasisdx(x):
-            return np.array([0.0,1.0,0.0,2.0*x[0],x[1],0.0])
-
-        def pbasisdy(x):
-            return np.array([0.0,0.0,1.0,0.0,x[0],2.0*x[1]])
+        e1=0.5*(v1+v2)
+        e2=0.5*(v2+v3)
+        e3=0.5*(v1+v3)
 
         # evaluate dofs
-        V[0,:]=pbasis(n1)
-        V[1,:]=pbasis(n2)
-        V[2,:]=pbasis(n3)
-        V[3,:]=pbasis(e1)
-        V[4,:]=pbasis(e2)
-        V[5,:]=pbasis(e3)
+        V[0,:]=self._pbasis2(v1)
+        V[1,:]=self._pbasis2(v2)
+        V[2,:]=self._pbasis2(v3)
+        V[3,:]=self._pbasis2(e1)
+        V[4,:]=self._pbasis2(e2)
+        V[5,:]=self._pbasis2(e3)
 
         Vinv=np.linalg.inv(V).T
 
@@ -225,11 +235,9 @@ class ElementGlobalTriP2(ElementGlobal):
         ddu=u # TODO
         for itr in range(len(X)):
             for jtr in range(6):
-                u[jtr][itr]+=np.sum(Vinv[jtr,:]*pbasis([X[itr],Y[itr]]))
-            for jtr in range(6):
-                du[jtr][0][itr]+=np.sum(Vinv[jtr,:]*pbasisdx([X[itr],Y[itr]]))
-            for jtr in range(6):
-                du[jtr][1][itr]+=np.sum(Vinv[jtr,:]*pbasisdy([X[itr],Y[itr]]))
+                u[jtr][itr]=np.sum(Vinv[jtr,:]*self._pbasis2([X[itr],Y[itr]]))
+                du[jtr][0][itr]=np.sum(Vinv[jtr,:]*self._pbasis2dx([X[itr],Y[itr]]))
+                du[jtr][1][itr]=np.sum(Vinv[jtr,:]*self._pbasis2dy([X[itr],Y[itr]]))
 
         return u,du,ddu
 
@@ -248,35 +256,32 @@ class ElementGlobalTriP1(ElementGlobal):
         # solve local basis functions
         V=np.zeros((3,3))
 
-        n1=mesh.p[:,mesh.t[0,k]]
-        n2=mesh.p[:,mesh.t[1,k]]
-        n3=mesh.p[:,mesh.t[2,k]]
-
-        def pbasis(x,y):
-            return np.array([1.0,x,y])
+        v1=mesh.p[:,mesh.t[0,k]]
+        v2=mesh.p[:,mesh.t[1,k]]
+        v3=mesh.p[:,mesh.t[2,k]]
 
         # evaluate dofs
-        V[0,:]=pbasis(n1[0],n1[1])
-        V[1,:]=pbasis(n2[0],n2[1])
-        V[2,:]=pbasis(n3[0],n3[1])
+        V[0,:]=self._pbasis1(v1)
+        V[1,:]=self._pbasis1(v2)
+        V[2,:]=self._pbasis1(v3)
 
         Vinv=np.linalg.inv(V).T
 
         u=const_cell(np.zeros(len(X)),3)
         du=const_cell(np.zeros(len(X)),3,2)
-        ddu=u
+        ddu=const_cell(np.zeros(len(X)),3,2,2)
         for itr in range(len(X)):
-            u[0][itr]+=np.sum(Vinv[0,:]*pbasis(X[itr],Y[itr]))
-            u[1][itr]+=np.sum(Vinv[1,:]*pbasis(X[itr],Y[itr]))
-            u[2][itr]+=np.sum(Vinv[2,:]*pbasis(X[itr],Y[itr]))
+            u[0][itr]=np.sum(Vinv[0,:]*self._pbasis1([X[itr],Y[itr]]))
+            u[1][itr]=np.sum(Vinv[1,:]*self._pbasis1([X[itr],Y[itr]]))
+            u[2][itr]=np.sum(Vinv[2,:]*self._pbasis1([X[itr],Y[itr]]))
 
-            du[0][0][itr]+=Vinv[0,1]
-            du[1][0][itr]+=Vinv[1,1]
-            du[2][0][itr]+=Vinv[2,1]
+            du[0][0][itr]=Vinv[0,1]
+            du[1][0][itr]=Vinv[1,1]
+            du[2][0][itr]=Vinv[2,1]
 
-            du[0][1][itr]+=Vinv[0,2]
-            du[1][1][itr]+=Vinv[1,2]
-            du[2][1][itr]+=Vinv[2,2]
+            du[0][1][itr]=Vinv[0,2]
+            du[1][1][itr]=Vinv[1,2]
+            du[2][1][itr]=Vinv[2,2]
 
         # output u[i] for each i must be array of size Nqp
         return u,du,ddu
