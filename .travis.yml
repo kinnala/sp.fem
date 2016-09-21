@@ -13,7 +13,7 @@ install:
   - conda create -q -n spfemenv python=$TRAVIS_PYTHON_VERSION nomkl numpy scipy matplotlib sympy ipython coverage pyqt=4.11.4
   - pip install codecov
   - source activate spfemenv
-  - make install
+  - make install-triangle
 script:
   - make run-coverage
 after_success:
