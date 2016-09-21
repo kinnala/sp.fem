@@ -189,10 +189,10 @@ class ElementGlobalMorley(ElementGlobal):
                 u[jtr][itr]=np.sum(Vinv[jtr,:]*self._pbasis2([X[itr],Y[itr]]))
                 du[jtr][0][itr]=np.sum(Vinv[jtr,:]*self._pbasis2dx([X[itr],Y[itr]]))
                 du[jtr][1][itr]=np.sum(Vinv[jtr,:]*self._pbasis2dy([X[itr],Y[itr]]))
-                ddu[jtr][0][0][itr]=np.sum(Vinv[jtr,:]*dxx)
-                ddu[jtr][0][1][itr]=np.sum(Vinv[jtr,:]*dxy)
-                ddu[jtr][1][0][itr]=np.sum(Vinv[jtr,:]*dxy)
-                ddu[jtr][1][1][itr]=np.sum(Vinv[jtr,:]*dyy)
+                ddu[jtr][0][0][itr]=2.0*Vinv[jtr,3]
+                ddu[jtr][0][1][itr]=Vinv[jtr,4]
+                ddu[jtr][1][0][itr]=Vinv[jtr,4]
+                ddu[jtr][1][1][itr]=2.0*Vinv[jtr,5]
 
         return u,du,ddu
 
