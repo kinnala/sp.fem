@@ -92,37 +92,35 @@ class ElementGlobal(Element):
     def _pbasis2dyy(self):
         return np.array([0.0,0.0,0.0,0.0,0.0,2.0])
 
-    def _pbasis5(self,x):
-        """This function defines the initial power basis
-        up to p=5 for 2d elements."""
-        return np.array([1.0,
-                         x[0],x[1],
-                         x[0]**2,x[0]*x[1],x[1]**2,
-                         x[0]**3,x[0]**2*x[1],x[0]*x[1]**2,x[1]**3,
-                         x[0]**4,x[0]**3*x[1],x[0]**2*x[1]**2,x[0]*x[1]**3,x[1]**4,
-                         x[0]**5,x[0]**4*x[1],x[0]**3*x[1]**2,x[0]**2*x[1]**3,x[0]*x[1]**4,x[1]**5,
-                         ])
-
-    def _pbasis5dx(self,x):
-        return np.array([0.0,
-                         1.0,0.0,
-                         2.0*x[0],x[1],0.0,
-                         3.0*x[0]**2,2.0*x[0]*x[1],x[1]**2,0.0,
-                         4.0*x[0]**3,3.0*x[0]**2*x[1],2.0*x[0]*x[1]**2,x[1]**3,0.0,
-                         5.0*x[0]**4,4.0*x[0]**3*x[1],3.0*x[0]**2*x[1]**2,2.0*x[0]*x[1]**3,x[1]**4,0.0,
-                         ])
-
-    def _pbasis5dy(self,x):
-        return np.array([0.0,0.0,1.0,0.0,x[0],2.0*x[1]])
-
-    def _pbasis5dxx(self,x):
-        return np.array([0.0,0.0,0.0,2.0,0.0,0.0])
-
-    def _pbasis5dxy(self,x):
-        return np.array([0.0,0.0,0.0,0.0,1.0,0.0])
-
-    def _pbasis5dyy(self,x):
-        return np.array([0.0,0.0,0.0,0.0,0.0,2.0])
+    def _pbasisNinit(self,dim,N,debug=False):
+        if not hasattr(self,'_pbasis'+str(N)):
+            import sympy as sp
+            from sympy.abc import x,y,z
+            R=range(N+1)
+            if dim==1:
+                pbasis=sp.Matrix([x**i for i in R if i<=N])
+                setattr(self,'_pbasis'+str(N),lambda X:sp.lambdify(x,pbasis)(X).flatten().astype(np.float64))
+                setattr(self,'_pbasis'+str(N)+'dx',lambda X:sp.lambdify(x,sp.diff(pbasis,x))(X).flatten().astype(np.float64))
+                setattr(self,'_pbasis'+str(N)+'dxx',lambda X:sp.lambdify(x,sp.diff(pbasis,x,2))(X).flatten().astype(np.float64))
+            elif dim==2:
+                pbasis=sp.Matrix([x**i*y**j for i in R for j in R if i+j<=N])
+                tmp=sp.lambdify((x,y),pbasis)
+                setattr(self,'_pbasis'+str(N),lambda X:tmp(X[0],X[1]).flatten().astype(np.float64))
+                tmp=sp.lambdify((x,y),sp.diff(pbasis,x))
+                setattr(self,'_pbasis'+str(N)+'dx',lambda X:tmp(X[0],X[1]).flatten().astype(np.float64))
+                tmp=sp.lambdify((x,y),sp.diff(pbasis,y))
+                setattr(self,'_pbasis'+str(N)+'dy',lambda X:tmp(X[0],X[1]).flatten().astype(np.float64))
+                tmp=sp.lambdify((x,y),sp.diff(pbasis,x,2))
+                setattr(self,'_pbasis'+str(N)+'dxx',lambda X:tmp(X[0],X[1]).flatten().astype(np.float64))
+                tmp=sp.lambdify((x,y),sp.diff(pbasis,x,y))
+                setattr(self,'_pbasis'+str(N)+'dxy',lambda X:tmp(X[0],X[1]).flatten().astype(np.float64))
+                tmp=sp.lambdify((x,y),sp.diff(pbasis,y,2))
+                setattr(self,'_pbasis'+str(N)+'dyy',lambda X:tmp(X[0],X[1]).flatten().astype(np.float64))
+            else:
+                raise NotImplementedError("ElementGlobal._pbasisNinit: the given "+\
+                                          "dimension not implemented!")
+            if debug:
+                print pbasis
 
     def visualize_basis_2d(self,show_du=False,show_ddu=False):
         """Draw the basis functions given by self.gbasis.
@@ -196,31 +194,56 @@ class ElementGlobalArgyris(ElementGlobal):
         n2/=np.linalg.norm(n2)
         n3/=np.linalg.norm(n3)
 
+        # initialize fifth order power basis
+        self._pbasisNinit(2,5)
+
         # evaluate dofs
-        V[0,:]=self._pbasis2(v1)
-        V[1,:]=self._pbasis2(v2)
-        V[2,:]=self._pbasis2(v3)
-        V[3,:]=self._pbasis2dx(e1)*n1[0]+\
-               self._pbasis2dy(e1)*n1[1]
-        V[4,:]=self._pbasis2dx(e2)*n2[0]+\
-               self._pbasis2dy(e2)*n2[1]
-        V[5,:]=self._pbasis2dx(e3)*n3[0]+\
-               self._pbasis2dy(e3)*n3[1]
+        V[0,:]=self._pbasis5(v1)
+        V[1,:]=self._pbasis5(v2)
+        V[2,:]=self._pbasis5(v3)
+
+        V[3,:]=self._pbasis5dx(v1)
+        V[4,:]=self._pbasis5dx(v2)
+        V[5,:]=self._pbasis5dx(v3)
+
+        V[6,:]=self._pbasis5dy(v1)
+        V[7,:]=self._pbasis5dy(v2)
+        V[8,:]=self._pbasis5dy(v3)
+
+        V[9,:]=self._pbasis5dxx(v1)
+        V[10,:]=self._pbasis5dxx(v2)
+        V[11,:]=self._pbasis5dxx(v3)
+
+        V[12,:]=self._pbasis5dxy(v1)
+        V[13,:]=self._pbasis5dxy(v2)
+        V[14,:]=self._pbasis5dxy(v3)
+
+        V[15,:]=self._pbasis5dyy(v1)
+        V[16,:]=self._pbasis5dyy(v2)
+        V[17,:]=self._pbasis5dyy(v3)
+
+        V[18,:]=self._pbasis5dx(e1)*n1[0]+\
+                self._pbasis5dy(e1)*n1[1]
+        V[19,:]=self._pbasis5dx(e2)*n2[0]+\
+                self._pbasis5dy(e2)*n2[1]
+        V[20,:]=self._pbasis5dx(e3)*n3[0]+\
+                self._pbasis5dy(e3)*n3[1]
 
         Vinv=np.linalg.inv(V).T
 
-        dxx=self._pbasis2dxx()
-        dxy=self._pbasis2dxy()
-        dyy=self._pbasis2dyy()
+        #dxx=self._pbasis2dxx()
+        #dxy=self._pbasis2dxy()
+        #dyy=self._pbasis2dyy()
 
-        u=const_cell(np.zeros(len(X)),6)
-        du=const_cell(np.zeros(len(X)),6,2)
-        ddu=const_cell(np.zeros(len(X)),6,2,2)
+        N=21
+        u=const_cell(np.zeros(len(X)),N)
+        du=const_cell(np.zeros(len(X)),N,2)
+        ddu=const_cell(np.zeros(len(X)),N,2,2)
         for itr in range(len(X)):
-            for jtr in range(6):
-                u[jtr][itr]=np.sum(Vinv[jtr,:]*self._pbasis2([X[itr],Y[itr]]))
-                du[jtr][0][itr]=np.sum(Vinv[jtr,:]*self._pbasis2dx([X[itr],Y[itr]]))
-                du[jtr][1][itr]=np.sum(Vinv[jtr,:]*self._pbasis2dy([X[itr],Y[itr]]))
+            for jtr in range(N):
+                u[jtr][itr]=np.sum(Vinv[jtr,:]*self._pbasis5([X[itr],Y[itr]]))
+                du[jtr][0][itr]=np.sum(Vinv[jtr,:]*self._pbasis5dx([X[itr],Y[itr]]))
+                du[jtr][1][itr]=np.sum(Vinv[jtr,:]*self._pbasis5dy([X[itr],Y[itr]]))
                 ddu[jtr][0][0][itr]=2.0*Vinv[jtr,3]
                 ddu[jtr][0][1][itr]=Vinv[jtr,4]
                 ddu[jtr][1][0][itr]=Vinv[jtr,4]
