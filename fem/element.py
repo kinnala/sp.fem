@@ -92,6 +92,38 @@ class ElementGlobal(Element):
     def _pbasis2dyy(self):
         return np.array([0.0,0.0,0.0,0.0,0.0,2.0])
 
+    def _pbasis5(self,x):
+        """This function defines the initial power basis
+        up to p=5 for 2d elements."""
+        return np.array([1.0,
+                         x[0],x[1],
+                         x[0]**2,x[0]*x[1],x[1]**2,
+                         x[0]**3,x[0]**2*x[1],x[0]*x[1]**2,x[1]**3,
+                         x[0]**4,x[0]**3*x[1],x[0]**2*x[1]**2,x[0]*x[1]**3,x[1]**4,
+                         x[0]**5,x[0]**4*x[1],x[0]**3*x[1]**2,x[0]**2*x[1]**3,x[0]*x[1]**4,x[1]**5,
+                         ])
+
+    def _pbasis5dx(self,x):
+        return np.array([0.0,
+                         1.0,0.0,
+                         2.0*x[0],x[1],0.0,
+                         3.0*x[0]**2,2.0*x[0]*x[1],x[1]**2,0.0,
+                         4.0*x[0]**3,3.0*x[0]**2*x[1],2.0*x[0]*x[1]**2,x[1]**3,0.0,
+                         5.0*x[0]**4,4.0*x[0]**3*x[1],3.0*x[0]**2*x[1]**2,2.0*x[0]*x[1]**3,x[1]**4,0.0,
+                         ])
+
+    def _pbasis5dy(self,x):
+        return np.array([0.0,0.0,1.0,0.0,x[0],2.0*x[1]])
+
+    def _pbasis5dxx(self,x):
+        return np.array([0.0,0.0,0.0,2.0,0.0,0.0])
+
+    def _pbasis5dxy(self,x):
+        return np.array([0.0,0.0,0.0,0.0,1.0,0.0])
+
+    def _pbasis5dyy(self,x):
+        return np.array([0.0,0.0,0.0,0.0,0.0,2.0])
+
     def visualize_basis_2d(self,show_du=False,show_ddu=False):
         """Draw the basis functions given by self.gbasis.
         Only for 2D triangular elements. For debugging purposes."""
@@ -129,6 +161,72 @@ class ElementGlobal(Element):
                 m.plot3(ddu[itr][1][1])
 
         m.show()
+        
+class ElementGlobalArgyris(ElementGlobal):
+    """Argyris element for fourth-order problems."""
+
+    n_dofs=6
+    f_dofs=1
+    dim=2
+    maxdeg=5
+
+    def gbasis(self,mesh,qps,k):
+        X=qps[0][k,:]
+        Y=qps[1][k,:]
+        # solve local basis functions
+        V=np.zeros((21,21))
+
+        v1=mesh.p[:,mesh.t[0,k]]
+        v2=mesh.p[:,mesh.t[1,k]]
+        v3=mesh.p[:,mesh.t[2,k]]
+
+        e1=0.5*(v1+v2)
+        e2=0.5*(v2+v3)
+        e3=0.5*(v1+v3)
+
+        t1=v1-v2
+        t2=v2-v3
+        t3=v1-v3
+
+        n1=np.array([t1[1],-t1[0]])
+        n2=np.array([t2[1],-t2[0]])
+        n3=np.array([t3[1],-t3[0]])
+
+        n1/=np.linalg.norm(n1)
+        n2/=np.linalg.norm(n2)
+        n3/=np.linalg.norm(n3)
+
+        # evaluate dofs
+        V[0,:]=self._pbasis2(v1)
+        V[1,:]=self._pbasis2(v2)
+        V[2,:]=self._pbasis2(v3)
+        V[3,:]=self._pbasis2dx(e1)*n1[0]+\
+               self._pbasis2dy(e1)*n1[1]
+        V[4,:]=self._pbasis2dx(e2)*n2[0]+\
+               self._pbasis2dy(e2)*n2[1]
+        V[5,:]=self._pbasis2dx(e3)*n3[0]+\
+               self._pbasis2dy(e3)*n3[1]
+
+        Vinv=np.linalg.inv(V).T
+
+        dxx=self._pbasis2dxx()
+        dxy=self._pbasis2dxy()
+        dyy=self._pbasis2dyy()
+
+        u=const_cell(np.zeros(len(X)),6)
+        du=const_cell(np.zeros(len(X)),6,2)
+        ddu=const_cell(np.zeros(len(X)),6,2,2)
+        for itr in range(len(X)):
+            for jtr in range(6):
+                u[jtr][itr]=np.sum(Vinv[jtr,:]*self._pbasis2([X[itr],Y[itr]]))
+                du[jtr][0][itr]=np.sum(Vinv[jtr,:]*self._pbasis2dx([X[itr],Y[itr]]))
+                du[jtr][1][itr]=np.sum(Vinv[jtr,:]*self._pbasis2dy([X[itr],Y[itr]]))
+                ddu[jtr][0][0][itr]=2.0*Vinv[jtr,3]
+                ddu[jtr][0][1][itr]=Vinv[jtr,4]
+                ddu[jtr][1][0][itr]=Vinv[jtr,4]
+                ddu[jtr][1][1][itr]=2.0*Vinv[jtr,5]
+
+        return u,du,ddu
 
 class ElementGlobalMorley(ElementGlobal):
     """Morley element for fourth-order problems."""
