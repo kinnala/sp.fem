@@ -105,8 +105,9 @@ class AssemblerGlobal(Assembler):
         self.mapping=mesh.mapping()
         self.Nbfun=self.dofnum.t_dof.shape[0]
 
-    def iasm(self,form,intorder=None):
-        tind=np.arange(self.mesh.t.shape[1])
+    def iasm(self,form,intorder=None,tind=None):
+        if tind is None:
+            tind=np.arange(self.mesh.t.shape[1])
 
         # check and fix parameters of form
         oldparams=inspect.getargspec(form).args

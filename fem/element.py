@@ -98,24 +98,24 @@ class ElementGlobal(Element):
             from sympy.abc import x,y,z
             R=range(N+1)
             if dim==1:
-                pbasis=sp.Matrix([x**i for i in R if i<=N])
+                pbasis=sp.Matrix([x**i for i in R if i<=N]) # TODO fix this
                 setattr(self,'_pbasis'+str(N),lambda X:sp.lambdify(x,pbasis)(X).flatten().astype(np.float64))
                 setattr(self,'_pbasis'+str(N)+'dx',lambda X:sp.lambdify(x,sp.diff(pbasis,x))(X).flatten().astype(np.float64))
                 setattr(self,'_pbasis'+str(N)+'dxx',lambda X:sp.lambdify(x,sp.diff(pbasis,x,2))(X).flatten().astype(np.float64))
             elif dim==2:
                 pbasis=sp.Matrix([x**i*y**j for i in R for j in R if i+j<=N])
-                tmp=sp.lambdify((x,y),pbasis)
-                setattr(self,'_pbasis'+str(N),lambda X:tmp(X[0],X[1]).flatten().astype(np.float64))
-                tmp=sp.lambdify((x,y),sp.diff(pbasis,x))
-                setattr(self,'_pbasis'+str(N)+'dx',lambda X:tmp(X[0],X[1]).flatten().astype(np.float64))
-                tmp=sp.lambdify((x,y),sp.diff(pbasis,y))
-                setattr(self,'_pbasis'+str(N)+'dy',lambda X:tmp(X[0],X[1]).flatten().astype(np.float64))
-                tmp=sp.lambdify((x,y),sp.diff(pbasis,x,2))
-                setattr(self,'_pbasis'+str(N)+'dxx',lambda X:tmp(X[0],X[1]).flatten().astype(np.float64))
-                tmp=sp.lambdify((x,y),sp.diff(pbasis,x,y))
-                setattr(self,'_pbasis'+str(N)+'dxy',lambda X:tmp(X[0],X[1]).flatten().astype(np.float64))
-                tmp=sp.lambdify((x,y),sp.diff(pbasis,y,2))
-                setattr(self,'_pbasis'+str(N)+'dyy',lambda X:tmp(X[0],X[1]).flatten().astype(np.float64))
+                tmp1=sp.lambdify((x,y),pbasis)
+                setattr(self,'_pbasis'+str(N),lambda X:tmp1(X[0],X[1]).flatten().astype(np.float64))
+                tmp2=sp.lambdify((x,y),sp.diff(pbasis,x))
+                setattr(self,'_pbasis'+str(N)+'dx',lambda X:tmp2(X[0],X[1]).flatten().astype(np.float64))
+                tmp3=sp.lambdify((x,y),sp.diff(pbasis,y))
+                setattr(self,'_pbasis'+str(N)+'dy',lambda X:tmp3(X[0],X[1]).flatten().astype(np.float64))
+                tmp4=sp.lambdify((x,y),sp.diff(pbasis,x,2))
+                setattr(self,'_pbasis'+str(N)+'dxx',lambda X:tmp4(X[0],X[1]).flatten().astype(np.float64))
+                tmp5=sp.lambdify((x,y),sp.diff(pbasis,x,y))
+                setattr(self,'_pbasis'+str(N)+'dxy',lambda X:tmp5(X[0],X[1]).flatten().astype(np.float64))
+                tmp6=sp.lambdify((x,y),sp.diff(pbasis,y,2))
+                setattr(self,'_pbasis'+str(N)+'dyy',lambda X:tmp6(X[0],X[1]).flatten().astype(np.float64))
             else:
                 raise NotImplementedError("ElementGlobal._pbasisNinit: the given "+\
                                           "dimension not implemented!")
@@ -168,11 +168,17 @@ class ElementGlobalArgyris(ElementGlobal):
     dim=2
     maxdeg=5
 
+    def __init__(self,optimize_u=False,optimize_du=False,optimize_ddu=False):
+        self.optimize_u=optimize_u
+        self.optimize_du=optimize_du
+        self.optimize_ddu=optimize_ddu
+
     def gbasis(self,mesh,qps,k):
         X=qps[0][k,:]
         Y=qps[1][k,:]
         # solve local basis functions
-        V=np.zeros((21,21))
+        N=21
+        V=np.zeros((N,N))
 
         v1=mesh.p[:,mesh.t[0,k]]
         v2=mesh.p[:,mesh.t[1,k]]
@@ -199,27 +205,24 @@ class ElementGlobalArgyris(ElementGlobal):
 
         # evaluate dofs
         V[0,:]=self._pbasis5(v1)
-        V[1,:]=self._pbasis5(v2)
-        V[2,:]=self._pbasis5(v3)
+        V[1,:]=self._pbasis5dx(v1)
+        V[2,:]=self._pbasis5dy(v1)
+        V[3,:]=self._pbasis5dxx(v1)
+        V[4,:]=self._pbasis5dxy(v1)
+        V[5,:]=self._pbasis5dyy(v1)
 
-        V[3,:]=self._pbasis5dx(v1)
-        V[4,:]=self._pbasis5dx(v2)
-        V[5,:]=self._pbasis5dx(v3)
+        V[6,:]=self._pbasis5(v2)
+        V[7,:]=self._pbasis5dx(v2)
+        V[8,:]=self._pbasis5dy(v2)
+        V[9,:]=self._pbasis5dxx(v2)
+        V[10,:]=self._pbasis5dxy(v2)
+        V[11,:]=self._pbasis5dyy(v2)
 
-        V[6,:]=self._pbasis5dy(v1)
-        V[7,:]=self._pbasis5dy(v2)
-        V[8,:]=self._pbasis5dy(v3)
-
-        V[9,:]=self._pbasis5dxx(v1)
-        V[10,:]=self._pbasis5dxx(v2)
-        V[11,:]=self._pbasis5dxx(v3)
-
-        V[12,:]=self._pbasis5dxy(v1)
-        V[13,:]=self._pbasis5dxy(v2)
-        V[14,:]=self._pbasis5dxy(v3)
-
-        V[15,:]=self._pbasis5dyy(v1)
-        V[16,:]=self._pbasis5dyy(v2)
+        V[12,:]=self._pbasis5(v3)
+        V[13,:]=self._pbasis5dx(v3)
+        V[14,:]=self._pbasis5dy(v3)
+        V[15,:]=self._pbasis5dxx(v3)
+        V[16,:]=self._pbasis5dxy(v3)
         V[17,:]=self._pbasis5dyy(v3)
 
         V[18,:]=self._pbasis5dx(e1)*n1[0]+\
@@ -231,23 +234,21 @@ class ElementGlobalArgyris(ElementGlobal):
 
         Vinv=np.linalg.inv(V).T
 
-        #dxx=self._pbasis2dxx()
-        #dxy=self._pbasis2dxy()
-        #dyy=self._pbasis2dyy()
-
-        N=21
         u=const_cell(np.zeros(len(X)),N)
         du=const_cell(np.zeros(len(X)),N,2)
         ddu=const_cell(np.zeros(len(X)),N,2,2)
         for itr in range(len(X)):
             for jtr in range(N):
-                u[jtr][itr]=np.sum(Vinv[jtr,:]*self._pbasis5([X[itr],Y[itr]]))
-                du[jtr][0][itr]=np.sum(Vinv[jtr,:]*self._pbasis5dx([X[itr],Y[itr]]))
-                du[jtr][1][itr]=np.sum(Vinv[jtr,:]*self._pbasis5dy([X[itr],Y[itr]]))
-                ddu[jtr][0][0][itr]=2.0*Vinv[jtr,3]
-                ddu[jtr][0][1][itr]=Vinv[jtr,4]
-                ddu[jtr][1][0][itr]=Vinv[jtr,4]
-                ddu[jtr][1][1][itr]=2.0*Vinv[jtr,5]
+                if not self.optimize_u:
+                    u[jtr][itr]=np.sum(Vinv[jtr,:]*self._pbasis5([X[itr],Y[itr]]))
+                if not self.optimize_du:
+                    du[jtr][0][itr]=np.sum(Vinv[jtr,:]*self._pbasis5dx([X[itr],Y[itr]]))
+                    du[jtr][1][itr]=np.sum(Vinv[jtr,:]*self._pbasis5dy([X[itr],Y[itr]]))
+                if not self.optimize_ddu:
+                    ddu[jtr][0][0][itr]=np.sum(Vinv[jtr,:]*self._pbasis5dxx([X[itr],Y[itr]]))
+                    ddu[jtr][0][1][itr]=np.sum(Vinv[jtr,:]*self._pbasis5dxy([X[itr],Y[itr]]))
+                    ddu[jtr][1][0][itr]=ddu[jtr][0][1][itr]
+                    ddu[jtr][1][1][itr]=np.sum(Vinv[jtr,:]*self._pbasis5dyy([X[itr],Y[itr]]))
 
         return u,du,ddu
 
