@@ -202,7 +202,24 @@ class AssemblerGlobal(Assembler):
             return coo_matrix((data,(rows,cols)),shape=(self.dofnum.N,1)).toarray().T[0]
 
 class AssemblerElement(Assembler):
-    """A quasi-fast assembler for arbitrary element/mesh/mapping."""
+    """A quasi-fast assembler for arbitrary element/mesh/mapping.
+    
+    Parameters
+    ----------
+    mesh : :class:`fem.mesh.Mesh`
+        The finite element mesh.
+
+    elem_u : :class:`fem.element.Element`
+        The element for the solution function.
+        
+    elem_v : (OPTIONAL) :class:`fem.element.Element`
+        The element for the test function. By default, same element is used for both.
+        
+    mapping : (OPTIONAL) :class:`fem.mapping.Mapping`
+        The mesh will give some sort of default mapping but sometimes, e.g.
+        when using isoparametric elements, the user might have to support
+        a different mapping.
+    """
     def __init__(self,mesh,elem_u,elem_v=None,mapping=None):
         if not isinstance(mesh,fem.mesh.Mesh):
             raise Exception("AssemblerElement.__init__(): first parameter "
@@ -235,11 +252,75 @@ class AssemblerElement(Assembler):
         
         Parameters
         ----------
-        form
+        form : function handle
             The bilinear or linear form function handle.
-            The supported parameters for bilinear forms
-            are u,v,du,dv,x,w,h. The supported parameters
-            for linear forms are v,dv,x,w,h.
+            The supported parameters can be found in the
+            following table.
+
+            +-----------+----------------------+--------------+
+            | Parameter | Explanation          | Supported in |
+            +-----------+----------------------+--------------+
+            | u         | solution             | bilinear     |
+            +-----------+----------------------+--------------+
+            | v         | test fun             | both         |
+            +-----------+----------------------+--------------+
+            | du        | solution derivatives | bilinear     |
+            +-----------+----------------------+--------------+
+            | dv        | test fun derivatives | both         |
+            +-----------+----------------------+--------------+
+            | x         | spatial location     | both         |
+            +-----------+----------------------+--------------+
+            | w         | cf. interp           | both         |
+            +-----------+----------------------+--------------+
+            | h         | the mesh parameter   | both         |
+            +-----------+----------------------+--------------+
+
+            The function handle must use these exact names for
+            the variables. Unused variable names can be omitted.
+            
+            Examples of valid bilinear forms:
+            ::
+                
+                def bilin_form1(du,dv):
+                    # Note that the element must be
+                    # defined for two-dimensional
+                    # meshes for this to make sense!
+                    return du[0]*dv[0]+du[1]*dv[1]
+
+                def bilin_form2(du,v):
+                    return du[0]*v
+
+                bilin_form3 = lambda u,v,x: x[0]**2*u*v
+
+            Examples of valid linear forms:
+            ::
+                
+                def lin_form1(v):
+                    return v
+
+                def lin_form2(h,x,v):
+                    import numpy as np
+                    mesh_parameter=h
+                    X=x[0]
+                    Y=x[1]
+                    return mesh_parameter*np.sin(np.pi*X)*np.sin(np.pi*Y)*v
+
+            The linear forms are automatically detected to be
+            non-bilinear through the omission of u or du.
+
+        intorder : int
+            The order of polynomials for which the applied
+            quadrature rule is exact. By default,
+            2*Element.maxdeg is used. Reducing this number
+            can sometimes reduce the computation time.
+
+        interp : numpy array
+            Using this flag, the user can provide
+            a solution vector that is interpolated
+            to the quadrature points and included in
+            the computation of the bilinear form
+            (the variable w). Useful e.g. when solving
+            nonlinear problems.
         """
         if tind is None:
             # assemble on all elements by default
