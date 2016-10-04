@@ -3,7 +3,7 @@ import numpy as np
 import fem.mesh as fmsh
 import fem.asm as fasm
 import fem.element as felem
-import fem.solvers as fsol
+import fem.utils as futil
 import scipy.sparse as spsp
 import copy
 from fem.weakform import *
@@ -68,7 +68,7 @@ class ExampleElasticity(unittest.TestCase):
         I=a.dofnum_u.getdofs(N=i1)
 
         # solve the system
-        u=fsol.direct(A,f,I=I,use_umfpack=True)
+        u=futil.direct(A,f,I=I,use_umfpack=True)
 
         e1=felem.ElementTetP1()
         c=fasm.AssemblerElement(m,e1)
