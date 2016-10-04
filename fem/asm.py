@@ -2,7 +2,24 @@
 """
 Assembly of matrices related to linear and bilinear forms.
 
-@author: Tom Gustafsson
+*Example 1*. Assemble the stiffness matrix related to
+the Poisson problem using the piecewise linear elements.
+
+.. code-block:: python
+
+    import fem.mesh as fmsh
+    import fem.asm as fasm
+    import fem.element as felem
+
+    m=fmsh.MeshTri()
+    m.refine(3)
+    e=felem.ElementTriP1()
+    a=fasm.AssemblerElement(m,e)
+
+    def bilinear_form(du,dv):
+        return du[0]*dv[0]+du[1]*dv[1]
+
+    K=a.iasm(bilinear_form)
 """
 import numpy as np
 import fem.mesh
@@ -77,7 +94,8 @@ class Assembler:
         return newform
 
 class AssemblerGlobal(Assembler):
-    """An assembler for globally defined elements, cf. :class:`fem.element.ElementGlobal`.
+    """An assembler for globally defined elements,
+    cf. :class:`fem.element.ElementGlobal`.
     
     The finite element given to this assembler is defined
     in such a way that given a (global) triangle and (global)
@@ -212,7 +230,17 @@ class AssemblerElement(Assembler):
             self.dofnum_v=Dofnum(mesh,elem_v)
      
     def iasm(self,form,intorder=None,tind=None,interp=None):
-        """Interior assembly."""
+        """Return a matrix related to a bilinear or linear form
+        where the integral is over the interior of the domain.
+        
+        Parameters
+        ----------
+        form
+            The bilinear or linear form function handle.
+            The supported parameters for bilinear forms
+            are u,v,du,dv,x,w,h. The supported parameters
+            for linear forms are v,dv,x,w,h.
+        """
         if tind is None:
             # assemble on all elements by default
             tind=range(self.mesh.t.shape[1])
@@ -224,10 +252,10 @@ class AssemblerElement(Assembler):
         # check and fix parameters of form
         oldparams=inspect.getargspec(form).args
         if 'u' in oldparams or 'du' in oldparams:
-            paramlist=['u','v','du','dv','ddu','ddv','x','w','h']
+            paramlist=['u','v','du','dv','x','w','h']
             bilinear=True
         else:
-            paramlist=['v','dv','ddv','x','w','h']
+            paramlist=['v','dv','x','w','h']
             bilinear=False
         fform=self.fillargs(form,paramlist)
         
@@ -265,15 +293,15 @@ class AssemblerElement(Assembler):
             cols=np.zeros(Nbfun_u*Nbfun_v*nt)
         
             for j in range(Nbfun_u):
-                u,du,ddu=self.elem_u.gbasis(self.mapping,X,j,tind)
+                u,du=self.elem_u.gbasis(self.mapping,X,j,tind)
                 for i in range(Nbfun_v):
-                    v,dv,ddv=self.elem_v.gbasis(self.mapping,X,i,tind)
+                    v,dv=self.elem_v.gbasis(self.mapping,X,i,tind)
             
                     # find correct location in data,rows,cols
                     ixs=slice(nt*(Nbfun_v*j+i),nt*(Nbfun_v*j+i+1))
                     
                     # compute entries of local stiffness matrices
-                    data[ixs]=np.dot(fform(u,v,du,dv,ddu,ddv,x,w,h)*np.abs(detDF),W)
+                    data[ixs]=np.dot(fform(u,v,du,dv,x,w,h)*np.abs(detDF),W)
                     rows[ixs]=self.dofnum_v.t_dof[i,tind]
                     cols[ixs]=self.dofnum_u.t_dof[j,tind]
         
@@ -286,13 +314,13 @@ class AssemblerElement(Assembler):
             cols=np.zeros(Nbfun_v*nt)
             
             for i in range(Nbfun_v):
-                v,dv,ddv=self.elem_v.gbasis(self.mapping,X,i,tind)
+                v,dv=self.elem_v.gbasis(self.mapping,X,i,tind)
 
                 # find correct location in data,rows,cols
                 ixs=slice(nt*i,nt*(i+1))
                 
                 # compute entries of local stiffness matrices
-                data[ixs]=np.dot(fform(v,dv,ddv,x,w,h)*np.abs(detDF),W)
+                data[ixs]=np.dot(fform(v,dv,x,w,h)*np.abs(detDF),W)
                 rows[ixs]=self.dofnum_v.t_dof[i,:]
                 cols[ixs]=np.zeros(nt)
         
@@ -345,7 +373,7 @@ class AssemblerElement(Assembler):
         # compute the mesh parameter from jacobian determinant
         if self.mesh.dim()>=1.0:
             h=np.abs(detDG)**(1.0/(self.mesh.dim()-1.0))
-        else: # exception for 1D mesh
+        else: # TODO exception for 2D mesh
             h=None
         
         # bilinear form
@@ -356,9 +384,9 @@ class AssemblerElement(Assembler):
             cols=np.zeros(Nbfun_u*Nbfun_v*ne)
 
             for j in range(Nbfun_u):
-                u,du,_=self.elem_u.gbasis(self.mapping,Y,j,tind)
+                u,du=self.elem_u.gbasis(self.mapping,Y,j,tind)
                 for i in range(Nbfun_v):
-                    v,dv,_=self.elem_v.gbasis(self.mapping,Y,i,tind)
+                    v,dv=self.elem_v.gbasis(self.mapping,Y,i,tind)
            
                     # find correct location in data,rows,cols
                     ixs=slice(ne*(Nbfun_v*j+i),ne*(Nbfun_v*j+i+1))
@@ -377,7 +405,7 @@ class AssemblerElement(Assembler):
             cols=np.zeros(Nbfun_v*ne)
 
             for i in range(Nbfun_v):
-                v,dv,_=self.elem_v.gbasis(self.mapping,Y,i,tind)
+                v,dv=self.elem_v.gbasis(self.mapping,Y,i,tind)
         
                 # find correct location in data,rows,cols
                 ixs=slice(ne*i,ne*(i+1))

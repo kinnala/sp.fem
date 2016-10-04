@@ -4,10 +4,10 @@ Classes that represent different types of meshes.
 
 Currently implemented mesh types are
 
-    * **MeshTri**, a triangular mesh
-    * **MeshTet**, a tetrahedral mesh
-    * **MeshQuad**, a mesh consisting of quadrilaterals
-    * **MeshLine**, one-dimensional mesh
+    * :class:`fem.mesh.MeshTri`, a triangular mesh
+    * :class:`fem.mesh.MeshTet`, a tetrahedral mesh
+    * :class:`fem.mesh.MeshQuad`, a mesh consisting of quadrilaterals
+    * :class:`fem.mesh.MeshLine`, one-dimensional mesh
 
 *Example 1*. Obtain a three times refined mesh of the unit square and draw it.
 

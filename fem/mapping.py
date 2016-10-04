@@ -1,32 +1,18 @@
 """
-@author: Tom Gustafsson
+The mappings defining relationships between reference and global elements.
 
+Currently these classes have quite a lot of undocumented behavior and
+untested code. The following mappings are implemented to some extent:
 
-This file is part of sp.fem.
-
-sp.fem is free software: you can redistribute it and/or modify
-it under the terms of the GNU Affero General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-sp.fem is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Affero General Public License for more details.
-
-You should have received a copy of the GNU Affero General Public License
-along with sp.fem.  If not, see <http://www.gnu.org/licenses/>. 
+    * :class:`fem.mapping.MappingAffine`, the standard affine local-to-global mapping that can be used with triangular and tetrahedral elements.
+    * :class:`fem.mapping.MappingQ1`, the local-to-global mapping defined by the Q1 basis functions. This is required for quadrilateral meshes.
 """
 import numpy as np
 import fem.mesh
 import copy
 
 class Mapping:
-    """Abstract superclass for mappings.
-
-    Mappings eat Meshes (possibly Geometries in isoparametric case?)
-    and allow local-to-global and global-to-local mappings.
-    """
+    """Abstract class for mappings."""
     dim=0
 
     def __init__(self,mesh):
@@ -132,15 +118,6 @@ class MappingQ1(Mapping):
                self.p[1,self.t[2,tind]][:,None]*self.quadbasis(X[0],X[1],2)+\
                self.p[1,self.t[3,tind]][:,None]*self.quadbasis(X[0],X[1],3)     
         
-        #out[0]=np.outer(self.p[0,self.t[0,:]],self.quadbasis(X[0,:],X[1,:],0))+\
-        #       np.outer(self.p[0,self.t[1,:]],self.quadbasis(X[0,:],X[1,:],1))+\
-        #       np.outer(self.p[0,self.t[2,:]],self.quadbasis(X[0,:],X[1,:],2))+\
-        #       np.outer(self.p[0,self.t[3,:]],self.quadbasis(X[0,:],X[1,:],3))
-        #out[1]=np.outer(self.p[1,self.t[0,:]],self.quadbasis(X[0,:],X[1,:],0))+\
-        #       np.outer(self.p[1,self.t[1,:]],self.quadbasis(X[0,:],X[1,:],1))+\
-        #       np.outer(self.p[1,self.t[2,:]],self.quadbasis(X[0,:],X[1,:],2))+\
-        #       np.outer(self.p[1,self.t[3,:]],self.quadbasis(X[0,:],X[1,:],3))
-
         return out
         
     def invF(self,x,tind=None):
@@ -158,7 +135,6 @@ class MappingQ1(Mapping):
             xnext[0]=X[0]+invDF[0][0]*g[0]+invDF[0][1]*g[1]
             xnext[1]=X[1]+invDF[1][0]*g[0]+invDF[1][1]*g[1]
             
-        #print xnext[0]
         return xnext
             
         
@@ -172,10 +148,6 @@ class MappingQ1(Mapping):
             detDF=self.J[0][0](X[0,:],X[1,:],tind)*self.J[1][1](X[0,:],X[1,:],tind)-\
                   self.J[0][1](X[0,:],X[1,:],tind)*self.J[1][0](X[0,:],X[1,:],tind)
         return detDF
-        #if tind is not None:
-        #    return detDF[tind,:]
-        #else:
-        #    return detDF
             
     def invDF(self,X,tind=None):
         invJ={0:{},1:{}}
@@ -591,7 +563,3 @@ class MappingAffine(Mapping):
                 invA[2][2]=np.tile(invA[2][2][tind],(N,1)).T           
                 
         return invA
-
-
-        
-

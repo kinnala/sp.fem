@@ -1,5 +1,10 @@
+# -*- coding: utf-8 -*-
 """
 The finite element definitions.
+
+Try for example the following actual implementations:
+    * :class:`fem.element.ElementTriP1`
+    * :class:`fem.element.ElementTriP2`
 """
 import numpy as np
 import matplotlib.pyplot as plt
@@ -7,7 +12,7 @@ from numpy.polynomial.polynomial import polyder,polyval2d
 from fem.utils import const_cell
 
 class Element(object):
-    """A finite element."""
+    """Abstract finite element class."""
 
     maxdeg=0 #: Maximum polynomial degree
     dim=0 #: Spatial dimension
@@ -430,9 +435,7 @@ class ElementHdiv(Element):
 
         du=dphi/detDF
 
-        ddu=None
-
-        return u,du,ddu
+        return u,du
 
 class ElementTriRT0(ElementHdiv):
     """Lowest order Raviart-Thomas element for triangle."""
@@ -495,9 +498,8 @@ class ElementH1(Element):
             du[2]=invDF[0][2]*dphi[0]+invDF[1][2]*dphi[1]+invDF[2][2]*dphi[2]
         else:
             raise NotImplementedError("ElementH1.gbasis: not implemented for the given dim.")
-        ddu=None # TODO fix ddu (for H1 element, Laplacian?)
 
-        return u,du,ddu
+        return u,du
 
 class ElementH1Vec(ElementH1):
     """Convert :math:`H^1` element to vectorial :math:`H^1` element."""
@@ -554,8 +556,7 @@ class ElementH1Vec(ElementH1):
                 for jtr in range(self.dim):
                     du[itr][jtr]=0*phi
             
-        ddu=None
-        return u,du,ddu
+        return u,du
         
 class ElementQ1(ElementH1):
     """Simplest quadrilateral element."""
