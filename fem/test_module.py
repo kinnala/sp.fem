@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 """
 Module level tests; tests that require multiple working classes.
-
-@author: Tom Gustafsson
 """
 import unittest
 import fem.mesh as fmsh
@@ -12,7 +10,10 @@ import scipy.sparse as spsp
 import fem.asm as fasm
 import fem.mapping as fmap
 import fem.element as felem
+import fem.utils as futil
 import matplotlib.pyplot as plt
+import copy
+from fem.weakform import *
 
 class RT0Test(unittest.TestCase):
     """Assemble and solve mixed Poisson equation
@@ -529,3 +530,211 @@ class AssemblerTriP1Nitsche(unittest.TestCase):
         
         # check that the convergence rate matches theory
         self.assertTrue(pfit[0]>=0.99)
+
+class ExamplePoisson(unittest.TestCase):
+    """Tetrahedral refinements with P1 and P2 elements."""
+    def runTest(self,verbose=False):
+        # define data
+        def F(x,y,z):
+            return 2*x**2+2*y**2-6*x*y*z
+            
+        def G(x,y,z):
+            return (x==1)*(3-3*y**2+2*y*z**3)+\
+                   (x==0)*(-y*z**3)+\
+                   (y==1)*(1+x-3*x**2+2*x*z**3)+\
+                   (y==0)*(1+x-x*z**3)+\
+                   (z==1)*(1+x+4*x*y-x**2*y**2)+\
+                   (z==0)*(1+x-x**2*y**2)
+
+        # bilinear and linear forms of the problem
+        def dudv(du,dv):
+            return du[0]*dv[0]+du[1]*dv[1]+du[2]*dv[2]
+
+        def uv(u,v):
+            return u*v
+
+        def fv(v,x):
+            return F(x[0],x[1],x[2])*v
+
+        def gv(v,x):
+            return G(x[0],x[1],x[2])*v
+
+        # analytical solution and its derivatives            
+        def exact(x):
+            return 1+x[0]-x[0]**2*x[1]**2+x[0]*x[1]*x[2]**3
+
+        dexact={}
+        dexact[0]=lambda x:1-2*x[0]*x[1]**2+x[1]*x[2]**3
+        dexact[1]=lambda x:-2*x[0]**2*x[1]+x[0]*x[2]**3
+        dexact[2]=lambda x:3*x[0]*x[1]*x[2]**2
+
+        # initialize arrays for saving errors
+        hs1=np.array([])
+        hs2=np.array([])
+        
+        # P1 element
+        H1err1=np.array([])
+        L2err1=np.array([])
+        
+        # P2 element
+        H1err2=np.array([])
+        L2err2=np.array([])
+
+        # create the mesh; by default a box [0,1]^3 is meshed
+        mesh=fmsh.MeshTet()
+        mesh.refine()
+
+        # loop over mesh refinement levels
+        for itr in range(3):
+            # compute with P2 element
+            b=fasm.AssemblerElement(mesh,felem.ElementTetP2())
+            
+            # assemble the matrices and vectors related to P2
+            A2=b.iasm(dudv)
+            f2=b.iasm(fv)
+
+            B2=b.fasm(uv)
+            g2=b.fasm(gv)
+
+            # initialize the solution vector and solve            
+            u2=np.zeros(b.dofnum_u.N)
+            u2=spsolve(A2+B2,f2+g2)
+            
+            # compute error of the P2 element
+            hs2=np.append(hs2,mesh.param())
+            L2err2=np.append(L2err2,b.L2error(u2,exact))
+            H1err2=np.append(H1err2,b.H1error(u2,dexact))
+
+            # refine mesh once
+            mesh.refine()
+
+            # create a finite element assembler = mesh + mapping + element
+            a=fasm.AssemblerElement(mesh,felem.ElementTetP1())
+
+            # assemble the matrices and vectors related to P1
+            A1=a.iasm(dudv)
+            f1=a.iasm(fv)
+
+            B1=a.fasm(uv)
+            g1=a.fasm(gv)
+
+            # initialize the solution vector and solve
+            u1=np.zeros(a.dofnum_u.N)
+            u1=spsolve(A1+B1,f1+g1)
+
+            # compute errors and save them
+            hs1=np.append(hs1,mesh.param())     
+            L2err1=np.append(L2err1,a.L2error(u1,exact))
+            H1err1=np.append(H1err1,a.H1error(u1,dexact))
+
+        # create a linear fit on logarithmic scale
+        pfit1=np.polyfit(np.log10(hs1),np.log10(np.sqrt(L2err1**2+H1err1**2)),1)
+        pfit2=np.polyfit(np.log10(hs2),np.log10(np.sqrt(L2err2**2+H1err2**2)),1)
+        
+        if verbose:
+            print "Convergence rate with P1 element: "+str(pfit1[0])
+            plt.loglog(hs1,np.sqrt(L2err1**2+H1err1**2),'bo-')
+            print "Convergence rate with P2 element: "+str(pfit2[0])
+            plt.loglog(hs2,np.sqrt(L2err2**2+H1err2**2),'ro-')
+        
+        # check that convergence rates match theory
+        self.assertTrue(pfit1[0]>=1)
+        self.assertTrue(pfit2[0]>=2)
+
+class ExampleElasticity(unittest.TestCase):
+    """Solving the linear elasticity equations (stress) in 3D box
+    and comparing to a manufactured analytical solution."""
+    def runTest(self,verbose=False):
+        U=TensorFunction(dim=3,torder=1)
+        V=TensorFunction(dim=3,torder=1,sym='v')
+
+        # infinitesimal strain tensor
+        def Eps(W):
+            return 0.5*(grad(W)+grad(W).T())
+
+        # material parameters: Young's modulus and Poisson ratio
+        E=20
+        Nu=0.3
+
+        # Lame parameters
+        Lambda=E*Nu/((1+Nu)*(1-2*Nu))
+        Mu=E/(2*(1+Nu))
+
+        # definition of the stress tensor
+        def Sigma(W):
+            return 2*Mu*Eps(W)+Lambda*div(W)*IdentityMatrix(3)
+
+        # define the weak formulation
+        dudv=dotp(Sigma(U),Eps(V))
+        dudv=dudv.handlify(verbose=verbose)
+
+        # generate a mesh in the box
+        m=fmsh.MeshTet()
+        m.refine(4)
+
+        # define the vectorial element
+        e=felem.ElementH1Vec(felem.ElementTetP1())
+        # create a FE-assembler object
+        a=fasm.AssemblerElement(m,e)
+        # assemble the stiffness matrix
+        A=a.iasm(dudv)
+
+        # define analytical solution and compute loading corresponding to it
+        def exact(x):
+            return -0.1*np.sin(np.pi*x[0])*np.sin(np.pi*x[1])*np.sin(np.pi*x[2])
+
+        def loading():
+            global exactvonmises
+            import sympy as sp
+            x,y,z=sp.symbols('x y z')
+            Ut=ConstantTensor(0.0,dim=3,torder=1)
+            Ut.expr[0]=0*x
+            Ut.expr[1]=0*x
+            Ut.expr[2]=0.1*sp.sin(sp.pi*x)*sp.sin(sp.pi*y)*sp.sin(sp.pi*z)
+
+            return dotp(div(Sigma(Ut)),V).handlify(verbose=verbose)
+
+        # assemble the load vector
+        f=a.iasm(loading())
+
+        i1=m.interior_nodes()
+        I=a.dofnum_u.getdofs(N=i1)
+
+        # solve the system
+        u=futil.direct(A,f,I=I,use_umfpack=True)
+
+        e1=felem.ElementTetP1()
+        c=fasm.AssemblerElement(m,e1)
+
+        L2err=c.L2error(u[a.dofnum_u.n_dof[2,:]],exact)
+
+        self.assertTrue(c.L2error(u[a.dofnum_u.n_dof[2,:]],exact)<=1e-3)
+
+        if verbose:
+            # displaced mesh for drawing
+            mdefo=copy.deepcopy(m)
+            mdefo.p[0,:]+=u[a.dofnum_u.n_dof[0,:]]
+            mdefo.p[1,:]+=u[a.dofnum_u.n_dof[1,:]]
+            mdefo.p[2,:]+=u[a.dofnum_u.n_dof[2,:]]
+
+            # project von mises stress to scalar P1 element
+            V=TensorFunction(dim=3,torder=0,sym='v')
+            b=fasm.AssemblerElement(m,e,e1)
+
+            S=Sigma(U)
+            def vonmises(s):
+                return np.sqrt(0.5*((s[0,0]-s[1,1])**2+(s[1,1]-s[2,2])**2+(s[2,2]-s[0,0])**2+\
+                       6.0*(s[1,2]**2+s[2,0]**2+s[0,1]**2)))
+
+            M=c.iasm(lambda u,v:u*v)
+
+            # compute each component of stress tensor
+            StressTensor={}
+            for itr in range(3):
+                for jtr in range(3):
+                    duv=(S[itr,jtr]*V).handlify(verbose=True)
+                    P=b.iasm(duv)
+                    StressTensor[(itr,jtr)]=fsol.direct(M,P*u,use_umfpack=True)
+
+            # draw the von Mises stress
+            mdefo.draw(u=vonmises(StressTensor),test=lambda x,y,z: x>=0.5)
