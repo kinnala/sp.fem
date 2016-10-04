@@ -454,8 +454,8 @@ class AssemblerElement(Assembler):
         # compute the mesh parameter from jacobian determinant
         if self.mesh.dim()>1.0:
             h=np.abs(detDG)**(1.0/(self.mesh.dim()-1.0))
-        else: # exception for 1D mesh
-            h=np.abs(self.mesh.p[0][self.mesh.t[1,:]]-self.mesh.p[0][self.mesh.t[1,:]])
+        else: # exception for 1D mesh (no boundary h defined)
+            h=None
         
         # bilinear form
         if bilinear:
