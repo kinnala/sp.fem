@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 """
 Performance/memory tests. 
-
-@author: Tom Gustafsson
 """
 
 import timeit
