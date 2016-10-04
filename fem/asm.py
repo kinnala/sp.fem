@@ -452,10 +452,10 @@ class AssemblerElement(Assembler):
             n=self.mapping.normals(Y,tind,find,self.mesh.t2f)
 
         # compute the mesh parameter from jacobian determinant
-        if self.mesh.dim()>=1.0:
+        if self.mesh.dim()>1.0:
             h=np.abs(detDG)**(1.0/(self.mesh.dim()-1.0))
-        else: # TODO exception for 2D mesh
-            h=None
+        else: # exception for 1D mesh
+            h=np.abs(self.mesh.p[0][self.mesh.t[1,:]]-self.mesh.p[0][self.mesh.t[1,:]])
         
         # bilinear form
         if bilinear:
@@ -499,7 +499,15 @@ class AssemblerElement(Assembler):
             return coo_matrix((data,(rows,cols)),shape=(self.dofnum_v.N,1)).toarray().T[0]
             
     def L2error(self,uh,exact,intorder=None):
-        """Compute L2 error against exact solution."""
+        """
+        Compute :math:`L^2` error against exact solution.
+        
+        The computation is based on the following identity:
+            
+        .. math::
+            
+            \|u-u_h\|_0^2 = (u,u)+(u_h,u_h)-2(u,u_h).
+        """
         if self.elem_u.maxdeg!=self.elem_v.maxdeg:
             raise NotImplementedError("AssemblyElement.L2error: elem_u.maxdeg must be elem_v.maxdeg when computing errors!")
         if intorder is None:
@@ -526,7 +534,15 @@ class AssemblerElement(Assembler):
         return np.sqrt(uu+np.dot(uh,M.dot(uh))-2.*np.dot(uh,f))
         
     def H1error(self,uh,dexact,intorder=None):
-        """Compute H1 seminorm error against exact solution."""
+        """
+        Compute :math:`H^1` seminorm error against exact solution.
+
+        The computation is based on the following identity:
+            
+        .. math::
+            
+            \|\\nabla(u-u_h)\|_0^2 = (\\nabla u,\\nabla u)+(\\nabla u_h, \\nabla u_h)-2(\\nabla u, \\nabla u_h).
+        """
         if self.elem_u.maxdeg!=self.elem_v.maxdeg:
             raise NotImplementedError("AssemblyElement.H1error: elem_u.maxdeg must be elem_v.maxdeg when computing errors!")
         if intorder is None:
