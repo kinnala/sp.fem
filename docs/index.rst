@@ -69,31 +69,31 @@ This section contains documentation generated automatically from the source code
 fem.mesh
 ########
 
-.. automodule:: fem.mesh
+.. automodule:: spfem.mesh
     :members:
 
 fem.asm
 #######
 
-.. automodule:: fem.asm
+.. automodule:: spfem.asm
     :members:
 
 fem.element
 ###########
 
-.. automodule:: fem.element
+.. automodule:: spfem.element
     :members:
 
 fem.mapping
 ###########
 
-.. automodule:: fem.mapping
+.. automodule:: spfem.mapping
     :members:
 
 fem.utils
 #########
 
-.. automodule:: fem.utils
+.. automodule:: spfem.utils
     :members:
 
 Tips
@@ -113,14 +113,14 @@ Tips
 
 .. code-block:: bash
 
-    ipython -m unittest discover ./fem
+    ipython -m unittest discover ./spfem
 
 * In order to estimate test coverage you can install coverage.py and run it
 
 .. code-block:: bash
 
     pip install coverage
-    coverage run -m unittest discover ./fem
+    coverage run -m unittest discover ./spfem
     coverage html
 
 License
