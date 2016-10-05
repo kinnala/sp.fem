@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 The mappings defining relationships between reference and global elements.
 
