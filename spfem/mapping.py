@@ -8,7 +8,6 @@ untested code. The following mappings are implemented to some extent:
     * :class:`spfem.mapping.MappingQ1`, the local-to-global mapping defined by the Q1 basis functions. This is required for quadrilateral meshes.
 """
 import numpy as np
-import spfem.mesh
 import copy
 
 class Mapping:
@@ -16,39 +15,40 @@ class Mapping:
     dim=0
 
     def __init__(self,mesh):
-        raise NotImplementedError("Mapping constructor not implemented!")
+        raise NotImplementedError("Constructor not implemented!")
 
     def F(self,X,tind):
         """Element local to global."""
-        raise NotImplementedError("Mapping.F() not implemented!")
+        raise NotImplementedError("F() not implemented!")
 
     def invF(self,x,tind):
-        raise NotImplementedError("Mapping.invF() not implemented!")
+        raise NotImplementedError("invF() not implemented!")
 
     def DF(self,X,tind):
-        raise NotImplementedError("Mapping.DF() not implemented!")
+        raise NotImplementedError("DF() not implemented!")
 
     def invDF(self,X,tind):
-        raise NotImplementedError("Mapping.invDF() not implemented!")
+        raise NotImplementedError("invDF() not implemented!")
 
     def detDF(self,X,tind):
-        raise NotImplementedError("Mapping.detDF() not implemented!")
+        raise NotImplementedError("detDF() not implemented!")
 
     def G(self,X,find):
         """Boundary local to global."""
-        raise NotImplementedError("Mapping.G() not implemented!")
+        raise NotImplementedError("G() not implemented!")
         
     def detDG(self,X,find):
-        raise NotImplementedError("Mapping.detDG() not implemented!")
+        raise NotImplementedError("detDG() not implemented!")
 
     def normals(self,X,find):
-        raise NotImplementedError("Mapping.normals() not implemented!")
+        raise NotImplementedError("normals() not implemented!")
 
 class MappingQ1(Mapping):
     """Mapping for quadrilaterals."""
     
     def __init__(self,mesh):
-        if isinstance(mesh,spfem.mesh.MeshQuad):
+        import spfem.mesh as fmsh
+        if isinstance(mesh,fmsh.MeshQuad):
             self.dim=2
             
             self.t=mesh.t
@@ -192,7 +192,8 @@ class MappingQ1(Mapping):
 class MappingAffine(Mapping):
     """Affine mappings for simplex (=line,tri,tet) mesh."""
     def __init__(self,mesh):
-        if isinstance(mesh,spfem.mesh.MeshLine):
+        import spfem.mesh as fmsh
+        if isinstance(mesh,fmsh.MeshLine):
             self.dim=1
             
             self.A=mesh.p[0,mesh.t[1,:]]-mesh.p[0,mesh.t[0,:]]
@@ -202,7 +203,7 @@ class MappingAffine(Mapping):
             
             self.invA=1.0/self.A
           
-        elif isinstance(mesh,spfem.mesh.MeshTri):
+        elif isinstance(mesh,fmsh.MeshTri):
             self.dim=2            
             
             self.A={0:{},1:{}}
@@ -239,7 +240,7 @@ class MappingAffine(Mapping):
     
             self.detB=np.sqrt(self.B[0]**2+self.B[1]**2)
             
-        elif isinstance(mesh,spfem.mesh.MeshTet):
+        elif isinstance(mesh,fmsh.MeshTet):
             self.dim=3            
             
             self.A={0:{},1:{},2:{}}
