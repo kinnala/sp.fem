@@ -50,17 +50,17 @@ class ElementGlobal(Element):
         -------
         u : dict
             A dictionary with integer keys from 0 to Nbfun.
-            Here i'th dictionary entry contains the values
-            of the i'th basis function evaluated at the
-            quadrature points (np.array).
+            Here u[i] contains the values
+            of the i'th basis function of the element k
+            evaluated at the given quadrature points (np.array).
         du : dict
             The first derivatives. The actual contents
-            are fully defined by the element behavior
+            are 100% defined by the element implementation
             although du[i] should correspond to the
             i'th basis function.
         ddu : dict
             The second derivatives. The actual contents
-            are fully defined by the element behavior
+            are 100% defined by the element implementation
             although ddu[i] should correspond to the i'th
             basis function.
         """
@@ -98,15 +98,20 @@ class ElementGlobal(Element):
         return np.array([0.0,0.0,0.0,0.0,0.0,2.0])
 
     def _pbasisNinit(self,dim,N,debug=False):
+        """This function can be used to define power bases
+        other than the hard coded ones."""
         if not hasattr(self,'_pbasis'+str(N)):
             import sympy as sp
             from sympy.abc import x,y,z
             R=range(N+1)
             if dim==1:
-                pbasis=sp.Matrix([x**i for i in R if i<=N]) # TODO fix this
-                setattr(self,'_pbasis'+str(N),lambda X:sp.lambdify(x,pbasis)(X).flatten().astype(np.float64))
-                setattr(self,'_pbasis'+str(N)+'dx',lambda X:sp.lambdify(x,sp.diff(pbasis,x))(X).flatten().astype(np.float64))
-                setattr(self,'_pbasis'+str(N)+'dxx',lambda X:sp.lambdify(x,sp.diff(pbasis,x,2))(X).flatten().astype(np.float64))
+                pbasis=sp.Matrix([x**i for i in R if i<=N])
+                tmp1=sp.lambdify((x,y),pbasis)
+                setattr(self,'_pbasis'+str(N),lambda X:tmp1(X).flatten().astype(np.float64))
+                tmp2=sp.lambdify((x,y),sp.diff(pbasis,x))
+                setattr(self,'_pbasis'+str(N)+'dx',lambda X:tmp2(X).flatten().astype(np.float64))
+                tmp3=sp.lambdify((x,y),sp.diff(pbasis,x,2))
+                setattr(self,'_pbasis'+str(N)+'dxx',lambda X:tmp3(X).flatten().astype(np.float64))
             elif dim==2:
                 pbasis=sp.Matrix([x**i*y**j for i in R for j in R if i+j<=N])
                 tmp1=sp.lambdify((x,y),pbasis)
