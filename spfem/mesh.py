@@ -4,16 +4,16 @@ Classes that represent different types of meshes.
 
 Currently implemented mesh types are
 
-    * :class:`fem.mesh.MeshTri`, a triangular mesh
-    * :class:`fem.mesh.MeshTet`, a tetrahedral mesh
-    * :class:`fem.mesh.MeshQuad`, a mesh consisting of quadrilaterals
-    * :class:`fem.mesh.MeshLine`, one-dimensional mesh
+    * :class:`spfem.mesh.MeshTri`, a triangular mesh
+    * :class:`spfem.mesh.MeshTet`, a tetrahedral mesh
+    * :class:`spfem.mesh.MeshQuad`, a mesh consisting of quadrilaterals
+    * :class:`spfem.mesh.MeshLine`, one-dimensional mesh
 
 *Example 1*. Obtain a three times refined mesh of the unit square and draw it.
 
 .. code-block:: python
 
-    import fem.mesh as fmsh
+    import spfem.mesh as fmsh
     m=fmsh.MeshTri()
     m.refine(3)
     m.draw()
@@ -28,7 +28,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.tri as mtri
 import scipy.interpolate as spi
-import fem.mapping as fmap
+import spfem.mapping as fmap
 from mpl_toolkits.mplot3d import Axes3D
 
 

@@ -2,7 +2,7 @@
 Import and generation of meshes.
 """
 import numpy as np
-import fem.mesh
+import spfem.mesh
 import platform
 
 import os
@@ -219,9 +219,9 @@ class GeometryTriangle2D(Geometry):
     def call_triangle(self,args,inputfile="geom"):
         # run Triangle (OS dependent)
         if platform.system()=="Linux":
-            os.system("./fem/triangle/triangle "+args+" "+inputfile+".poly")
+            os.system("./spfem/triangle/triangle "+args+" "+inputfile+".poly")
         elif platform.system()=="Windows":
-            os.system("fem\\triangle\\triangle.exe "+args+" "+inputfile+".poly")
+            os.system("spfem\\triangle\\triangle.exe "+args+" "+inputfile+".poly")
         else:
             raise NotImplementedError(self.__class__.__name__+": method 'call_triangle' not implemented for your platform!")
 
@@ -276,7 +276,7 @@ class GeometryTriangle2D(Geometry):
             fixedmarkers[key]=ixb[value]
         self.markers=fixedmarkers
 
-        return fem.mesh.MeshTri(p,t)
+        return spfem.mesh.MeshTri(p,t)
 
 # The following code depends on MeshPy
 
@@ -288,9 +288,9 @@ class GeometryMeshPy(Geometry):
         p=np.array(self.mesh.points).T
         t=np.array(self.mesh.elements).T
         if isinstance(self.mesh,meshpy.tet.MeshInfo):
-            return fem.mesh.MeshTet(p,t)
+            return spfem.mesh.MeshTet(p,t)
 	elif isinstance(self.mesh,meshpy.triangle.MeshInfo):
-            return fem.mesh.MeshTri(p,t)
+            return spfem.mesh.MeshTri(p,t)
         else:
             raise NotImplementedError("GeometryMeshPy: The used MeshPy "+
                                       " MeshInfo class not supported.")

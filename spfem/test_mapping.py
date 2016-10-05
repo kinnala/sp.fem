@@ -1,20 +1,20 @@
 import unittest
-import fem.mesh
-import fem.geometry
-import fem.mapping
-import fem.asm as fasm
+import spfem.mesh
+import spfem.geometry
+import spfem.mapping
+import spfem.asm as fasm
 import numpy as np
-import fem.element as felem
+import spfem.element as felem
 
 class MappingAffineBasicTest(unittest.TestCase):
     def setUp(self):
-        self.mesh=fem.mesh.MeshTri()
+        self.mesh=spfem.mesh.MeshTri()
         self.mesh.refine()
 
 class MappingAffineFinvF(MappingAffineBasicTest):
     """Check that F(invF(x))===x"""
     def runTest(self):
-        mapping=fem.mapping.MappingAffine(self.mesh)
+        mapping=spfem.mapping.MappingAffine(self.mesh)
         y=mapping.F(np.array([[1,2,3],[1,2,3]]))
         X=mapping.invF(y)
 
@@ -23,7 +23,7 @@ class MappingAffineFinvF(MappingAffineBasicTest):
 class MappingAffineNormalOrientation2D(unittest.TestCase):
     """Check that the normal vectors are correctly oriented in 2D."""
     def runTest(self):
-        m=fem.mesh.MeshTri()
+        m=spfem.mesh.MeshTri()
         m.refine(2)
 
         e=felem.ElementTriP1()
@@ -43,7 +43,7 @@ class MappingAffineNormalOrientation2D(unittest.TestCase):
 class MappingAffineNormalOrientation3D(unittest.TestCase):
     """Check that the normal vectors are correctly oriented in 3D."""
     def runTest(self):
-        m=fem.mesh.MeshTet()
+        m=spfem.mesh.MeshTet()
         m.refine(2)
 
         e=felem.ElementTetP1()

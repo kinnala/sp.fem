@@ -1,6 +1,6 @@
 import unittest
-import fem.mesh
-import fem.geometry
+import spfem.mesh
+import spfem.geometry
 import numpy as np
 import copy
 
@@ -10,26 +10,26 @@ class MeshFaultyInputs(unittest.TestCase):
     def runTest(self):
         with self.assertRaises(Exception):
             # point belonging to no element
-            m=fem.mesh.MeshTri(p=np.array([[0,0],[0,1],[1,0],[1,1]]).T,
-                               t=np.array([[0,1,2]]).T)
+            m=spfem.mesh.MeshTri(p=np.array([[0,0],[0,1],[1,0],[1,1]]).T,
+                                 t=np.array([[0,1,2]]).T)
         with self.assertRaises(Exception):
             # wrong size inputs (t not matching to Mesh type)
-            m=fem.mesh.MeshTet(p=np.array([[0,0],[0,1],[1,0],[1,1]]).T,
-                               t=np.array([[0,1,2]]).T)
+            m=spfem.mesh.MeshTet(p=np.array([[0,0],[0,1],[1,0],[1,1]]).T,
+                                 t=np.array([[0,1,2]]).T)
         with self.assertRaises(Exception):
             # wrong size inputs (t not matching to Mesh type)
-            m=fem.mesh.MeshLine(p=np.array([[0,0],[0,1],[1,0],[1,1]]).T,
-                               t=np.array([[0,1,2]]).T)
+            m=spfem.mesh.MeshLine(p=np.array([[0,0],[0,1],[1,0],[1,1]]).T,
+                                  t=np.array([[0,1,2]]).T)
         with self.assertRaises(Exception):
             # inputting trasposes
-            m=fem.mesh.MeshTri(p=np.array([[0,0],[0,1],[1,0],[1,1]]),
-                               t=np.array([[0,1,2],[1,2,3]]))
+            m=spfem.mesh.MeshTri(p=np.array([[0,0],[0,1],[1,0],[1,1]]),
+                                 t=np.array([[0,1,2],[1,2,3]]))
 
 
 class MeshTetRefineShapeRegularity(unittest.TestCase):
     """Refine tetrahedral mesh and check shape regularity."""
     def runTest(self):
-        m=fem.mesh.MeshTet()
+        m=spfem.mesh.MeshTet()
         for itr in range(5):
             m.refine()
             # check that shape regularity stays bounded
@@ -38,7 +38,7 @@ class MeshTetRefineShapeRegularity(unittest.TestCase):
 
 class MeshTriBasicTest(unittest.TestCase):
     def setUp(self):
-        self.mesh=fem.mesh.MeshTri()
+        self.mesh=spfem.mesh.MeshTri()
         self.mesh.refine()
 
 

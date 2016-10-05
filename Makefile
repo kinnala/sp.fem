@@ -1,9 +1,9 @@
 SHELL:=/bin/bash
 
 install-triangle: ## Download and compile Triangle
-	@curl -o fem/triangle/triangle.zip http://www.netlib.org/voronoi/triangle.zip
-	@unzip fem/triangle/triangle.zip -d fem/triangle
-	@make -C fem/triangle
+	@curl -o spfem/triangle/triangle.zip http://www.netlib.org/voronoi/triangle.zip
+	@unzip spfem/triangle/triangle.zip -d spfem/triangle
+	@make -C spfem/triangle
 
 install-conda: ## Download and install miniconda
 	@curl -o miniconda.sh https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh
@@ -11,7 +11,7 @@ install-conda: ## Download and install miniconda
 	@rm miniconda.sh
 
 dev-scripts: ## Create scripts that are useful while developing (with) sp.fem
-	@printf "#!/bin/bash\ntmux -2 new-session -d 'TERM=screen-256color vim fem/*'\ntmux split-window -h \ntmux split-window -v\ntmux -2 attach-session -d" > dev-tmux
+	@printf "#!/bin/bash\ntmux -2 new-session -d 'TERM=screen-256color vim spfem/*'\ntmux split-window -h \ntmux split-window -v\ntmux -2 attach-session -d" > dev-tmux
 	@chmod 744 dev-tmux
 
 dev-install-txt: ## Create a development environment from requirements.txt
@@ -27,10 +27,10 @@ deactivate: ## Type ". deactivate" to quit the conda environment
 	@echo "Deactivate the development environment by typing: \". deactivate\""
 
 run-tests: ## Run the unit tests
-	@ipython -m unittest discover ./fem
+	@ipython -m unittest discover ./spfem
 
 run-coverage: ## Run the unit tests with coverage.py
-	@coverage run -m unittest discover ./fem
+	@coverage run -m unittest discover ./spfem
 
 build-docs: ## Run Sphinx to build the documentation
 	@make -C docs html

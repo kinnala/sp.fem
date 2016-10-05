@@ -3,13 +3,13 @@
 The finite element definitions.
 
 Try for example the following actual implementations:
-    * :class:`fem.element.ElementTriP1`
-    * :class:`fem.element.ElementTriP2`
+    * :class:`spfem.element.ElementTriP1`
+    * :class:`spfem.element.ElementTriP2`
 """
 import numpy as np
 import matplotlib.pyplot as plt
 from numpy.polynomial.polynomial import polyder,polyval2d
-from fem.utils import const_cell
+from spfem.utils import const_cell
 
 class Element(object):
     """Abstract finite element class."""
@@ -31,7 +31,7 @@ class Element(object):
         raise NotImplementedError("Element.gbasis: local basis (lbasis) not implemented!")
 
 class ElementGlobal(Element):
-    """An element defined globally. These elements are used by :class:`fem.asm.AssemblerGlobal`."""
+    """An element defined globally. These elements are used by :class:`spfem.asm.AssemblerGlobal`."""
 
     def gbasis(self,mesh,qps,k):
         """Return the global basis functions of an element evaluated at
@@ -40,9 +40,9 @@ class ElementGlobal(Element):
         Parameters
         ----------
         mesh
-            The :class:`fem.mesh.Mesh` object.
+            The :class:`spfem.mesh.Mesh` object.
         qps : dict of global quadrature points
-            The global quadrature points as given by :func:`fem.mapping.Mapping.F`.
+            The global quadrature points as given by :func:`spfem.mapping.Mapping.F`.
         k : int
             The index of the element in mesh structure.
 
@@ -139,7 +139,7 @@ class ElementGlobal(Element):
             raise NotImplementedError("ElementGlobal.visualize_basis_2d supports "+
                                       "only two dimensional triangular elements.")
         import copy
-        import fem.mesh as fmsh
+        import spfem.mesh as fmsh
         m=fmsh.MeshTri(np.array([[0.5,0.0,1.0],[0.0,1.0,1.0]]),
                        np.array([[0],[1],[2]]))
         M=copy.deepcopy(m)

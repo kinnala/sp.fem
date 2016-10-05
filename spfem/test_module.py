@@ -3,17 +3,17 @@
 Module level tests; tests that require multiple working classes.
 """
 import unittest
-import fem.mesh as fmsh
+import spfem.mesh as fmsh
 import numpy as np
 from scipy.sparse.linalg import spsolve
 import scipy.sparse as spsp
-import fem.asm as fasm
-import fem.mapping as fmap
-import fem.element as felem
-import fem.utils as futil
+import spfem.asm as fasm
+import spfem.mapping as fmap
+import spfem.element as felem
+import spfem.utils as futil
 import matplotlib.pyplot as plt
 import copy
-from fem.weakform import *
+from spfem.weakform import *
 
 class RT0Test(unittest.TestCase):
     """Assemble and solve mixed Poisson equation

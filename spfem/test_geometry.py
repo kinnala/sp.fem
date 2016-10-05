@@ -1,5 +1,5 @@
 import unittest
-import fem.geometry as fegeom
+import spfem.geometry as fegeom
 import numpy as np
 
 class GeometryTriangle2DMeshABoxTest(unittest.TestCase):

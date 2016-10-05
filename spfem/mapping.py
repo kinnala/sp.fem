@@ -4,11 +4,11 @@ The mappings defining relationships between reference and global elements.
 Currently these classes have quite a lot of undocumented behavior and
 untested code. The following mappings are implemented to some extent:
 
-    * :class:`fem.mapping.MappingAffine`, the standard affine local-to-global mapping that can be used with triangular and tetrahedral elements.
-    * :class:`fem.mapping.MappingQ1`, the local-to-global mapping defined by the Q1 basis functions. This is required for quadrilateral meshes.
+    * :class:`spfem.mapping.MappingAffine`, the standard affine local-to-global mapping that can be used with triangular and tetrahedral elements.
+    * :class:`spfem.mapping.MappingQ1`, the local-to-global mapping defined by the Q1 basis functions. This is required for quadrilateral meshes.
 """
 import numpy as np
-import fem.mesh
+import spfem.mesh
 import copy
 
 class Mapping:
@@ -48,7 +48,7 @@ class MappingQ1(Mapping):
     """Mapping for quadrilaterals."""
     
     def __init__(self,mesh):
-        if isinstance(mesh,fem.mesh.MeshQuad):
+        if isinstance(mesh,spfem.mesh.MeshQuad):
             self.dim=2
             
             self.t=mesh.t
@@ -192,7 +192,7 @@ class MappingQ1(Mapping):
 class MappingAffine(Mapping):
     """Affine mappings for simplex (=line,tri,tet) mesh."""
     def __init__(self,mesh):
-        if isinstance(mesh,fem.mesh.MeshLine):
+        if isinstance(mesh,spfem.mesh.MeshLine):
             self.dim=1
             
             self.A=mesh.p[0,mesh.t[1,:]]-mesh.p[0,mesh.t[0,:]]
@@ -202,7 +202,7 @@ class MappingAffine(Mapping):
             
             self.invA=1.0/self.A
           
-        elif isinstance(mesh,fem.mesh.MeshTri):
+        elif isinstance(mesh,spfem.mesh.MeshTri):
             self.dim=2            
             
             self.A={0:{},1:{}}
@@ -239,7 +239,7 @@ class MappingAffine(Mapping):
     
             self.detB=np.sqrt(self.B[0]**2+self.B[1]**2)
             
-        elif isinstance(mesh,fem.mesh.MeshTet):
+        elif isinstance(mesh,spfem.mesh.MeshTet):
             self.dim=3            
             
             self.A={0:{},1:{},2:{}}

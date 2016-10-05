@@ -7,9 +7,9 @@ the Poisson problem using the piecewise linear elements.
 
 .. code-block:: python
 
-    import fem.mesh as fmsh
-    import fem.asm as fasm
-    import fem.element as felem
+    import spfem.mesh as fmsh
+    import spfem.asm as fasm
+    import spfem.element as felem
 
     m=fmsh.MeshTri()
     m.refine(3)
@@ -22,10 +22,10 @@ the Poisson problem using the piecewise linear elements.
     K=a.iasm(bilinear_form)
 """
 import numpy as np
-import fem.mesh
-import fem.mapping
+import spfem.mesh
+import spfem.mapping
 import inspect
-from fem.quadrature import get_quadrature
+from spfem.quadrature import get_quadrature
 from scipy.sparse import coo_matrix
 
 import matplotlib.pyplot as plt
@@ -95,7 +95,7 @@ class Assembler:
 
 class AssemblerGlobal(Assembler):
     """An assembler for globally defined elements,
-    cf. :class:`fem.element.ElementGlobal`.
+    cf. :class:`spfem.element.ElementGlobal`.
     
     The finite element given to this assembler is defined
     in such a way that given a (global) triangle and (global)
@@ -110,12 +110,12 @@ class AssemblerGlobal(Assembler):
     over the elements using Python for-loop.
     """
     def __init__(self,mesh,elem):
-        if not isinstance(mesh,fem.mesh.Mesh):
+        if not isinstance(mesh,spfem.mesh.Mesh):
             raise Exception("AssemblerGlobal.__init__(): first parameter "
-                            "must be an instance of fem.mesh.Mesh!")
-        if not isinstance(elem,fem.element.ElementGlobal):
+                            "must be an instance of spfem.mesh.Mesh!")
+        if not isinstance(elem,spfem.element.ElementGlobal):
             raise Exception("AssemblerGlobal.__init__(): second parameter "
-                            "must be an instance of fem.element.ElementGlobal!")
+                            "must be an instance of spfem.element.ElementGlobal!")
 
         self.mesh=mesh
         self.elem=elem
@@ -206,27 +206,27 @@ class AssemblerElement(Assembler):
     
     Parameters
     ----------
-    mesh : :class:`fem.mesh.Mesh`
+    mesh : :class:`spfem.mesh.Mesh`
         The finite element mesh.
 
-    elem_u : :class:`fem.element.Element`
+    elem_u : :class:`spfem.element.Element`
         The element for the solution function.
         
-    elem_v : (OPTIONAL) :class:`fem.element.Element`
+    elem_v : (OPTIONAL) :class:`spfem.element.Element`
         The element for the test function. By default, same element is used for both.
         
-    mapping : (OPTIONAL) :class:`fem.mapping.Mapping`
+    mapping : (OPTIONAL) :class:`spfem.mapping.Mapping`
         The mesh will give some sort of default mapping but sometimes, e.g.
         when using isoparametric elements, the user might have to support
         a different mapping.
     """
     def __init__(self,mesh,elem_u,elem_v=None,mapping=None):
-        if not isinstance(mesh,fem.mesh.Mesh):
+        if not isinstance(mesh,spfem.mesh.Mesh):
             raise Exception("AssemblerElement.__init__(): first parameter "
-                            "must be an instance of fem.mesh.Mesh!")
-        if not isinstance(elem_u,fem.element.Element):
+                            "must be an instance of spfem.mesh.Mesh!")
+        if not isinstance(elem_u,spfem.element.Element):
             raise Exception("AssemblerElement.__init__(): second parameter "
-                            "must be an instance of fem.element.Element!")
+                            "must be an instance of spfem.element.Element!")
 
         # get default mapping from the mesh
         if mapping is None:

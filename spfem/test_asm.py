@@ -1,13 +1,13 @@
 import unittest
-import fem.asm
-import fem.geometry
-import fem.mesh as fmsh
+import spfem.asm
+import spfem.geometry
+import spfem.mesh as fmsh
 import numpy as np
 import scipy.sparse.linalg
 import scipy.sparse as spsp
-import fem.asm as fasm
-import fem.mapping as fmap
-import fem.element as felem
+import spfem.asm as fasm
+import spfem.mapping as fmap
+import spfem.element as felem
 import matplotlib.pyplot as plt
 
 class AssemblerGlobalP2Comparison(unittest.TestCase):

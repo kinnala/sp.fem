@@ -22,9 +22,9 @@ def _template_func(setup,func):
 
 timeit._template_func=_template_func
 
-import fem.mesh as fmsh
-import fem.asm as fasm
-import fem.element as felem
+import spfem.mesh as fmsh
+import spfem.asm as fasm
+import spfem.element as felem
 
 import numpy as np
 import matplotlib.pyplot as plt
