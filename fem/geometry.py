@@ -1,21 +1,5 @@
 """
-@author: Tom Gustafsson
-
-
-This file is part of sp.fem.
-
-sp.fem is free software: you can redistribute it and/or modify
-it under the terms of the GNU Affero General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-sp.fem is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Affero General Public License for more details.
-
-You should have received a copy of the GNU Affero General Public License
-along with sp.fem.  If not, see <http://www.gnu.org/licenses/>. 
+Import and generation of meshes.
 """
 import numpy as np
 import fem.mesh
@@ -293,3 +277,20 @@ class GeometryTriangle2D(Geometry):
         self.markers=fixedmarkers
 
         return fem.mesh.MeshTri(p,t)
+
+# The following code depends on MeshPy
+
+class GeometryMeshPy(Geometry):
+    """A geometry defined by MeshPy meshes."""
+
+    def mesh(self):
+        import meshpy
+        p=np.array(self.mesh.points).T
+        t=np.array(self.mesh.elements).T
+        if isinstance(self.mesh,meshpy.tet.MeshInfo):
+            return fem.mesh.MeshTet(p,t)
+	elif isinstance(self.mesh,meshpy.triangle.MeshInfo):
+            return fem.mesh.MeshTri(p,t)
+        else:
+            raise NotImplementedError("GeometryMeshPy: The used MeshPy "+
+                                      " MeshInfo class not supported.")
