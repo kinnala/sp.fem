@@ -29,6 +29,9 @@ deactivate: ## Type ". deactivate" to quit the conda environment
 run-tests: ## Run the unit tests
 	@ipython -m unittest discover ./spfem
 
+run-perf: ## Run the performance tests
+	@ipython ./spfem/test_perf.py
+
 run-coverage: ## Run the unit tests with coverage.py
 	@coverage run -m unittest discover ./spfem
 

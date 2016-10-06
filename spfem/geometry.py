@@ -4,11 +4,14 @@ Import and generation of meshes.
 import numpy as np
 import spfem.mesh
 import platform
+import meshpy.triangle
+import meshpy.tet
+from meshpy.geometry import GeometryBuilder
 
 import os
 import matplotlib.pyplot as plt
 
-class Geometry:
+class Geometry(object):
     """Geometry contains metadata and outputs meshes."""
 
     def __init__(self):
@@ -281,16 +284,99 @@ class GeometryTriangle2D(Geometry):
 # The following code depends on MeshPy
 
 class GeometryMeshPy(Geometry):
-    """A geometry defined by MeshPy meshes."""
+    """A geometry defined by MeshPy constructs."""
 
-    def mesh(self):
-        import meshpy
-        p=np.array(self.mesh.points).T
-        t=np.array(self.mesh.elements).T
-        if isinstance(self.mesh,meshpy.tet.MeshInfo):
-            return spfem.mesh.MeshTet(p,t)
-	elif isinstance(self.mesh,meshpy.triangle.MeshInfo):
-            return spfem.mesh.MeshTri(p,t)
+    def __init__(self):
+        raise NotImplementedError("Constructor not implemented!")
+
+    def mesh(self,h):
+        raise NotImplementedError("mesh() not implemented!")
+
+class GeometryMeshPyTetgen(GeometryMeshPy):
+    """Mesh 3-dimensional domains with MeshPy/Tetgen."""
+
+    def __init__(self):
+        self.geob=GeometryBuilder()
+
+    def mesh(self,h):
+        info=meshpy.tet.MeshInfo()
+        self.geob.set(info)
+        self.m=meshpy.tet.build(info,max_volume=h**3)
+        print "Generated "+str(len(self.m.elements))+" elements!"
+        return self._mesh_output()
+
+    def _mesh_output(self):
+        p=np.array(self.m.points).T
+        t=np.array(self.m.elements).T
+        return spfem.mesh.MeshTet(p,t)
+
+    def extrude(self,points,rz):
+        """Add a geometry defined by an exstrusion.
+        
+        Parameters
+        ==========
+        points : array of tuples
+            TODO
+        rz : array of tuples
+            TODO
+        """
+        self.geob.add_geometry(*meshpy.geometry.generate_extrusion(rz_points=rz,base_shape=points))
+
+
+class GeometryMeshPyTriangle(GeometryMeshPy):
+    """Mesh 2-dimensional domains with MeshPy/Triangle."""
+
+    def __init__(self,points,facets=None,holes=None):
+        """Define a domain using boundary segments (PLSG).
+        
+        Default behavior is to connect all points.
+        
+        Parameters
+        ==========
+        points : array of tuples
+            The list of points that form the boundarys.
+        facets : (OPTIONAL) array of tuples
+            The list of indices to points that define the boundary segments.
+        holes : (OPTIONAL) array of tuples
+            The list of points that define the holes.
+        """
+        self.info=meshpy.triangle.MeshInfo()
+        self.info.set_points(points)
+        if holes is not None:
+            self.info.set_holes(holes)
+        if facets is None:
+            self.info.set_facets([(i,i+1) for i in range(0,len(points)-1)])
         else:
-            raise NotImplementedError("GeometryMeshPy: The used MeshPy "+
-                                      " MeshInfo class not supported.")
+            self.info.set_facets(facets)
+
+    def mesh(self,h):
+        def ref_func(tri_points,area):
+            return bool(area>h*h)
+        self.m=meshpy.triangle.build(self.info,refinement_func=ref_func)
+        return self._mesh_output()
+
+    def _mesh_output(self):
+        p=np.array(self.m.points).T
+        t=np.array(self.m.elements).T
+        return spfem.mesh.MeshTri(p,t)
+
+    def refine(self,ref_elems):
+        p=np.array(self.m.points).T
+        t=np.array(self.m.elements).T
+
+        # define new points
+        pnew1=1./2.*(p[:,t[0,ref_elems]]+p[:,t[1,ref_elems]])
+        pnew2=1./2.*(p[:,t[1,ref_elems]]+p[:,t[2,ref_elems]])
+        pnew3=1./2.*(p[:,t[0,ref_elems]]+p[:,t[2,ref_elems]])
+
+        # stack
+        points=np.hstack((p,pnew1,pnew2,pnew3)).T
+
+        # build new mesh
+        self.info.set_points(np.array(points))
+        self.info.set_facets(np.array(self.m.facets))
+        self.m=meshpy.triangle.build(self.info,allow_volume_steiner=False,
+                allow_boundary_steiner=False)
+        return self._mesh_output()
+
+
