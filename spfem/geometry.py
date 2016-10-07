@@ -25,19 +25,32 @@ class GeometryTetGmshFile(Geometry):
     """A faster *.msh loader for tetrahedral meshes."""
 
     def __init__(self,filename):
+        reading_nodes=0
+        reading_elements=0
         points=[]
         with open(filename) as f:
             file_iter=iter(f)
             for line in file_iter:
                 if line=='$Nodes':
-                    reading_nodes=True
-                    Nnodes=int(next(file_iter))
-                    print Nnodes
-                    for itr in range(Nnodes):
-                        linedata=next(file_iter).split(" ")
-                        points.append([float(linedata[1]),
-                                       float(linedata[2]),
-                                       float(linedata[3])])
+                    reading_nodes=1
+                    continue
+                if line=='$Elements':
+                    reading_elements=1
+                    continue
+
+                if reading_nodes==1:
+                    Nnodes=int(line)
+                    reading_nodes=2
+                    continue
+                if reading_elements==1:
+                    Nelems=int(line)
+                    reading_elements=2
+                    continue
+
+                if reading_nodes==2:
+
+
+
         print points
 
 # The following code depends on MeshPy
