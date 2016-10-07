@@ -1,10 +1,5 @@
 SHELL:=/bin/bash
 
-install-triangle: ## Download and compile Triangle
-	@curl -o spfem/triangle/triangle.zip http://www.netlib.org/voronoi/triangle.zip
-	@unzip spfem/triangle/triangle.zip -d spfem/triangle
-	@make -C spfem/triangle
-
 install-conda: ## Download and install miniconda
 	@curl -o miniconda.sh https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh
 	@bash miniconda.sh

@@ -24,12 +24,6 @@ You can download the library and get started by running the following commands
     git clone https://github.com/kinnala/sp.fem
     cd sp.fem
 
-Next you can download and install Triangle by running
-
-.. code-block:: bash
-
-    make install-triangle
-
 If you are a well-seasoned Python developer you may look into the contents of requirements.txt, check that you have all the required libraries and do whatever you wish.
 
 Otherwise, we suggest that you use *miniconda* for managing Python virtual environments and installing packages. You can download and install *miniconda* by running
