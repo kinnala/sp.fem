@@ -6,6 +6,7 @@ import spfem.mesh
 import platform
 import meshpy.triangle
 import meshpy.tet
+import meshpy.gmsh_reader
 from meshpy.geometry import GeometryBuilder
 
 import os
@@ -20,11 +21,55 @@ class Geometry(object):
     def mesh(self):
         raise NotImplementedError("Geometry mesher not implemented!")
 
+class GeometryTetGmshFile(Geometry):
+    """A faster *.msh loader for tetrahedral meshes."""
+
+    def __init__(self,filename):
+        points=[]
+        with open(filename) as f:
+            file_iter=iter(f)
+            for line in file_iter:
+                if line=='$Nodes':
+                    reading_nodes=True
+                    Nnodes=int(next(file_iter))
+                    print Nnodes
+                    for itr in range(Nnodes):
+                        linedata=next(file_iter).split(" ")
+                        points.append([float(linedata[1]),
+                                       float(linedata[2]),
+                                       float(linedata[3])])
+        print points
+
 # The following code depends on MeshPy
 
 class GeometryMeshPy(Geometry):
     """A geometry defined by MeshPy constructs."""
-    pass
+
+    def _mesh_output(self):
+        p=np.array(self.m.points).T
+        t=np.array(self.m.elements).T
+        if p.shape[0]==3:
+            return spfem.mesh.MeshTet(p,t)
+        elif p.shape[0]==2:
+            return spfem.mesh.MeshTri(p,t)
+        else:
+            raise NotImplementedError("The type of mesh not supported")
+
+class GeometryMeshPyGmshFile(GeometryMeshPy):
+    """Import a *.msh file using MeshPy.
+
+    Note that other mesh formats can usually be
+    converted to Gmsh format with external tools.
+    """
+
+    def __init__(self,filename):
+        self.m=meshpy.gmsh_reader.GmshMeshReceiverNumPy()
+        meshpy.gmsh_reader.read_gmsh(self.m,filename)
+
+    def mesh(self):
+        ix=np.array([isinstance(k,meshpy.gmsh_reader.GmshTetrahedralElement) for k in self.m.element_types])
+        self.m.elements=np.vstack(np.array(self.m.elements)[ix])
+        return self._mesh_output()
 
 class GeometryMeshPyTetgen(GeometryMeshPy):
     """Define and mesh 3-dimensional domains with MeshPy/Tetgen."""
@@ -39,11 +84,6 @@ class GeometryMeshPyTetgen(GeometryMeshPy):
             info.set_holes(holes)
         self.m=meshpy.tet.build(info,max_volume=h**3)
         return self._mesh_output()
-
-    def _mesh_output(self):
-        p=np.array(self.m.points).T
-        t=np.array(self.m.elements).T
-        return spfem.mesh.MeshTet(p,t)
 
     def extrude(self,points,z):
         """A wrapper to self.advanced_extrude to create
@@ -129,11 +169,6 @@ class GeometryMeshPyTriangle(GeometryMeshPy):
             return bool(area>h*h)
         self.m=meshpy.triangle.build(self.info,refinement_func=ref_func)
         return self._mesh_output()
-
-    def _mesh_output(self):
-        p=np.array(self.m.points).T
-        t=np.array(self.m.elements).T
-        return spfem.mesh.MeshTri(p,t)
 
     def refine(self,ref_elems):
         p=np.array(self.m.points).T
