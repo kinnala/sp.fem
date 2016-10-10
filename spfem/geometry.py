@@ -98,22 +98,6 @@ class GeometryMeshPy(Geometry):
         else:
             raise NotImplementedError("The type of mesh not supported")
 
-class GeometryMeshPyGmshFile(GeometryMeshPy):
-    """Import a *.msh file using MeshPy.
-
-    Note that other mesh formats can usually be
-    converted to Gmsh format with external tools.
-    """
-
-    def __init__(self,filename):
-        self.m=meshpy.gmsh_reader.GmshMeshReceiverNumPy()
-        meshpy.gmsh_reader.read_gmsh(self.m,filename)
-
-    def mesh(self):
-        ix=np.array([isinstance(k,meshpy.gmsh_reader.GmshTetrahedralElement) for k in self.m.element_types])
-        self.m.elements=np.vstack(np.array(self.m.elements)[ix])
-        return self._mesh_output()
-
 class GeometryMeshPyTetgen(GeometryMeshPy):
     """Define and mesh 3-dimensional domains with MeshPy/Tetgen."""
 
