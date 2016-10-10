@@ -25,33 +25,63 @@ class GeometryTetGmshFile(Geometry):
     """A faster *.msh loader for tetrahedral meshes."""
 
     def __init__(self,filename):
-        reading_nodes=0
-        reading_elements=0
-        points=[]
-        with open(filename) as f:
-            file_iter=iter(f)
-            for line in file_iter:
-                if line=='$Nodes':
-                    reading_nodes=1
-                    continue
-                if line=='$Elements':
-                    reading_elements=1
-                    continue
+        import mmap
+        import contextlib
+        import sys
 
-                if reading_nodes==1:
-                    Nnodes=int(line)
-                    reading_nodes=2
-                    continue
-                if reading_elements==1:
-                    Nelems=int(line)
-                    reading_elements=2
-                    continue
+        node_start=-1
+        node_end=-1
+        no_nodes=0
+        elem_start=-1
+        elem_end=-1
+        no_elems=0
+        ix=0
 
-                if reading_nodes==2:
+        # read the locations from the file
+        with open(filename,'rb') as f:
+            m=mmap.mmap(f.fileno(),0,prot=mmap.PROT_READ)
+            line=m.readline()
+            while line:
+                ix=ix+1
 
+                # find number of nodes/elems
+                if ix==node_start+1:
+                    no_nodes=int(line)
+                elif ix==elem_start+1:
+                    no_elems=int(line)
 
+                # find starting/ending of node/elem list
+                if line[0]=='$':
+                    if line=='$Nodes\n':
+                        node_start=ix
+                    elif line=='$EndNodes\n':
+                        node_end=ix
+                    elif line=='$Elements\n':
+                        elem_start=ix
+                    elif line=='$EndElements\n':
+                        elem_end=ix
 
-        print points
+                line=m.readline()
+
+        self.points=np.genfromtxt(filename,usecols=(1,2,3),skip_header=node_start+1,skip_footer=ix-node_end+1)
+
+        # silence stdout
+        class Dummy(object):
+            def write(self,x):
+                pass
+
+        @contextlib.contextmanager
+        def nostderr():
+            tmp=sys.stderr
+            sys.stderr=Dummy()
+            yield
+            sys.stderr=tmp
+
+        with nostderr():
+            self.elems=np.genfromtxt(filename,usecols=(5,6,7,8),skip_header=elem_start+1,skip_footer=ix-elem_end+1,invalid_raise=False)
+
+    def mesh(self):
+        return spfem.mesh.MeshTet(self.points.T,self.elems.T)
 
 # The following code depends on MeshPy
 
