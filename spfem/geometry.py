@@ -91,6 +91,8 @@ class GeometryMeshPy(Geometry):
     """A geometry defined by MeshPy constructs."""
 
     def _mesh_output(self):
+        if len(self.m.elements)==0:
+            raise Exception("Empty mesh")
         p=np.array(self.m.points).T
         t=np.array(self.m.elements).T
         if p.shape[0]==3:
