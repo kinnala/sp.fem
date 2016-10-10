@@ -1,6 +1,5 @@
 import unittest
 import spfem.mesh
-import spfem.geometry
 import spfem.mapping
 import spfem.asm as fasm
 import numpy as np

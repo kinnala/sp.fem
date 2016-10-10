@@ -80,6 +80,8 @@ class GeometryTetGmshFile(Geometry):
         with nostderr():
             self.elems=np.genfromtxt(filename,usecols=(5,6,7,8),skip_header=elem_start+1,skip_footer=ix-elem_end+1,invalid_raise=False)
 
+        self.elems-=1
+
     def mesh(self):
         return spfem.mesh.MeshTet(self.points.T,self.elems.T)
 

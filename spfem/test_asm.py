@@ -1,6 +1,5 @@
 import unittest
 import spfem.asm
-import spfem.geometry
 import spfem.mesh as fmsh
 import numpy as np
 import scipy.sparse.linalg
