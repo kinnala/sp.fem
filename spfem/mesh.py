@@ -871,18 +871,3 @@ class MeshTri(Mesh):
     def mapping(self):
         return fmap.MappingAffine(self)
 
-
-class MeshPyTri(MeshTri):
-    """Simple wrapper for reading MeshPy triangular mesh."""
-    def __init__(self,meshpy):
-        p=np.array(meshpy.points).T
-        t=np.array(meshpy.elements).T
-        MeshTri.__init__(self,p,t)
-
-
-class MeshPyTet(MeshTet):
-    """Simple wrapper for reading MeshPy tetrahedral mesh."""
-    def __init__(self,meshpy):
-        p=np.array(meshpy.points).T
-        t=np.array(meshpy.elements).T
-        MeshTet.__init__(self,p,t)

@@ -44,6 +44,12 @@ The newly created virtual environment can be activated by writing
 
     source activate spfemenv
 
+Optionally, in order to use the geometry module, you should install MeshPy dependency by running
+
+.. code-block:: bash
+
+    pip install meshpy
+
 Tutorial
 ========
 
