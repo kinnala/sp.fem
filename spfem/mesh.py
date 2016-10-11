@@ -56,6 +56,24 @@ class Mesh(object):
     def mapping(self):
         raise NotImplementedError("Mesh.mapping() not implemented!")
 
+    def remove_elements(self,ix):
+        """Return new mesh with elements removed
+        based on their indices.
+        
+        Parameters
+        ==========
+        ix : numpy array
+            List of element indices to remove.
+        """
+        keep=np.setdiff1d(np.arange(self.t.shape[1]),ix)
+        newt=self.t[:,keep]
+        ptix=np.unique(newt)
+        reverse=np.zeros(self.p.shape[1])
+        reverse[ptix]=np.arange(len(ptix))
+        newt=reverse[newt]
+        newp=self.p[:,ptix]
+        return newp,newt.astype(np.intp)
+
     def scale(self,scale):
         """Scale the mesh.
 
@@ -85,6 +103,12 @@ class Mesh(object):
 
     def _validate(self):
         """Perform mesh validity checks."""
+        # check that element connectivity contains integers
+        # NOTE: this is neccessary for some plotting functionality
+        if not np.issubdtype(self.t[0,0],int):
+            msg=("Mesh._validate(): Element connectivity "
+                 "must consist of integers.")
+            raise Exception(msg)
         # check that vertex matrix has "correct" size
         if(self.p.shape[0]>3):
             msg=("Mesh._validate(): We do not allow meshes "
@@ -765,9 +789,13 @@ class MeshTri(Mesh):
         return np.max(np.sqrt(np.sum((self.p[:,self.facets[0,:]]-
                                       self.p[:,self.facets[1,:]])**2,axis=0)))
 
-    def draw(self):
+    def draw(self,nofig=False):
         """Draw the mesh."""
-        fig=plt.figure()
+        if nofig:
+            fig=0
+        else:
+            # create new figure
+            fig=plt.figure()
         # visualize the mesh faster plotting is achieved through
         # None insertion trick.
         xs=[]
