@@ -6,7 +6,6 @@ import spfem.mesh
 import platform
 import meshpy.triangle
 import meshpy.tet
-import meshpy.gmsh_reader
 from meshpy.geometry import GeometryBuilder
 
 import os
