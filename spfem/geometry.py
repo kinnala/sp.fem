@@ -151,7 +151,7 @@ class GeometryMeshPyTetgen(GeometryMeshPy):
         self.geob.add_geometry(*meshpy.geometry.generate_extrusion(rz_points=rz,
             base_shape=points))
 
-    def revolution(self,points,N):
+    def revolution(self,points,N,transform=None):
         """Generate a surface of revolution.
 
         Parameters
@@ -164,9 +164,18 @@ class GeometryMeshPyTetgen(GeometryMeshPy):
             be located at x=0.
         N : integer
             The number of subdivisions in the revolution.
+        transform : (OPTIONAL) A function that takes list of 3-tuples
+            and modifies the list somehow. Can be used to e.g. translate
+            the points after revolving.
         """
-        self.geob.add_geometry(*meshpy.geometry.generate_surface_of_revolution(points,
-            closure=meshpy.geometry.EXT_OPEN,radial_subdiv=N))
+        if transform is None:
+            self.geob.add_geometry(*meshpy.geometry.generate_surface_of_revolution(points,
+                closure=meshpy.geometry.EXT_OPEN,radial_subdiv=N))
+        else:
+            a,b,c,d=meshpy.geometry.generate_surface_of_revolution(points,
+                    closure=meshpy.geometry.EXT_OPEN,radial_subdiv=N)
+            A=[transform(*x) for x in a]
+            self.geob.add_geometry(A,b,c,d)
 
 
 class GeometryMeshPyTriangle(GeometryMeshPy):

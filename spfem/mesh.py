@@ -29,6 +29,7 @@ import matplotlib.pyplot as plt
 import matplotlib.tri as mtri
 import scipy.interpolate as spi
 import spfem.mapping as fmap
+import copy
 from mpl_toolkits.mplot3d import Axes3D
 
 
@@ -54,6 +55,33 @@ class Mesh(object):
 
     def mapping(self):
         raise NotImplementedError("Mesh.mapping() not implemented!")
+
+    def scale(self,scale):
+        """Scale the mesh.
+
+        Parameters
+        ==========
+        scale : float OR tuple of size dim
+            Scale each dimension by a factor. If a floating
+            point number is provided, same scale is used
+            for each dimension.
+        """
+        for itr in range(int(self.dim())):
+            if isinstance(scale,tuple):
+                self.p[itr,:]*=scale[itr]
+            else:
+                self.p[itr,:]*=scale
+
+    def translate(self,vec):
+        """Translate the mesh.
+
+        Parameters
+        ==========
+        vec : tuple of size dim
+            Translate the mesh by a vector.
+        """
+        for itr in range(int(self.dim())):
+            self.p[itr,:]+=vec[itr]
 
     def _validate(self):
         """Perform mesh validity checks."""
@@ -89,9 +117,12 @@ class MeshLine(Mesh):
     refdom="line"
     brefdom="point"
 
-    def __init__(self,p=np.array([[0,1]]),
-                 t=np.array([[0],[1]]),
-                 validate=True):
+    def __init__(self,p=None,t=None,validate=True):
+        if p is None and t is None:
+            p=np.array([[0,1]]).T
+            t=np.array([[0],[1]])
+        elif p is None or t is None:
+            raise Exception("Must provide p AND t or neither")
         self.p=p
         self.t=t
         if validate:
@@ -145,9 +176,12 @@ class MeshQuad(Mesh):
     refdom="quad"
     brefdom="line"
 
-    def __init__(self,p=np.array([[0,0],[1,0],[1,1],[0,1]]).T,
-                 t=np.array([[0,1,2,3]]).T,
-                 validate=True):
+    def __init__(self,p=None,t=None,validate=True):
+        if p is None and t is None:
+            p=np.array([[0,0],[1,0],[1,1],[0,1]]).T
+            t=np.array([[0,1,2,3]]).T
+        elif p is None or t is None:
+            raise Exception("Must provide p AND t or neither")
         self.p=p
         self.t=t
         if validate:
@@ -317,11 +351,14 @@ class MeshTet(Mesh):
     refdom="tet"
     brefdom="tri"
 
-    def __init__(self,p=np.array([[0,0,0],[0,0,1],[0,1,0],[1,0,0],
-                                  [0,1,1],[1,0,1],[1,1,0],[1,1,1]]).T,
-                 t=np.array([[0,1,2,3],[3,5,1,7],[2,3,6,7],
-                             [2,3,1,7],[1,2,4,7]]).T,
-                 validate=True):
+    def __init__(self,p=None,t=None,validate=True):
+        if p is None and t is None:
+            p=np.array([[0,0,0],[0,0,1],[0,1,0],[1,0,0],
+                        [0,1,1],[1,0,1],[1,1,0],[1,1,1]]).T
+            t=np.array([[0,1,2,3],[3,5,1,7],[2,3,6,7],
+                        [2,3,1,7],[1,2,4,7]]).T
+        elif p is None or t is None:
+            raise Exception("Must provide p AND t or neither")
         self.p=p
         self.t=t
         if validate:
@@ -643,9 +680,12 @@ class MeshTri(Mesh):
     refdom="tri"
     brefdom="line"
 
-    def __init__(self,p=np.array([[0,1,0,1],[0,0,1,1]],dtype=np.float_),
-                 t=np.array([[0,1,2],[1,3,2]],dtype=np.intp).T,
-                 validate=True):
+    def __init__(self,p=None,t=None,validate=True):
+        if p is None and t is None:
+            p=np.array([[0,1,0,1],[0,0,1,1]],dtype=np.float_)
+            t=np.array([[0,1,2],[1,3,2]],dtype=np.intp).T
+        elif p is None or t is None:
+            raise Exception("Must provide p AND t or neither")
         self.p=p
         self.t=t
         if validate:
