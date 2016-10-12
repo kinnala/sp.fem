@@ -824,14 +824,25 @@ class MeshTri(Mesh):
         else:
             plt.plot(self.p[0,nodes],self.p[1,nodes],mark)
 
-    def plot(self,z,smooth=False):
+    def plot(self,z,smooth=False,nofig=False,zlim=None):
         """Visualize nodal or elemental function (2d)."""
-        fig=plt.figure()
-        if smooth:
-            plt.tripcolor(self.p[0,:],self.p[1,:],self.t.T,z,
-                                 shading='gouraud')
+        if nofig:
+            fig=0
         else:
-            plt.tripcolor(self.p[0,:],self.p[1,:],self.t.T,z)
+            fig=plt.figure()
+        if zlim==None:
+            if smooth:
+                plt.tripcolor(self.p[0,:],self.p[1,:],self.t.T,z,
+                                     shading='gouraud')
+            else:
+                plt.tripcolor(self.p[0,:],self.p[1,:],self.t.T,z)
+        else:
+            if smooth:
+                plt.tripcolor(self.p[0,:],self.p[1,:],self.t.T,z,
+                        shading='gouraud',vmin=zlim[0],vmax=zlim[1])
+            else:
+                plt.tripcolor(self.p[0,:],self.p[1,:],self.t.T,z,
+                        vmin=zlim[0],vmax=zlim[1])
         return fig
 
     def plot3(self,z,smooth=False):

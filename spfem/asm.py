@@ -592,15 +592,19 @@ class AssemblerElement(Assembler):
 class Dofnum():
     """Generate a global degree-of-freedom numbering for arbitrary mesh."""
     def __init__(self,mesh,element):
-        self.n_dof=np.reshape(np.arange(element.n_dofs*mesh.p.shape[1],dtype=np.int64),(element.n_dofs,mesh.p.shape[1]),order='F')
+        self.n_dof=np.reshape(np.arange(element.n_dofs*mesh.p.shape[1],dtype=np.int64),
+                (element.n_dofs,mesh.p.shape[1]),order='F')
         offset=element.n_dofs*mesh.p.shape[1]
         if hasattr(mesh,'edges'): # 3d mesh
-            self.e_dof=np.reshape(np.arange(element.e_dofs*mesh.edges.shape[1],dtype=np.int64),(element.e_dofs,mesh.edges.shape[1]),order='F')+offset
+            self.e_dof=np.reshape(np.arange(element.e_dofs*mesh.edges.shape[1],dtype=np.int64),
+                    (element.e_dofs,mesh.edges.shape[1]),order='F')+offset
             offset=offset+element.e_dofs*mesh.edges.shape[1]
         if hasattr(mesh,'facets'): # 2d or 3d mesh
-            self.f_dof=np.reshape(np.arange(element.f_dofs*mesh.facets.shape[1],dtype=np.int64),(element.f_dofs,mesh.facets.shape[1]),order='F')+offset
+            self.f_dof=np.reshape(np.arange(element.f_dofs*mesh.facets.shape[1],dtype=np.int64),
+                    (element.f_dofs,mesh.facets.shape[1]),order='F')+offset
             offset=offset+element.f_dofs*mesh.facets.shape[1]
-        self.i_dof=np.reshape(np.arange(element.i_dofs*mesh.t.shape[1],dtype=np.int64),(element.i_dofs,mesh.t.shape[1]),order='F')+offset
+        self.i_dof=np.reshape(np.arange(element.i_dofs*mesh.t.shape[1],dtype=np.int64),
+                (element.i_dofs,mesh.t.shape[1]),order='F')+offset
         
         # global numbering
         self.t_dof=np.zeros((0,mesh.t.shape[1]),dtype=np.int64)
