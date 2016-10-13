@@ -765,6 +765,12 @@ class MeshTri(Mesh):
         """Return nodes that satisfy some condition."""
         return np.nonzero(test(self.p[0,:],self.p[1,:]))[0]
 
+    def elements_satisfying(self,test):
+        """Return elements whose midpoints satisfy some condition."""
+        mx=.33333*np.sum(self.p[0,self.t],axis=0)
+        my=.33333*np.sum(self.p[1,self.t],axis=0)
+        return np.nonzero(test(mx,my))[0]
+
     def facets_satisfying(self,test):
         """Return facets whose midpoints satisfy some condition."""
         mx=0.5*(self.p[0,self.facets[0,:]]+self.p[0,self.facets[1,:]])
