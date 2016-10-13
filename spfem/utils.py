@@ -156,3 +156,23 @@ class ConvergenceStudy(object):
     def show(self):
         plt.show()
 
+def gradient(u,mesh):
+    """Compute the gradient of a piecewise linear function."""
+
+    x1=mesh.p[0,mesh.t[0,:]]
+    x2=mesh.p[0,mesh.t[1,:]]
+    x3=mesh.p[0,mesh.t[2,:]]
+
+    y1=mesh.p[1,mesh.t[0,:]]
+    y2=mesh.p[1,mesh.t[1,:]]
+    y3=mesh.p[1,mesh.t[2,:]]
+
+    z1=u[mesh.t[0,:]]
+    z2=u[mesh.t[1,:]]
+    z3=u[mesh.t[2,:]]
+
+    dx=(-y2*z1+y3*z1+y1*z2-y3*z2-y1*z3+y2*z3)/(x2*y1-x3*y1-x1*y2+x3*y2+x1*y3-x2*y3)
+    dy=(x2*z1-x3*z1-x1*z2+x3*z2+x1*z3-x2*z3)/(x2*y1-x3*y1-x1*y2+x3*y2+x1*y3-x2*y3)
+
+    return dx,dy
+
