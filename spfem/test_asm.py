@@ -180,6 +180,10 @@ class AssemblerTriSubset(unittest.TestCase):
         I1=np.arange(m.t.shape[1]/2)
         I2=np.setdiff1d(np.arange(m.t.shape[1]),I1)
 
+        bix=m.boundary_facets()
+        bix1=bix[0:len(bix)/2]
+        bix2=np.setdiff1d(bix,bix1)
+
         a=fasm.AssemblerElement(m,felem.ElementTriP1())
 
         def dudv(du,dv):
@@ -189,15 +193,19 @@ class AssemblerTriSubset(unittest.TestCase):
         A1=a.iasm(dudv,tind=I1)
         A2=a.iasm(dudv,tind=I2)
 
+        B=a.fasm(dudv)
+        B1=a.fasm(dudv,find=bix1)
+        B2=a.fasm(dudv,find=bix2)
+
         f=a.iasm(lambda v: 1*v)
 
         I=m.interior_nodes()
 
         x=np.zeros(A.shape[0])
-        x[I]=scipy.sparse.linalg.spsolve(A[I].T[I].T,f[I])
+        x[I]=scipy.sparse.linalg.spsolve((A+B)[I].T[I].T,f[I])
 
         X=np.zeros(A.shape[0])
-        X[I]=scipy.sparse.linalg.spsolve(A1[I].T[I].T+A2[I].T[I].T,f[I])
+        X[I]=scipy.sparse.linalg.spsolve((A1+B1)[I].T[I].T+(A2+B2)[I].T[I].T,f[I])
 
         self.assertAlmostEqual(np.linalg.norm(x-X),0.0,places=10)
 
