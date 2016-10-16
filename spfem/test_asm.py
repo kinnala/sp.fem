@@ -170,6 +170,30 @@ class AssemblerTriP1Interp(AssemblerTriP1BasicTest):
 
         self.assertAlmostEqual(np.linalg.norm(f-A*u),0.0,places=10)
 
+class AssemblerTriP1FacetInterp(unittest.TestCase):
+    """Compare M*u with f(u)."""
+
+    def runTest(self):
+        m=fmsh.MeshTri()
+        m.refine(3)
+        a=fasm.AssemblerElement(m,felem.ElementTriP1())
+
+        def G(x,y):
+            return np.sin(np.pi*x)
+        u=G(m.p[0,:],m.p[1,:])
+
+        # interpolate just the values and compare
+        def v1(v,w):
+            return w[0]*v
+        def v2(u,v):
+            return u*v
+        f=a.fasm(v1,interp={0:u})
+        A=a.fasm(v2)
+
+        self.assertAlmostEqual(np.linalg.norm(f-A*u),0.0,places=10)
+
+
+
 
 class AssemblerTriSubset(unittest.TestCase):
     """Test the subset assembly."""

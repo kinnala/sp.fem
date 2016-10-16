@@ -409,7 +409,7 @@ class AssemblerElement(Assembler):
 
     # TODO add ifasm (interior facet assembly) for DG methods etc.
             
-    def fasm(self,form,find=None,intorder=None,normals=True): # TODO fix and test
+    def fasm(self,form,find=None,intorder=None,normals=True,interp=None):
         """Facet assembly on all exterior facets."""
         if find is None:
             find=self.mesh.boundary_facets()
@@ -423,12 +423,10 @@ class AssemblerElement(Assembler):
         # check and fix parameters of form
         oldparams=inspect.getargspec(form).args
         if 'u' in oldparams or 'du' in oldparams:
-            paramlist=['u','v','du','dv','x','h','n']
-            #paramlist=['u','v','du','dv','x','h','n','w']
+            paramlist=['u','v','du','dv','x','h','n','w']
             bilinear=True
         else:
-            paramlist=['v','dv','x','h','n']
-            #paramlist=['v','dv','x','h','n','w']
+            paramlist=['v','dv','x','h','n','w']
             bilinear=False
         fform=self.fillargs(form,paramlist)
 
@@ -456,6 +454,15 @@ class AssemblerElement(Assembler):
             h=np.abs(detDG)**(1.0/(self.mesh.dim()-1.0))
         else: # exception for 1D mesh (no boundary h defined)
             h=None
+
+        # interpolate some previous discrete function at quadrature points
+        w={}
+        if interp is not None:
+            for k in interp:
+                w[k]=0.0*x[0]
+                for j in range(Nbfun_u):
+                    phi,_=self.elem_u.gbasis(self.mapping,Y,j,tind)
+                    w[k]=w[k]+interp[k][self.dofnum_u.t_dof[j,tind],None]*phi
         
         # bilinear form
         if bilinear:
@@ -473,7 +480,7 @@ class AssemblerElement(Assembler):
                     ixs=slice(ne*(Nbfun_v*j+i),ne*(Nbfun_v*j+i+1))
                     
                     # compute entries of local stiffness matrices
-                    data[ixs]=np.dot(fform(u,v,du,dv,x,h,n)*np.abs(detDG),W)
+                    data[ixs]=np.dot(fform(u,v,du,dv,x,h,n,w)*np.abs(detDG),W)
                     rows[ixs]=self.dofnum_v.t_dof[i,tind]
                     cols[ixs]=self.dofnum_u.t_dof[j,tind]
         
@@ -492,7 +499,7 @@ class AssemblerElement(Assembler):
                 ixs=slice(ne*i,ne*(i+1))
                 
                 # compute entries of local stiffness matrices
-                data[ixs]=np.dot(fform(v,dv,x,h,n)*np.abs(detDG),W)
+                data[ixs]=np.dot(fform(v,dv,x,h,n,w)*np.abs(detDG),W)
                 rows[ixs]=self.dofnum_v.t_dof[i,tind]
                 cols[ixs]=np.zeros(ne)
         
