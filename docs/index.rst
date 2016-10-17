@@ -5,15 +5,6 @@ This is the documentation of a simple finite element assembler library written i
 
 The library is currently work-in-progress and there is a fair amount of work to be done until it can be considered complete. The current state is however more than usable.
 
-What the hell is a finite element?
-==================================
-
-You might remember computing derivatives in high school. Unfortunately, back then the practice was not motivated that much (same applies to many university-level mathematics courses) and probably you ended up forgetting most of what you learned.
-
-This is unfortunate since the derivatives are used to build very useful and detailed models of physics, engineering and economics. These models are known as *differential equations* and very often can be robustly solved using a computer and the so-called *finite element method*.
-
-This library contains tools to quickly build the matrices related to the finite element method. We support various types of finite elements out-of-the-box although defining completely new elements is also possible.
-
 Getting started
 ===============
 
@@ -53,13 +44,31 @@ Optionally, in order to use the geometry module, you should install MeshPy depen
 Tutorial
 ========
 
-Derivative describes the change. For example, the rate of change in the location of a particle is called the particle's velocity. In technical terms we say that the derivative of the location (with respect to time) is the velocity. Similarly, the derivative of the velocity is called acceleration.
+This tutorial is targeted towards people who have a basic understanding what partial differential equations are and want to start solving them using finite elements.
 
-One can consider an infinite lattice of point masses and springs. Let :math:`u(x,y,t)` be. The movement of the points is described by the so-called wave equation which states that the acceleration of a point is proportional to the curvature, that is,
+Let us start by solving the wave equation,
 
 .. math::
 
-    u_{tt}=\Delta u
+    u_{tt}=\Delta u,
+
+in a two-dimensional domain. The time discretization is performed using finite differences and spatial discretization using finite elements in a classical manner.
+
+Denote the domain by :math:`\Omega` and the end time by :math:`T`.
+The weak formulation reads: for all :math:`t \in [0,T]`, find :math:`u(t) \in H^1_0(\Omega)` satisfying
+
+.. math::
+    (u_{tt},v)+(\nabla u, \nabla v)=0
+
+for every :math:`v \in H^1_0(\Omega)`.
+
+Let
+
+.. math::
+    
+    u_h(x,t)=\sum_{j=1}^N u_j(t) \varphi_j(x).
+
+The spatial discretization leads to
 
 Classes
 =======
