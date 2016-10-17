@@ -42,7 +42,7 @@ class ElementGlobal(Element):
         mesh
             The :class:`spfem.mesh.Mesh` object.
         qps : dict of global quadrature points
-            The global quadrature points as given by :func:`spfem.mapping.Mapping.F`.
+            The global quadrature points in the element k.
         k : int
             The index of the element in mesh structure.
 
@@ -184,8 +184,8 @@ class ElementGlobalArgyris(ElementGlobal):
         self.optimize_ddu=optimize_ddu
 
     def gbasis(self,mesh,qps,k):
-        X=qps[0][k,:]
-        Y=qps[1][k,:]
+        X=qps[0]
+        Y=qps[1]
         # solve local basis functions
         N=21
         V=np.zeros((N,N))
@@ -271,8 +271,8 @@ class ElementGlobalMorley(ElementGlobal):
     maxdeg=2
 
     def gbasis(self,mesh,qps,k):
-        X=qps[0][k,:]
-        Y=qps[1][k,:]
+        X=qps[0]
+        Y=qps[1]
         # solve local basis functions
         V=np.zeros((6,6))
 
@@ -339,8 +339,8 @@ class ElementGlobalTriP2(ElementGlobal):
     maxdeg=2
 
     def gbasis(self,mesh,qps,k):
-        X=qps[0][k,:]
-        Y=qps[1][k,:]
+        X=qps[0]
+        Y=qps[1]
         # solve local basis functions
         V=np.zeros((6,6))
 
@@ -383,8 +383,8 @@ class ElementGlobalTriP1(ElementGlobal):
     maxdeg=1
 
     def gbasis(self,mesh,qps,k):
-        X=qps[0][k,:]
-        Y=qps[1][k,:]
+        X=qps[0]
+        Y=qps[1]
         # solve local basis functions
         V=np.zeros((3,3))
 

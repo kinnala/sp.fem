@@ -123,8 +123,74 @@ class AssemblerGlobal(Assembler):
         self.mapping=mesh.mapping()
         self.Nbfun=self.dofnum.t_dof.shape[0]
 
+    def ifposteriori(self,form,w,intorder=None):
+        # evaluate norm on all interior facets
+        find=np.nonzero(self.mesh.f2t[1,:]>0)[0]
+
+        if intorder is None:
+            intorder=2*self.elem.maxdeg            
+
+        # check and fix parameters of form
+        oldparams=inspect.getargspec(form).args
+        #paramlist=['u','v','du','dv','ddu','ddv','x']
+        paramlist=['u1','u2','x']
+        fform=self.fillargs(form,paramlist)
+
+        X,W=get_quadrature(self.mesh.brefdom,intorder)
+
+        # boundary element indices
+        tind1=self.mesh.f2t[0,find]
+        tind2=self.mesh.f2t[1,find]
+
+        # mappings
+        x=self.mapping.G(X,find=find) # reference facet to global facet
+        detDG=self.mapping.detDG(X,find)        
+
+        # initialize sparse matrix
+        data=np.zeros(self.mesh.facets.shape[1])
+
+        # loop over elements and do assembly
+        dim=self.mesh.p.shape[0]
+        ktr=0
+
+        #import pdb; pdb.set_trace()
+
+        for k in find:
+            # quadrature points in current facet
+            xk={}
+            for itr in range(dim):
+                xk[itr]=x[itr][ktr,:]
+
+            # evaluate global bases of both elements
+            t1=self.mesh.f2t[0,k]
+            t2=self.mesh.f2t[1,k]
+            u1,du1,ddu1=self.elem.gbasis(self.mesh,xk,t1)
+            u2,du2,ddu2=self.elem.gbasis(self.mesh,xk,t2)
+            
+            U1=0*u1[0]
+            U2=0*u1[0]
+            # interpolate basis functions and solution vector
+            # at quadrature points
+            for jtr in range(self.Nbfun):
+                ix1=self.dofnum.t_dof[jtr,t1]
+                ix2=self.dofnum.t_dof[jtr,t2]
+                U1+=w[ix1]*u1[jtr]
+                U2+=w[ix2]*u2[jtr]
+
+            # loop over basis functions
+            for jtr in range(self.Nbfun):
+                ix1=self.dofnum.t_dof[jtr,t1]
+                ix2=self.dofnum.t_dof[jtr,t2]
+                data[k]+=np.dot(fform(U1,U2,
+                                      xk)**2,W*np.abs(detDG[ktr]))
+            ktr+=1
+
+        return data
+
+
     def iasm(self,form,intorder=None,tind=None):
         if tind is None:
+            # by default, all elements
             tind=np.arange(self.mesh.t.shape[1])
 
         # check and fix parameters of form
@@ -160,12 +226,13 @@ class AssemblerGlobal(Assembler):
             cols=np.zeros(tind.shape[0]*self.Nbfun**2)
 
             for k in tind:
-                u,du,ddu=self.elem.gbasis(self.mesh,x,k)
-
                 # quadrature points in current element
                 xk={}
                 for itr in range(dim):
                     xk[itr]=x[itr][k,:]
+
+                # basis function and derivatives in quadrature points
+                u,du,ddu=self.elem.gbasis(self.mesh,xk,k)
 
                 # assemble local stiffness matrix
                 for jtr in range(self.Nbfun):
@@ -186,12 +253,12 @@ class AssemblerGlobal(Assembler):
             cols=np.zeros(tind.shape[0]*self.Nbfun)
 
             for k in tind:
-                u,du,ddu=self.elem.gbasis(self.mesh,x,k)
-
                 # quadrature points in current element
                 xk={}
                 for itr in range(dim):
                     xk[itr]=x[itr][k,:]
+
+                u,du,ddu=self.elem.gbasis(self.mesh,xk,k)
 
                 # assemble local laod vector
                 for itr in range(self.Nbfun):
