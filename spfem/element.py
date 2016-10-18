@@ -169,6 +169,64 @@ class ElementGlobal(Element):
                 m.plot3(ddu[itr][1][1])
 
         m.show()
+
+class ElementGlobalDGTriP3(ElementGlobal):
+    """A triangular third-order DG element."""
+
+    dim=2
+    maxdeg=3
+    i_dofs=10
+
+    def gbasis(self,mesh,qps,k):
+        X=qps[0]
+        Y=qps[1]
+        # solve local basis functions
+        N=10
+        V=np.zeros((N,N))
+
+        v1=mesh.p[:,mesh.t[0,k]]
+        v2=mesh.p[:,mesh.t[1,k]]
+        v3=mesh.p[:,mesh.t[2,k]]
+
+        e1=0.5*(v1+v2)
+        e2=0.5*(v2+v3)
+        e3=0.5*(v1+v3)
+
+        # initialize third order power basis
+        self._pbasisNinit(2,3)
+
+        # evaluate dofs
+        V[0,:]=self._pbasis3(v1)
+        V[1,:]=self._pbasis3(v2)
+        V[2,:]=self._pbasis3(v3)
+
+        V[3,:]=self._pbasis3((v1+2.0*v2)/3.0)
+        V[4,:]=self._pbasis3((2.0*v1+v2)/3.0)
+
+        V[5,:]=self._pbasis3((v2+2.0*v3)/3.0)
+        V[6,:]=self._pbasis3((2.0*v2+v3)/3.0)
+
+        V[7,:]=self._pbasis3((v1+2.0*v3)/3.0)
+        V[8,:]=self._pbasis3((2.0*v1+v3)/3.0)
+
+        V[9,:]=self._pbasis3((v1+v2+v3)/3.0)
+
+        Vinv=np.linalg.inv(V).T
+
+        u=const_cell(np.zeros(len(X)),N)
+        du=const_cell(np.zeros(len(X)),N,2)
+        ddu=const_cell(np.zeros(len(X)),N,2,2)
+        for itr in range(len(X)):
+            for jtr in range(N):
+                u[jtr][itr]=np.sum(Vinv[jtr,:]*self._pbasis3([X[itr],Y[itr]]))
+                du[jtr][0][itr]=np.sum(Vinv[jtr,:]*self._pbasis3dx([X[itr],Y[itr]]))
+                du[jtr][1][itr]=np.sum(Vinv[jtr,:]*self._pbasis3dy([X[itr],Y[itr]]))
+                ddu[jtr][0][0][itr]=np.sum(Vinv[jtr,:]*self._pbasis3dxx([X[itr],Y[itr]]))
+                ddu[jtr][0][1][itr]=np.sum(Vinv[jtr,:]*self._pbasis3dxy([X[itr],Y[itr]]))
+                ddu[jtr][1][0][itr]=ddu[jtr][0][1][itr]
+                ddu[jtr][1][1][itr]=np.sum(Vinv[jtr,:]*self._pbasis3dyy([X[itr],Y[itr]]))
+
+        return u,du,ddu
         
 class ElementGlobalArgyris(ElementGlobal):
     """Argyris element for fourth-order problems."""

@@ -26,6 +26,7 @@ import spfem.mesh
 import spfem.mapping
 import inspect
 from spfem.quadrature import get_quadrature
+from spfem.utils import const_cell
 from scipy.sparse import coo_matrix
 
 import matplotlib.pyplot as plt
@@ -132,8 +133,7 @@ class AssemblerGlobal(Assembler):
 
         # check and fix parameters of form
         oldparams=inspect.getargspec(form).args
-        #paramlist=['u','v','du','dv','ddu','ddv','x']
-        paramlist=['u1','u2','x']
+        paramlist=['u1','u2','du1','du2','ddu1','ddu2','x','n','t','h']
         fform=self.fillargs(form,paramlist)
 
         X,W=get_quadrature(self.mesh.brefdom,intorder)
@@ -153,10 +153,20 @@ class AssemblerGlobal(Assembler):
         dim=self.mesh.p.shape[0]
         ktr=0
 
-        #import pdb; pdb.set_trace()
-
         for k in find:
-            # quadrature points in current facet
+            # compute tangent and normal vectors
+            normal=np.zeros(2)
+            if dim==2:
+                tangent=self.mesh.p[:,self.mesh.facets[0,k]]-self.mesh.p[:,self.mesh.facets[1,k]]
+                h=np.linalg.norm(tangent)
+                tangent/=h
+                normal[0]=-tangent[1]
+                normal[1]=tangent[0]
+            else:
+                # TODO not in hurry though. This method is slow for larger dims
+                tangent=np.zeros(2)
+                h=0
+            # quadrature points in current facet 
             xk={}
             for itr in range(dim):
                 xk[itr]=x[itr][ktr,:]
@@ -168,7 +178,11 @@ class AssemblerGlobal(Assembler):
             u2,du2,ddu2=self.elem.gbasis(self.mesh,xk,t2)
             
             U1=0*u1[0]
-            U2=0*u1[0]
+            U2=U1
+            dU1=const_cell(U1,dim)
+            dU2=const_cell(U1,dim)
+            ddU1=const_cell(U1,dim,dim)
+            ddU2=const_cell(U1,dim,dim)
             # interpolate basis functions and solution vector
             # at quadrature points
             for jtr in range(self.Nbfun):
@@ -176,13 +190,16 @@ class AssemblerGlobal(Assembler):
                 ix2=self.dofnum.t_dof[jtr,t2]
                 U1+=w[ix1]*u1[jtr]
                 U2+=w[ix2]*u2[jtr]
+                for a in range(dim):
+                    dU1[a]+=w[ix1]*du1[jtr][a]
+                    dU2[a]+=w[ix2]*du2[jtr][a]
+                    for b in range(dim):
+                        ddU1[a][b]+=w[ix1]*ddu1[jtr][a][b]
+                        ddU2[a][b]+=w[ix2]*ddu2[jtr][a][b]
 
-            # loop over basis functions
-            for jtr in range(self.Nbfun):
-                ix1=self.dofnum.t_dof[jtr,t1]
-                ix2=self.dofnum.t_dof[jtr,t2]
-                data[k]+=np.dot(fform(U1,U2,
-                                      xk)**2,W*np.abs(detDG[ktr]))
+            # integrate over the facet
+            data[k]+=np.dot(fform(U1,U2,dU1,dU2,ddU1,ddU2,xk,normal,tangent,h)**2,W*np.abs(detDG[ktr]))
+
             ktr+=1
 
         return data
