@@ -6,6 +6,28 @@ In this repository you find the working draft of a flexible, fully-interpreted a
 
 The code is (c) Tom Gustafsson and licensed under AGPLv3.
 
+## Minimal example
+The following code solves the Poisson equation in a unit square with zero boundary conditions and unit loading.
+```python
+from spfem.mesh import MeshTri
+from spfem.asm import AssemblerElement
+from spfem.element import ElementTriP1
+from spfem.utils import direct
+
+m=MeshTri()
+m.refine(6)
+
+a=AssemblerElement(m,ElementTriP1())
+
+A=a.iasm(lambda du,dv: du[0]*dv[0]+du[1]*dv[1])
+b=a.iasm(lambda v: 1.0*v)
+
+x=direct(A,b,I=m.interior_nodes())
+
+m.plot3(x)
+m.show()
+```
+
 ## Acknowledgements
 
 The author and the code of sp.fem has strongly been influenced by the finite element knowledge shared by the following fellow scientists
