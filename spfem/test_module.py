@@ -764,20 +764,20 @@ class TestArgyris(unittest.TestCase):
 
         f=a.iasm(lambda v,x: F(x)*v)
 
-        D=a.dofnum.getdofs(N=m.boundary_nodes(),F=m.boundary_facets())
-        I=np.setdiff1d(np.arange(a.dofnum.N),D)
+        D=a.dofnum_u.getdofs(N=m.boundary_nodes(),F=m.boundary_facets())
+        I=np.setdiff1d(np.arange(a.dofnum_u.N),D)
 
         x=futil.direct(A,f,I=I)
 
-        Linferror=np.max(np.abs(x[a.dofnum.n_dof[0,:]]-uexfun(m.p[0,:],m.p[1,:])))
+        Linferror=np.max(np.abs(x[a.dofnum_u.n_dof[0,:]]-uexfun(m.p[0,:],m.p[1,:])))
 
         self.assertTrue(Linferror<=3e-2)
 
         # TODO convergence rates not checked
 
         if verbose:
-            print np.max(np.abs(x[a.dofnum.n_dof[0,:]]-uexfun(m.p[0,:],m.p[1,:])))
-            m.plot3(x[a.dofnum.n_dof[0,:]])
+            print np.max(np.abs(x[a.dofnum_u.n_dof[0,:]]-uexfun(m.p[0,:],m.p[1,:])))
+            m.plot3(x[a.dofnum_u.n_dof[0,:]])
             m.plot3(uexfun(m.p[0,:],m.p[1,:]))
             m.show()
 

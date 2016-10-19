@@ -110,26 +110,39 @@ class AssemblerGlobal(Assembler):
     Note: This assembler is slow since it explicitly loops
     over the elements using Python for-loop.
     """
-    def __init__(self,mesh,elem):
+    def __init__(self,mesh,elem_u,elem_v=None):
         if not isinstance(mesh,spfem.mesh.Mesh):
             raise Exception("AssemblerGlobal.__init__(): first parameter "
                             "must be an instance of spfem.mesh.Mesh!")
-        if not isinstance(elem,spfem.element.ElementGlobal):
+        if not isinstance(elem_u,spfem.element.ElementGlobal):
             raise Exception("AssemblerGlobal.__init__(): second parameter "
+                            "must be an instance of spfem.element.ElementGlobal!")
+        if elem_v is not None and not isinstance(elem_v,spfem.element.ElementGlobal):
+            raise Exception("AssemblerGlobal.__init__(): third parameter "
                             "must be an instance of spfem.element.ElementGlobal!")
 
         self.mesh=mesh
-        self.elem=elem
-        self.dofnum=Dofnum(mesh,elem)
+        self.elem_u=elem_u
+        self.dofnum_u=Dofnum(mesh,elem_u)
         self.mapping=mesh.mapping()
-        self.Nbfun=self.dofnum.t_dof.shape[0]
+        self.Nbfun_u=self.dofnum_u.t_dof.shape[0]
+
+        # duplicate test function element type if None is given
+        if elem_v is None:
+            self.elem_v=elem_u
+            self.dofnum_v=self.dofnum_u
+            self.Nbfun_v=self.Nbfun_u
+        else:
+            self.elem_v=elem_v
+            self.donum_v=Dofnum(mesh,elem_v)
+            self.Nbfun_v=self.dofnum_v.t_dof.shape[0]
 
     def ifposteriori(self,form,w,intorder=None):
         # evaluate norm on all interior facets
         find=np.nonzero(self.mesh.f2t[1,:]>0)[0]
 
         if intorder is None:
-            intorder=2*self.elem.maxdeg            
+            intorder=2*self.elem_u.maxdeg
 
         # check and fix parameters of form
         oldparams=inspect.getargspec(form).args
@@ -174,8 +187,8 @@ class AssemblerGlobal(Assembler):
             # evaluate global bases of both elements
             t1=self.mesh.f2t[0,k]
             t2=self.mesh.f2t[1,k]
-            u1,du1,ddu1=self.elem.gbasis(self.mesh,xk,t1)
-            u2,du2,ddu2=self.elem.gbasis(self.mesh,xk,t2)
+            u1,du1,ddu1=self.elem_u.gbasis(self.mesh,xk,t1)
+            u2,du2,ddu2=self.elem_u.gbasis(self.mesh,xk,t2)
             
             U1=0*u1[0]
             U2=U1
@@ -185,7 +198,7 @@ class AssemblerGlobal(Assembler):
             ddU2=const_cell(U1,dim,dim)
             # interpolate basis functions and solution vector
             # at quadrature points
-            for jtr in range(self.Nbfun):
+            for jtr in range(self.Nbfun_u):
                 ix1=self.dofnum.t_dof[jtr,t1]
                 ix2=self.dofnum.t_dof[jtr,t2]
                 U1+=w[ix1]*u1[jtr]
@@ -222,7 +235,7 @@ class AssemblerGlobal(Assembler):
 
         if intorder is None:
             # compute the maximum polynomial degree from elements
-            intorder=2*self.elem.maxdeg
+            intorder=self.elem_u.maxdeg+self.elem_v.maxdeg
 
         # quadrature points and weights
         X,W=get_quadrature(self.mesh.refdom,intorder)
@@ -238,9 +251,9 @@ class AssemblerGlobal(Assembler):
 
         if bilinear:
             # initialize sparse matrix
-            data=np.zeros(tind.shape[0]*self.Nbfun**2)
-            rows=np.zeros(tind.shape[0]*self.Nbfun**2)
-            cols=np.zeros(tind.shape[0]*self.Nbfun**2)
+            data=np.zeros(tind.shape[0]*self.Nbfun_u*self.Nbfun_v)
+            rows=np.zeros(tind.shape[0]*self.Nbfun_u*self.Nbfun_v)
+            cols=np.zeros(tind.shape[0]*self.Nbfun_u*self.Nbfun_v)
 
             for k in tind:
                 # quadrature points in current element
@@ -249,25 +262,26 @@ class AssemblerGlobal(Assembler):
                     xk[itr]=x[itr][k,:]
 
                 # basis function and derivatives in quadrature points
-                u,du,ddu=self.elem.gbasis(self.mesh,xk,k)
+                u,du,ddu=self.elem_u.gbasis(self.mesh,xk,k)
+                v,dv,ddv=self.elem_v.gbasis(self.mesh,xk,k)
 
                 # assemble local stiffness matrix
-                for jtr in range(self.Nbfun):
-                    for itr in range(self.Nbfun):
-                        data[ktr]=np.dot(fform(u[jtr],u[itr],
-                                               du[jtr],du[itr],
-                                               ddu[jtr],ddu[itr],xk),W*np.abs(detDF[k]))
-                        rows[ktr]=self.dofnum.t_dof[itr,k]
-                        cols[ktr]=self.dofnum.t_dof[jtr,k]
+                for jtr in range(self.Nbfun_u):
+                    for itr in range(self.Nbfun_v):
+                        data[ktr]=np.dot(fform(u[jtr],v[itr],
+                                               du[jtr],dv[itr],
+                                               ddu[jtr],ddv[itr],xk),W*np.abs(detDF[k]))
+                        rows[ktr]=self.dofnum_v.t_dof[itr,k]
+                        cols[ktr]=self.dofnum_u.t_dof[jtr,k]
                         ktr+=1
 
-            return coo_matrix((data,(rows,cols)),shape=(self.dofnum.N,self.dofnum.N)).tocsr()
+            return coo_matrix((data,(rows,cols)),shape=(self.dofnum_v.N,self.dofnum_u.N)).tocsr()
 
         else:
             # initialize sparse matrix structures
-            data=np.zeros(tind.shape[0]*self.Nbfun)
-            rows=np.zeros(tind.shape[0]*self.Nbfun)
-            cols=np.zeros(tind.shape[0]*self.Nbfun)
+            data=np.zeros(tind.shape[0]*self.Nbfun_v)
+            rows=np.zeros(tind.shape[0]*self.Nbfun_v)
+            cols=np.zeros(tind.shape[0]*self.Nbfun_v)
 
             for k in tind:
                 # quadrature points in current element
@@ -275,15 +289,15 @@ class AssemblerGlobal(Assembler):
                 for itr in range(dim):
                     xk[itr]=x[itr][k,:]
 
-                u,du,ddu=self.elem.gbasis(self.mesh,xk,k)
+                v,dv,ddv=self.elem_v.gbasis(self.mesh,xk,k)
 
-                # assemble local laod vector
-                for itr in range(self.Nbfun):
-                    data[ktr]=np.dot(fform(u[itr],du[itr],ddu[itr],xk),W*np.abs(detDF[k]))
-                    rows[ktr]=self.dofnum.t_dof[itr,k]
+                # assemble local load vector
+                for itr in range(self.Nbfun_v):
+                    data[ktr]=np.dot(fform(v[itr],dv[itr],ddv[itr],xk),W*np.abs(detDF[k]))
+                    rows[ktr]=self.dofnum_v.t_dof[itr,k]
                     ktr+=1
             
-            return coo_matrix((data,(rows,cols)),shape=(self.dofnum.N,1)).toarray().T[0]
+            return coo_matrix((data,(rows,cols)),shape=(self.dofnum_v.N,1)).toarray().T[0]
 
 class AssemblerElement(Assembler):
     """A quasi-fast assembler for arbitrary element/mesh/mapping.
