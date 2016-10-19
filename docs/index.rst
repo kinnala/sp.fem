@@ -44,31 +44,74 @@ Optionally, in order to use the geometry module, you should install MeshPy depen
 Tutorial
 ========
 
-This tutorial is targeted towards people who have a basic understanding what partial differential equations are and want to start solving them using finite elements.
+We begin by importing the necessary library functions.
 
-Let us start by solving the wave equation,
+.. code-block:: python
+
+    from spfem.mesh import MeshTri
+    from spfem.asm import AssemblerElement
+    from spfem.element import ElementTriP1
+    from spfem.utils import direct
+
+Let us solve the Poisson equation in a unit square :math:`\Omega = [0,1]^2` with unit loading. We can obtain a mesh of the unit square and refine it six times by
+
+.. code-block:: python
+
+    m=MeshTri()
+    m.refine(6)
+
+By default, the initializer of :class:`spfem.mesh.MeshTri` returns a mesh of the unit square with two elements. The :py:meth:`spfem.mesh.MeshTri.refine` method refines the mesh by splitting each triangle into four subtriangles. Let us denote the finite element mesh by :math:`\mathcal{T}_h` and an arbitrary element by :math:`K`.
+
+The governing equation is
 
 .. math::
 
-    u_{tt}=\Delta u,
+    -\Delta u=1,
 
-in a two-dimensional domain. The time discretization is performed using finite differences and spatial discretization using finite elements in a classical manner.
-
-Denote the domain by :math:`\Omega` and the end time by :math:`T`.
-The weak formulation reads: for all :math:`t \in [0,T]`, find :math:`u(t) \in H^1_0(\Omega)` satisfying
-
-.. math::
-    (u_{tt},v)+(\nabla u, \nabla v)=0
-
-for every :math:`v \in H^1_0(\Omega)`.
-
-Let
+and it is combined with the boundary condition
 
 .. math::
     
-    u_h(x,t)=\sum_{j=1}^N u_j(t) \varphi_j(x).
+    u=0.
 
-The spatial discretization leads to
+The weak formulation reads: find :math:`u \in H^1_0(\Omega)` satisfying
+
+.. math::
+
+    (\nabla u, \nabla v)=(1,v)
+
+for every :math:`v \in H^1_0(\Omega)`.
+
+We use a conforming piecewise linear finite element approximation space
+
+.. math::
+
+    V_h = \{ w_h \in H^1_0(\Omega) : w_h|_K \in P_1(K)~\forall K \in \mathcal{T}_h \}.
+
+The finite element method reads: find :math:`u_h \in V_h` satisfying
+
+.. math::
+    
+    (\nabla u_h, \nabla v_h) = (1,v_h)
+
+for every :math:`v_h \in V_h`. A typical approach to impose the boundary condition :math:`u_h=0` (which is implicitly included in the definition of :math:`V_h`) is to initially build the matrix and the vector corresponding to the discrete space
+
+.. math::
+    
+    W_h = \{ w_h \in H^1(\Omega) : w_h|_K \in P_1(K)~\forall K \in \mathcal{T}_h \}
+
+and afterwards remove the rows and columns corresponding to the boundary nodes. An assembler object corresponding to the mesh :math:`\mathcal{T}_h` and the discrete space :math:`W_h` can be initialized by
+
+.. code-block:: python
+
+    a=AssemblerElement(m,ElementTriP1())
+
+and the stiffness matrix and the load vector can be assembled by writing
+
+.. code-block:: python
+
+    A=a.iasm(lambda du,dv: du[0]*dv[0]+du[1]*dv[1])
+    b=a.iasm(lambda v: 1.0*v)
 
 Classes
 =======
