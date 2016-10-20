@@ -137,6 +137,63 @@ class AssemblerGlobal(Assembler):
             self.dofnum_v=Dofnum(mesh,elem_v)
             self.Nbfun_v=self.dofnum_v.t_dof.shape[0]
 
+    def iposteriori(self,form,w,intorder=None):
+        # evaluate norm on all elements
+        tind=range(self.mesh.t.shape[1])
+
+        if intorder is None:
+            intorder=2*self.elem_u.maxdeg
+
+        # check and fix parameters of form
+        oldparams=inspect.getargspec(form).args
+        paramlist=['u','du','ddu','x','h']
+        fform=self.fillargs(form,paramlist)
+
+        X,W=get_quadrature(self.mesh.refdom,intorder)
+
+        # mappings
+        x=self.mapping.F(X,tind) # reference facet to global facet
+
+        # jacobian at quadrature points
+        detDF=self.mapping.detDF(X,tind)
+
+        # initialize sparse matrix
+        data=np.zeros(self.mesh.t.shape[1])
+
+        # loop over elements and do assembly
+        dim=self.mesh.p.shape[0]
+        ktr=0
+
+        for k in tind:
+            # quadrature points in current element
+            xk={}
+            for itr in range(dim):
+                xk[itr]=x[itr][ktr,:]
+            h=np.abs(detDF[k])**(1.0/self.mesh.dim())
+
+            # evaluate global bases
+            u,du,ddu=self.elem_u.gbasis(self.mesh,xk,k)
+            
+            U=0*u[0]
+            dU=const_cell(U,dim)
+            ddU=const_cell(U,dim,dim)
+            # interpolate basis functions and solution vector
+            # at quadrature points
+            for jtr in range(self.Nbfun_u):
+                ix=self.dofnum_u.t_dof[jtr,k]
+                U+=w[ix]*u[jtr]
+                for a in range(dim):
+                    dU[a]+=w[ix]*du[jtr][a]
+                    for b in range(dim):
+                        ddU[a][b]+=w[ix]*ddu[jtr][a][b]
+
+            # integrate over the facet
+            data[k]+=np.dot(fform(U,dU,ddU,xk,h)**2,W*np.abs(detDF[ktr]))
+
+            ktr+=1
+
+        return data
+
     def ifposteriori(self,form,w,intorder=None):
         # evaluate norm on all interior facets
         find=np.nonzero(self.mesh.f2t[1,:]>0)[0]
@@ -226,10 +283,10 @@ class AssemblerGlobal(Assembler):
         # check and fix parameters of form
         oldparams=inspect.getargspec(form).args
         if 'u' in oldparams or 'du' in oldparams or 'ddu' in oldparams:
-            paramlist=['u','v','du','dv','ddu','ddv','x']
+            paramlist=['u','v','du','dv','ddu','ddv','h','x']
             bilinear=True
         else:
-            paramlist=['v','dv','ddv','x']
+            paramlist=['v','dv','ddv','h','x']
             bilinear=False
         fform=self.fillargs(form,paramlist)
 
@@ -261,6 +318,7 @@ class AssemblerGlobal(Assembler):
                 for itr in range(dim):
                     xk[itr]=x[itr][k,:]
 
+                h=np.abs(detDF[k])**(1.0/self.mesh.dim())
                 # basis function and derivatives in quadrature points
                 u,du,ddu=self.elem_u.gbasis(self.mesh,xk,k)
                 v,dv,ddv=self.elem_v.gbasis(self.mesh,xk,k)
@@ -270,7 +328,7 @@ class AssemblerGlobal(Assembler):
                     for itr in range(self.Nbfun_v):
                         data[ktr]=np.dot(fform(u[jtr],v[itr],
                                                du[jtr],dv[itr],
-                                               ddu[jtr],ddv[itr],xk),W*np.abs(detDF[k]))
+                                               ddu[jtr],ddv[itr],h,xk),W*np.abs(detDF[k]))
                         rows[ktr]=self.dofnum_v.t_dof[itr,k]
                         cols[ktr]=self.dofnum_u.t_dof[jtr,k]
                         ktr+=1
@@ -289,11 +347,12 @@ class AssemblerGlobal(Assembler):
                 for itr in range(dim):
                     xk[itr]=x[itr][k,:]
 
+                h=np.abs(detDF[k])**(1.0/self.mesh.dim())
                 v,dv,ddv=self.elem_v.gbasis(self.mesh,xk,k)
 
                 # assemble local load vector
                 for itr in range(self.Nbfun_v):
-                    data[ktr]=np.dot(fform(v[itr],dv[itr],ddv[itr],xk),W*np.abs(detDF[k]))
+                    data[ktr]=np.dot(fform(v[itr],dv[itr],ddv[itr],h,xk),W*np.abs(detDF[k]))
                     rows[ktr]=self.dofnum_v.t_dof[itr,k]
                     ktr+=1
             

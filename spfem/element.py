@@ -170,6 +170,56 @@ class ElementGlobal(Element):
 
         m.show()
 
+class ElementGlobalDGTriP0(ElementGlobal):
+    """A triangular constant DG element."""
+
+    dim=2
+    maxdeg=1
+    i_dofs=1
+
+    def gbasis(self,mesh,qps,k):
+        X=qps[0]
+        u=const_cell(np.ones(len(X)),1)
+        du=const_cell(np.zeros(len(X)),1,2)
+        ddu=const_cell(np.zeros(len(X)),1,2,2)
+        return u,du,ddu
+
+class ElementGlobalDGTriP1(ElementGlobal):
+    """A triangular first-order DG element."""
+
+    dim=2
+    maxdeg=1
+    i_dofs=3
+
+    def gbasis(self,mesh,qps,k):
+        X=qps[0]
+        Y=qps[1]
+        # solve local basis functions
+        N=3
+        V=np.zeros((N,N))
+
+        v1=mesh.p[:,mesh.t[0,k]]
+        v2=mesh.p[:,mesh.t[1,k]]
+        v3=mesh.p[:,mesh.t[2,k]]
+
+        # evaluate dofs
+        V[0,:]=self._pbasis1(v1)
+        V[1,:]=self._pbasis1(v2)
+        V[2,:]=self._pbasis1(v3)
+
+        Vinv=np.linalg.inv(V).T
+
+        u=const_cell(np.zeros(len(X)),N)
+        du=const_cell(np.zeros(len(X)),N,2)
+        ddu=const_cell(np.zeros(len(X)),N,2,2)
+        for itr in range(len(X)):
+            for jtr in range(N):
+                u[jtr][itr]=np.sum(Vinv[jtr,:]*self._pbasis1([X[itr],Y[itr]]))
+                du[jtr][0][itr]=np.sum(Vinv[jtr,:]*self._pbasis1dx())
+                du[jtr][1][itr]=np.sum(Vinv[jtr,:]*self._pbasis1dy())
+
+        return u,du,ddu
+
 class ElementGlobalDGTriP3(ElementGlobal):
     """A triangular third-order DG element."""
 
