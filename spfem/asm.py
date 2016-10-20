@@ -134,7 +134,7 @@ class AssemblerGlobal(Assembler):
             self.Nbfun_v=self.Nbfun_u
         else:
             self.elem_v=elem_v
-            self.donum_v=Dofnum(mesh,elem_v)
+            self.dofnum_v=Dofnum(mesh,elem_v)
             self.Nbfun_v=self.dofnum_v.t_dof.shape[0]
 
     def ifposteriori(self,form,w,intorder=None):
@@ -199,8 +199,8 @@ class AssemblerGlobal(Assembler):
             # interpolate basis functions and solution vector
             # at quadrature points
             for jtr in range(self.Nbfun_u):
-                ix1=self.dofnum.t_dof[jtr,t1]
-                ix2=self.dofnum.t_dof[jtr,t2]
+                ix1=self.dofnum_u.t_dof[jtr,t1]
+                ix2=self.dofnum_u.t_dof[jtr,t2]
                 U1+=w[ix1]*u1[jtr]
                 U2+=w[ix2]*u2[jtr]
                 for a in range(dim):

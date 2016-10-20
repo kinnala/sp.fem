@@ -9,6 +9,9 @@ import spfem.mapping as fmap
 import spfem.element as felem
 import matplotlib.pyplot as plt
 
+# TODO AssemblerGlobal: compute derivative of P1
+# through projection and compare to utils.gradient.
+
 class AssemblerGlobalP2Comparison(unittest.TestCase):
     """Build some matrices with AssemblerGlobal
     and AssemblerElement. Compare the results."""
