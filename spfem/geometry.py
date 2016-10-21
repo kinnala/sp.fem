@@ -199,7 +199,7 @@ class GeometryMeshPyTriangle(GeometryMeshPy):
         if holes is not None:
             self.info.set_holes(holes)
         if facets is None:
-            self.info.set_facets([(i,i+1) for i in range(0,len(points)-1)])
+            self.info.set_facets([(i,i+1) for i in range(0,len(points)-1)]+[(len(points)-1,0)])
         else:
             self.info.set_facets(facets)
 
