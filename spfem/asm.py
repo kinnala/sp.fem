@@ -247,25 +247,33 @@ class AssemblerGlobal(Assembler):
             u1,du1,ddu1=self.elem_u.gbasis(self.mesh,xk,t1)
             u2,du2,ddu2=self.elem_u.gbasis(self.mesh,xk,t2)
             
-            U1=0*u1[0]
-            U2=U1
-            dU1=const_cell(U1,dim)
-            dU2=const_cell(U1,dim)
-            ddU1=const_cell(U1,dim,dim)
-            ddU2=const_cell(U1,dim,dim)
+            U1={}
+            U2={}
+            dU1={}
+            dU2={}
+            ddU1={}
+            ddU2={}
             # interpolate basis functions and solution vector
             # at quadrature points
-            for jtr in range(self.Nbfun_u):
-                ix1=self.dofnum_u.t_dof[jtr,t1]
-                ix2=self.dofnum_u.t_dof[jtr,t2]
-                U1+=w[ix1]*u1[jtr]
-                U2+=w[ix2]*u2[jtr]
-                for a in range(dim):
-                    dU1[a]+=w[ix1]*du1[jtr][a]
-                    dU2[a]+=w[ix2]*du2[jtr][a]
-                    for b in range(dim):
-                        ddU1[a][b]+=w[ix1]*ddu1[jtr][a][b]
-                        ddU2[a][b]+=w[ix2]*ddu2[jtr][a][b]
+            for itr in w:
+                tmp=0*u1[0]
+                U1[itr]=tmp
+                U2[itr]=tmp
+                dU1[itr]=const_cell(tmp,dim)
+                dU2[itr]=const_cell(tmp,dim)
+                ddU1[itr]=const_cell(tmp,dim,dim)
+                ddU2[itr]=const_cell(tmp,dim,dim)
+                for jtr in range(self.Nbfun_u):
+                    ix1=self.dofnum_u.t_dof[jtr,t1]
+                    ix2=self.dofnum_u.t_dof[jtr,t2]
+                    U1[itr]+=w[itr][ix1]*u1[jtr]
+                    U2[itr]+=w[itr][ix2]*u2[jtr]
+                    for a in range(dim):
+                        dU1[itr][a]+=w[itr][ix1]*du1[jtr][a]
+                        dU2[itr][a]+=w[itr][ix2]*du2[jtr][a]
+                        for b in range(dim):
+                            ddU1[itr][a][b]+=w[itr][ix1]*ddu1[jtr][a][b]
+                            ddU2[itr][a][b]+=w[itr][ix2]*ddu2[jtr][a][b]
 
             # integrate over the facet
             data[k]+=np.dot(fform(U1,U2,dU1,dU2,ddU1,ddU2,xk,normal,tangent,h)**2,W*np.abs(detDG[ktr]))
