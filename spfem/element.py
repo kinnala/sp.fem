@@ -132,7 +132,7 @@ class ElementGlobal(Element):
             if debug:
                 print pbasis
 
-    def visualize_basis_2d(self,show_du=False,show_ddu=False):
+    def visualize_basis_2d(self,show_du=False,show_ddu=False,save_figures=False):
         """Draw the basis functions given by self.gbasis.
         Only for 2D triangular elements. For debugging purposes."""
         if self.dim!=2:
@@ -145,12 +145,14 @@ class ElementGlobal(Element):
         M=copy.deepcopy(m)
         m.refine(4)
         qps={}
-        qps[0]=np.array([m.p[0,:]])
-        qps[1]=np.array([m.p[1,:]])
+        qps[0]=m.p[0,:]
+        qps[1]=m.p[1,:]
         u,du,ddu=self.gbasis(M,qps,0)
 
         for itr in range(len(u)):
             m.plot3(u[itr])
+            if save_figures:
+                plt.savefig('bfun'+str(itr)+'.pdf')
 
         if show_du:
             for itr in range(len(u)):
@@ -168,7 +170,8 @@ class ElementGlobal(Element):
             for itr in range(len(u)):
                 m.plot3(ddu[itr][1][1])
 
-        m.show()
+        if not save_figures:
+            m.show()
 
 class ElementGlobalDGTriP0(ElementGlobal):
     """A triangular constant DG element."""
