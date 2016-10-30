@@ -41,10 +41,55 @@ class AbstractElement(object):
     f_dofs=0 #: Number of facet dofs (2d and 3d only)
     e_dofs=0 #: Number of edge dofs (3d only)
 
+    def _evaldofs(self,mesh):
+        N=len(self._pbasis)
+
+        V=np.zeros((mesh.t.shape[1],N,N))
+
+        # TODO if triangle
+        v1=mesh.p[:,mesh.t[0,:]]
+        v2=mesh.p[:,mesh.t[1,:]]
+        v3=mesh.p[:,mesh.t[2,:]]
+
+        e1=0.5*(v1+v2)
+        e2=0.5*(v2+v3)
+        e3=0.5*(v1+v3)
+
+        t1=v1-v2
+        t2=v2-v3
+        t3=v1-v3
+
+        n1=np.array([t1[1,:],-t1[0,:]])
+        n2=np.array([t2[1,:],-t2[0,:]])
+        n3=np.array([t3[1,:],-t3[0,:]])
+
+        n1/=np.linalg.norm(n1,axis=0)
+        n2/=np.linalg.norm(n2,axis=0)
+        n3/=np.linalg.norm(n3,axis=0)
+
+        dofvars={
+            'v1':v1,
+            'v2':v2,
+            'v3':v3,
+            'e1':e1,
+            'e2':e2,
+            'e3':e3,
+            'n1':n1,
+            'n2':n2,
+            'n3':n3,
+            }
+
+        # evaluate dofs
+        for itr in range(N):
+            for jtr in range(N):
+                V[:,jtr,itr]=self.gdof(dofvars,itr,jtr)
+
+        return V
+
     def evalbasis(self,mesh,qps):
         self._pbasisNinit(self.dim,self.maxdeg)
         N=len(self._pbasis)
-        V=self.evaldofs(mesh)
+        V=self._evaldofs(mesh)
         V=np.linalg.inv(V)
         u=const_cell(0*qps[0],N)
         du=const_cell(0*qps[0],N,self.dim)
@@ -99,43 +144,18 @@ class AbstractElementMorley(AbstractElement):
     dim=2
     maxdeg=2
 
-    def evaldofs(self,mesh):
-        V=np.zeros((mesh.t.shape[1],6,6))
-
-        v1=mesh.p[:,mesh.t[0,:]]
-        v2=mesh.p[:,mesh.t[1,:]]
-        v3=mesh.p[:,mesh.t[2,:]]
-
-        e1=0.5*(v1+v2)
-        e2=0.5*(v2+v3)
-        e3=0.5*(v1+v3)
-
-        t1=v1-v2
-        t2=v2-v3
-        t3=v1-v3
-
-        n1=np.array([t1[1,:],-t1[0,:]])
-        n2=np.array([t2[1,:],-t2[0,:]])
-        n3=np.array([t3[1,:],-t3[0,:]])
-
-        n1/=np.linalg.norm(n1,axis=0)
-        n2/=np.linalg.norm(n2,axis=0)
-        n3/=np.linalg.norm(n3,axis=0)
-
-        # evaluate dofs
-        for itr in range(6):
-            V[:,0,itr]=self._pbasis[itr](v1[0,:],v1[1,:])
-            V[:,1,itr]=self._pbasis[itr](v2[0,:],v2[1,:])
-            V[:,2,itr]=self._pbasis[itr](v3[0,:],v3[1,:])
-            V[:,3,itr]=self._pbasisdx[itr](e1[0,:],e1[1,:])*n1[0,:]+\
-                       self._pbasisdy[itr](e1[0,:],e1[1,:])*n1[1,:]
-            V[:,4,itr]=self._pbasisdx[itr](e2[0,:],e2[1,:])*n2[0,:]+\
-                       self._pbasisdy[itr](e2[0,:],e2[1,:])*n2[1,:]
-            V[:,5,itr]=self._pbasisdx[itr](e3[0,:],e3[1,:])*n3[0,:]+\
-                       self._pbasisdy[itr](e3[0,:],e3[1,:])*n3[1,:]
-
-        return V
-
+    def gdof(self,v,i,j):
+        return [
+            lambda:self._pbasis[i](v['v1'][0,:],v['v1'][1,:]),
+            lambda:self._pbasis[i](v['v2'][0,:],v['v2'][1,:]),
+            lambda:self._pbasis[i](v['v3'][0,:],v['v3'][1,:]),
+            lambda:self._pbasisdx[i](v['e1'][0,:],v['e1'][1,:])*v['n1'][0,:]+\
+                   self._pbasisdy[i](v['e1'][0,:],v['e1'][1,:])*v['n1'][1,:],
+            lambda:self._pbasisdx[i](v['e2'][0,:],v['e2'][1,:])*v['n2'][0,:]+\
+                   self._pbasisdy[i](v['e2'][0,:],v['e2'][1,:])*v['n2'][1,:],
+            lambda:self._pbasisdx[i](v['e3'][0,:],v['e3'][1,:])*v['n3'][0,:]+\
+                   self._pbasisdy[i](v['e3'][0,:],v['e3'][1,:])*v['n3'][1,:],
+            ][j]()
 
 class ElementGlobal(Element):
     """An element defined globally. These elements are used by :class:`spfem.asm.AssemblerGlobal`."""
