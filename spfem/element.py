@@ -30,6 +30,113 @@ class Element(object):
         """Returns global basis functions evaluated at some local points."""
         raise NotImplementedError("Element.gbasis: local basis (lbasis) not implemented!")
 
+class AbstractElement(object):
+    """This will replace ElementGlobal in the future."""
+
+    maxdeg=0 #: Maximum polynomial degree
+    dim=0 #: Spatial dimension
+
+    n_dofs=0 #: Number of nodal dofs
+    i_dofs=0 #: Number of interior dofs
+    f_dofs=0 #: Number of facet dofs (2d and 3d only)
+    e_dofs=0 #: Number of edge dofs (3d only)
+
+    def evalbasis(self,mesh,qps):
+        self._pbasisNinit(self.dim,self.maxdeg)
+        N=len(self._pbasis)
+        V=self.evaldofs(mesh)
+        V=np.linalg.inv(V)
+        u=const_cell(0*qps[0],N)
+        du=const_cell(0*qps[0],N,self.dim)
+        ddu=const_cell(0*qps[0],N,self.dim,self.dim)
+        # loop over new basis
+        for jtr in range(N):
+            # loop over power basis
+            for itr in range(N):
+                if self.dim==2:
+                    u[jtr]+=V[:,itr,jtr][:,None]*self._pbasis[itr](qps[0],qps[1])
+                    du[jtr][0]+=V[:,itr,jtr][:,None]*self._pbasisdx[itr](qps[0],qps[1])
+                    du[jtr][1]+=V[:,itr,jtr][:,None]*self._pbasisdy[itr](qps[0],qps[1])
+                    ddu[jtr][0][0]+=V[:,itr,jtr][:,None]*self._pbasisdxx[itr](qps[0],qps[1])
+                    ddu[jtr][0][1]+=V[:,itr,jtr][:,None]*self._pbasisdxy[itr](qps[0],qps[1])
+                    ddu[jtr][1][1]+=V[:,itr,jtr][:,None]*self._pbasisdyy[itr](qps[0],qps[1])
+                else:
+                    raise NotImplementedError("!")
+            ddu[jtr][1][0]=ddu[jtr][0][1]
+        return u,du,ddu
+
+    def _pbasisNinit(self,dim,N):
+        """Define power bases."""
+        if not hasattr(self,'_pbasis'+str(N)):
+            import sympy as sp
+            from sympy.abc import x,y,z
+            R=range(N+1)
+            ops={
+                '': lambda a:a,
+                'dx': lambda a:sp.diff(a,x),
+                'dy': lambda a:sp.diff(a,y),
+                'dxx': lambda a:sp.diff(a,x,2),
+                'dyy': lambda a:sp.diff(a,y,2),
+                'dxy': lambda a:sp.diff(sp.diff(a,x),y),
+            }
+            if dim==2:
+                for name,op in ops.iteritems():
+                    pbasis=[sp.lambdify((x,y),op(x**i*y**j),"numpy") for i in R for j in R if i+j<=N]
+                    # workaround for constant shape bug in SymPy
+                    for itr in range(len(pbasis)):
+                        const=pbasis[itr](np.zeros(2),np.zeros(2))
+                        if type(const) is int:
+                            pbasis[itr]=lambda X,Y,const=const:const*np.ones(X.shape)
+                    setattr(self,'_pbasis'+name,pbasis)
+            else:
+                raise NotImplementedError("The given dimension not implemented!")
+
+class AbstractElementMorley(AbstractElement):
+    """Morley element for fourth-order problems."""
+
+    n_dofs=1
+    f_dofs=1
+    dim=2
+    maxdeg=2
+
+    def evaldofs(self,mesh):
+        V=np.zeros((mesh.t.shape[1],6,6))
+
+        v1=mesh.p[:,mesh.t[0,:]]
+        v2=mesh.p[:,mesh.t[1,:]]
+        v3=mesh.p[:,mesh.t[2,:]]
+
+        e1=0.5*(v1+v2)
+        e2=0.5*(v2+v3)
+        e3=0.5*(v1+v3)
+
+        t1=v1-v2
+        t2=v2-v3
+        t3=v1-v3
+
+        n1=np.array([t1[1,:],-t1[0,:]])
+        n2=np.array([t2[1,:],-t2[0,:]])
+        n3=np.array([t3[1,:],-t3[0,:]])
+
+        n1/=np.linalg.norm(n1,axis=0)
+        n2/=np.linalg.norm(n2,axis=0)
+        n3/=np.linalg.norm(n3,axis=0)
+
+        # evaluate dofs
+        for itr in range(6):
+            V[:,0,itr]=self._pbasis[itr](v1[0,:],v1[1,:])
+            V[:,1,itr]=self._pbasis[itr](v2[0,:],v2[1,:])
+            V[:,2,itr]=self._pbasis[itr](v3[0,:],v3[1,:])
+            V[:,3,itr]=self._pbasisdx[itr](e1[0,:],e1[1,:])*n1[0,:]+\
+                       self._pbasisdy[itr](e1[0,:],e1[1,:])*n1[1,:]
+            V[:,4,itr]=self._pbasisdx[itr](e2[0,:],e2[1,:])*n2[0,:]+\
+                       self._pbasisdy[itr](e2[0,:],e2[1,:])*n2[1,:]
+            V[:,5,itr]=self._pbasisdx[itr](e3[0,:],e3[1,:])*n3[0,:]+\
+                       self._pbasisdy[itr](e3[0,:],e3[1,:])*n3[1,:]
+
+        return V
+
+
 class ElementGlobal(Element):
     """An element defined globally. These elements are used by :class:`spfem.asm.AssemblerGlobal`."""
 
