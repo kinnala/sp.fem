@@ -17,7 +17,7 @@ from spfem.utils import direct
 m = MeshTri()
 m.refine(6)
 
-a = AssemblerElement(m,ElementTriP1())
+a = AssemblerElement(m, ElementTriP1())
 
 A = a.iasm(lambda du, dv: du[0]*dv[0] + du[1]*dv[1])
 b = a.iasm(lambda v: 1.0*v)
