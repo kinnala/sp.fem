@@ -124,11 +124,12 @@ class AssemblerAbstract(Assembler):
             self.intorder=self.elem_u.maxdeg+self.elem_v.maxdeg
         else:
             self.intorder=intorder
+
         # quadrature points and weights
         X,_=get_quadrature(self.mesh.refdom,self.intorder)
         # global quadrature points
         x=self.mapping.F(X,range(self.mesh.t.shape[1]))
-        # compute basis functions
+        # pre-compute basis functions at quadrature points
         self.u,self.du,self.ddu=self.elem_u.evalbasis(self.mesh,x)
 
         if elem_v is None:
@@ -214,90 +215,6 @@ class AssemblerAbstract(Assembler):
                 cols[ixs]=np.zeros(nt)
         
             return coo_matrix((data,(rows,cols)),shape=(self.dofnum_v.N,1)).toarray().T[0]
-
-#   def iasm(self,form,intorder=None,tind=None):
-#       nt=self.mesh.t.shape[1]
-#       if tind is None:
-#           # by default, all elements
-#           tind=np.arange(nt)
-
-#       # check and fix parameters of form
-#       oldparams=inspect.getargspec(form).args
-#       if 'u' in oldparams or 'du' in oldparams or 'ddu' in oldparams:
-#           paramlist=['u','v','du','dv','ddu','ddv','h','x']
-#           bilinear=True
-#       else:
-#           paramlist=['v','dv','ddv','h','x']
-#           bilinear=False
-#       fform=self.fillargs(form,paramlist)
-
-#       if intorder is None:
-#           # compute the maximum polynomial degree from elements
-#           intorder=self.elem_u.maxdeg+self.elem_v.maxdeg
-
-#       # quadrature points and weights
-#       X,W=get_quadrature(self.mesh.refdom,intorder)
-
-#       x=self.mapping.F(X,tind)
-
-#       # jacobian at quadrature points
-#       detDF=self.mapping.detDF(X,tind)
-
-#       # loop over elements and do assembly
-#       dim=self.mesh.p.shape[0]
-#       ktr=0
-
-#       if bilinear:
-#           # initialize sparse matrix
-#           data=np.zeros(tind.shape[0]*self.Nbfun_u*self.Nbfun_v)
-#           rows=np.zeros(tind.shape[0]*self.Nbfun_u*self.Nbfun_v)
-#           cols=np.zeros(tind.shape[0]*self.Nbfun_u*self.Nbfun_v)
-
-#           for k in tind:
-#               # quadrature points in current element
-#               xk={}
-#               for itr in range(dim):
-#                   xk[itr]=x[itr][k,:]
-
-#               h=np.abs(detDF[k])**(1.0/self.mesh.dim())
-#               # basis function and derivatives in quadrature points
-#               u,du,ddu=self.elem_u.gbasis(self.mesh,xk,k)
-#               v,dv,ddv=self.elem_v.gbasis(self.mesh,xk,k)
-
-#               # assemble local stiffness matrix
-#               for jtr in range(self.Nbfun_u):
-#                   for itr in range(self.Nbfun_v):
-#                       data[ktr]=np.dot(fform(u[jtr],v[itr],
-#                                              du[jtr],dv[itr],
-#                                              ddu[jtr],ddv[itr],h,xk),W*np.abs(detDF[k]))
-#                       rows[ktr]=self.dofnum_v.t_dof[itr,k]
-#                       cols[ktr]=self.dofnum_u.t_dof[jtr,k]
-#                       ktr+=1
-
-#           return coo_matrix((data,(rows,cols)),shape=(self.dofnum_v.N,self.dofnum_u.N)).tocsr()
-
-#       else:
-#           # initialize sparse matrix structures
-#           data=np.zeros(tind.shape[0]*self.Nbfun_v)
-#           rows=np.zeros(tind.shape[0]*self.Nbfun_v)
-#           cols=np.zeros(tind.shape[0]*self.Nbfun_v)
-
-#           for k in tind:
-#               # quadrature points in current element
-#               xk={}
-#               for itr in range(dim):
-#                   xk[itr]=x[itr][k,:]
-
-#               h=np.abs(detDF[k])**(1.0/self.mesh.dim())
-#               v,dv,ddv=self.elem_v.gbasis(self.mesh,xk,k)
-
-#               # assemble local load vector
-#               for itr in range(self.Nbfun_v):
-#                   data[ktr]=np.dot(fform(v[itr],dv[itr],ddv[itr],h,xk),W*np.abs(detDF[k]))
-#                   rows[ktr]=self.dofnum_v.t_dof[itr,k]
-#                   ktr+=1
-#           
-#           return coo_matrix((data,(rows,cols)),shape=(self.dofnum_v.N,1)).toarray().T[0]
 
 class AssemblerGlobal(Assembler):
     """An assembler for globally defined elements,
