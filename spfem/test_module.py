@@ -781,3 +781,44 @@ class TestArgyris(unittest.TestCase):
             m.plot3(uexfun(m.p[0,:],m.p[1,:]))
             m.show()
 
+class TestAbstractMorley(unittest.TestCase):
+    """Solve biharmonic problem with Morley elements."""
+    def runTest(self,verbose=False):
+        m=fmsh.MeshTri()
+        m.refine(7)
+
+        e=felem.AbstractElementMorley()
+        a=fasm.AssemblerAbstract(m,e)
+
+        A=a.iasm(lambda ddu,ddv: ddu[0][0]*ddv[0][0]+ddu[1][0]*ddv[1][0]+
+                                 ddu[0][1]*ddv[0][1]+ddu[1][1]*ddv[1][1])
+
+        # construct a loading that corresponds to the analytical solution uex
+        import sympy as sp
+        from sympy.abc import x,y,z
+        uex=(sp.sin(sp.pi*x)*sp.sin(sp.pi*y))**2
+        uexfun=sp.lambdify((x,y),uex,"numpy")
+        load=sp.diff(uex,x,4)+sp.diff(uex,y,4)+2*sp.diff(sp.diff(uex,x,2),y,2)
+        loadfun=sp.lambdify((x,y),load,"numpy")
+        def F(x):
+            return loadfun(x[0],x[1])
+
+        f=a.iasm(lambda v,x: F(x)*v)
+
+        D=a.dofnum_u.getdofs(N=m.boundary_nodes(),F=m.boundary_facets())
+        I=np.setdiff1d(np.arange(a.dofnum_u.N),D)
+
+        x=futil.direct(A,f,I=I)
+
+        Linferror=np.max(np.abs(x[a.dofnum_u.n_dof[0,:]]-uexfun(m.p[0,:],m.p[1,:])))
+
+        self.assertTrue(Linferror<=1e-3)
+
+        # TODO convergence rates not checked
+
+        if verbose:
+            print np.max(np.abs(x[a.dofnum_u.n_dof[0,:]]-uexfun(m.p[0,:],m.p[1,:])))
+            m.plot3(x[a.dofnum_u.n_dof[0,:]])
+            m.plot3(uexfun(m.p[0,:],m.p[1,:]))
+            m.show()
+

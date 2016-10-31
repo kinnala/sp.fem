@@ -30,6 +30,133 @@ class Element(object):
         """Returns global basis functions evaluated at some local points."""
         raise NotImplementedError("Element.gbasis: local basis (lbasis) not implemented!")
 
+class AbstractElement(object):
+    """This will replace ElementGlobal in the future."""
+
+    maxdeg=0 #: Maximum polynomial degree
+    dim=0 #: Spatial dimension
+
+    n_dofs=0 #: Number of nodal dofs
+    i_dofs=0 #: Number of interior dofs
+    f_dofs=0 #: Number of facet dofs (2d and 3d only)
+    e_dofs=0 #: Number of edge dofs (3d only)
+
+    def _evaldofs(self,mesh):
+        N=len(self._pbasis)
+
+        V=np.zeros((mesh.t.shape[1],N,N))
+
+        # TODO if triangle
+        v1=mesh.p[:,mesh.t[0,:]]
+        v2=mesh.p[:,mesh.t[1,:]]
+        v3=mesh.p[:,mesh.t[2,:]]
+
+        e1=0.5*(v1+v2)
+        e2=0.5*(v2+v3)
+        e3=0.5*(v1+v3)
+
+        t1=v1-v2
+        t2=v2-v3
+        t3=v1-v3
+
+        n1=np.array([t1[1,:],-t1[0,:]])
+        n2=np.array([t2[1,:],-t2[0,:]])
+        n3=np.array([t3[1,:],-t3[0,:]])
+
+        n1/=np.linalg.norm(n1,axis=0)
+        n2/=np.linalg.norm(n2,axis=0)
+        n3/=np.linalg.norm(n3,axis=0)
+
+        dofvars={
+            'v1':v1,
+            'v2':v2,
+            'v3':v3,
+            'e1':e1,
+            'e2':e2,
+            'e3':e3,
+            'n1':n1,
+            'n2':n2,
+            'n3':n3,
+            }
+
+        # evaluate dofs
+        for itr in range(N):
+            for jtr in range(N):
+                V[:,jtr,itr]=self.gdof(dofvars,itr,jtr)
+
+        return V
+
+    def evalbasis(self,mesh,qps):
+        self._pbasisNinit(self.dim,self.maxdeg)
+        N=len(self._pbasis)
+        V=self._evaldofs(mesh)
+        V=np.linalg.inv(V)
+        u=const_cell(0*qps[0],N)
+        du=const_cell(0*qps[0],N,self.dim)
+        ddu=const_cell(0*qps[0],N,self.dim,self.dim)
+        # loop over new basis
+        for jtr in range(N):
+            # loop over power basis
+            for itr in range(N):
+                if self.dim==2:
+                    u[jtr]+=V[:,itr,jtr][:,None]*self._pbasis[itr](qps[0],qps[1])
+                    du[jtr][0]+=V[:,itr,jtr][:,None]*self._pbasisdx[itr](qps[0],qps[1])
+                    du[jtr][1]+=V[:,itr,jtr][:,None]*self._pbasisdy[itr](qps[0],qps[1])
+                    ddu[jtr][0][0]+=V[:,itr,jtr][:,None]*self._pbasisdxx[itr](qps[0],qps[1])
+                    ddu[jtr][0][1]+=V[:,itr,jtr][:,None]*self._pbasisdxy[itr](qps[0],qps[1])
+                    ddu[jtr][1][1]+=V[:,itr,jtr][:,None]*self._pbasisdyy[itr](qps[0],qps[1])
+                else:
+                    raise NotImplementedError("!")
+            ddu[jtr][1][0]=ddu[jtr][0][1]
+        return u,du,ddu
+
+    def _pbasisNinit(self,dim,N):
+        """Define power bases."""
+        if not hasattr(self,'_pbasis'+str(N)):
+            import sympy as sp
+            from sympy.abc import x,y,z
+            R=range(N+1)
+            ops={
+                '': lambda a:a,
+                'dx': lambda a:sp.diff(a,x),
+                'dy': lambda a:sp.diff(a,y),
+                'dxx': lambda a:sp.diff(a,x,2),
+                'dyy': lambda a:sp.diff(a,y,2),
+                'dxy': lambda a:sp.diff(sp.diff(a,x),y),
+            }
+            if dim==2:
+                for name,op in ops.iteritems():
+                    pbasis=[sp.lambdify((x,y),op(x**i*y**j),"numpy") for i in R for j in R if i+j<=N]
+                    # workaround for constant shape bug in SymPy
+                    for itr in range(len(pbasis)):
+                        const=pbasis[itr](np.zeros(2),np.zeros(2))
+                        if type(const) is int:
+                            pbasis[itr]=lambda X,Y,const=const:const*np.ones(X.shape)
+                    setattr(self,'_pbasis'+name,pbasis)
+            else:
+                raise NotImplementedError("The given dimension not implemented!")
+
+class AbstractElementMorley(AbstractElement):
+    """Morley element for fourth-order problems."""
+
+    n_dofs=1
+    f_dofs=1
+    dim=2
+    maxdeg=2
+
+    def gdof(self,v,i,j):
+        return [
+            lambda:self._pbasis[i](v['v1'][0,:],v['v1'][1,:]),
+            lambda:self._pbasis[i](v['v2'][0,:],v['v2'][1,:]),
+            lambda:self._pbasis[i](v['v3'][0,:],v['v3'][1,:]),
+            lambda:self._pbasisdx[i](v['e1'][0,:],v['e1'][1,:])*v['n1'][0,:]+\
+                   self._pbasisdy[i](v['e1'][0,:],v['e1'][1,:])*v['n1'][1,:],
+            lambda:self._pbasisdx[i](v['e2'][0,:],v['e2'][1,:])*v['n2'][0,:]+\
+                   self._pbasisdy[i](v['e2'][0,:],v['e2'][1,:])*v['n2'][1,:],
+            lambda:self._pbasisdx[i](v['e3'][0,:],v['e3'][1,:])*v['n3'][0,:]+\
+                   self._pbasisdy[i](v['e3'][0,:],v['e3'][1,:])*v['n3'][1,:],
+            ][j]()
+
 class ElementGlobal(Element):
     """An element defined globally. These elements are used by :class:`spfem.asm.AssemblerGlobal`."""
 

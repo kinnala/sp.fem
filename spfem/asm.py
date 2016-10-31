@@ -94,6 +94,211 @@ class Assembler:
 
         return newform
 
+class AssemblerAbstract(Assembler):
+    def __init__(self,mesh,elem_u,elem_v=None,intorder=None):
+        if not isinstance(mesh,spfem.mesh.Mesh):
+            raise Exception("First parameter must be an instance of spfem.mesh.Mesh.")
+        if not isinstance(elem_u,spfem.element.AbstractElement):
+            raise Exception("Second parameter must be an instance of spfem.element.AbstractElement.")
+        if elem_v is not None and not isinstance(elem_v,spfem.element.AbstractElement):
+            raise Exception("Third parameter must be an instance of spfem.element.AbstractElement.")
+
+        self.mesh=mesh
+        self.elem_u=elem_u
+        self.dofnum_u=Dofnum(mesh,elem_u)
+        self.mapping=mesh.mapping()
+        self.Nbfun_u=self.dofnum_u.t_dof.shape[0]
+
+        # duplicate test function element type if None is given
+        if elem_v is None:
+            self.elem_v=elem_u
+            self.dofnum_v=self.dofnum_u
+            self.Nbfun_v=self.Nbfun_u
+        else:
+            self.elem_v=elem_v
+            self.dofnum_v=Dofnum(mesh,elem_v)
+            self.Nbfun_v=self.dofnum_v.t_dof.shape[0]
+
+        if intorder is None:
+            # compute the maximum polynomial degree from elements
+            self.intorder=self.elem_u.maxdeg+self.elem_v.maxdeg
+        else:
+            self.intorder=intorder
+        # quadrature points and weights
+        X,_=get_quadrature(self.mesh.refdom,self.intorder)
+        # global quadrature points
+        x=self.mapping.F(X,range(self.mesh.t.shape[1]))
+        # compute basis functions
+        self.u,self.du,self.ddu=self.elem_u.evalbasis(self.mesh,x)
+
+        if elem_v is None:
+            self.v=self.u
+            self.dv=self.du
+            self.ddv=self.ddu
+        else:
+            self.v,self.dv,self.ddv=self.elem_v.evalbasis(self.mesh,x)
+
+    def iasm(self,form,tind=None,interp=None):
+        if tind is None:
+            # assemble on all elements by default
+            tind=range(self.mesh.t.shape[1])
+        nt=len(tind)
+        
+        # check and fix parameters of form
+        oldparams=inspect.getargspec(form).args
+        if 'u' in oldparams or 'du' in oldparams or 'ddu' in oldparams:
+            paramlist=['u','v','du','dv','ddu','ddv','x','w','h']
+            bilinear=True
+        else:
+            paramlist=['v','dv','ddv','x','w','h']
+            bilinear=False
+        fform=self.fillargs(form,paramlist)
+        
+        # quadrature points and weights
+        X,W=get_quadrature(self.mesh.refdom,self.intorder)
+
+        # global quadrature points
+        x=self.mapping.F(X,tind)
+
+        # jacobian at quadrature points
+        detDF=self.mapping.detDF(X,tind)
+        
+        Nbfun_u=self.dofnum_u.t_dof.shape[0]
+        Nbfun_v=self.dofnum_v.t_dof.shape[0]  
+
+        # interpolate some previous discrete function at quadrature points
+        w={}
+        if interp is not None:
+            # TODO this does not work
+            for k in interp:
+                w[k]=0.0*x[0]
+                for j in range(Nbfun_u):
+                    phi,_=self.elem_u.lbasis(X,j)
+                    w[k]=w[k]+np.outer(interp[k][self.dofnum_u.t_dof[j,:]],phi)
+
+        # compute the mesh parameter from jacobian determinant
+        h=np.abs(detDF)**(1.0/self.mesh.dim())
+
+        # bilinear form
+        if bilinear:
+            # initialize sparse matrix structures
+            data=np.zeros(Nbfun_u*Nbfun_v*nt)
+            rows=np.zeros(Nbfun_u*Nbfun_v*nt)
+            cols=np.zeros(Nbfun_u*Nbfun_v*nt)
+        
+            for j in range(Nbfun_u):
+                for i in range(Nbfun_v):
+                    # find correct location in data,rows,cols
+                    ixs=slice(nt*(Nbfun_v*j+i),nt*(Nbfun_v*j+i+1))
+                    
+                    # compute entries of local stiffness matrices
+                    data[ixs]=np.dot(fform(self.u[j],self.v[i],self.du[j],self.dv[i],self.ddu[j],self.ddv[i],x,w,h)*np.abs(detDF),W)
+                    rows[ixs]=self.dofnum_v.t_dof[i,tind]
+                    cols[ixs]=self.dofnum_u.t_dof[j,tind]
+        
+            return coo_matrix((data,(rows,cols)),shape=(self.dofnum_v.N,self.dofnum_u.N)).tocsr()
+            
+        else:
+            # initialize sparse matrix structures
+            data=np.zeros(Nbfun_v*nt)
+            rows=np.zeros(Nbfun_v*nt)
+            cols=np.zeros(Nbfun_v*nt)
+            
+            for i in range(Nbfun_v):
+                # find correct location in data,rows,cols
+                ixs=slice(nt*i,nt*(i+1))
+                
+                # compute entries of local stiffness matrices
+                data[ixs]=np.dot(fform(self.v[i],self.dv[i],self.ddv[i],x,w,h)*np.abs(detDF),W)
+                rows[ixs]=self.dofnum_v.t_dof[i,:]
+                cols[ixs]=np.zeros(nt)
+        
+            return coo_matrix((data,(rows,cols)),shape=(self.dofnum_v.N,1)).toarray().T[0]
+
+#   def iasm(self,form,intorder=None,tind=None):
+#       nt=self.mesh.t.shape[1]
+#       if tind is None:
+#           # by default, all elements
+#           tind=np.arange(nt)
+
+#       # check and fix parameters of form
+#       oldparams=inspect.getargspec(form).args
+#       if 'u' in oldparams or 'du' in oldparams or 'ddu' in oldparams:
+#           paramlist=['u','v','du','dv','ddu','ddv','h','x']
+#           bilinear=True
+#       else:
+#           paramlist=['v','dv','ddv','h','x']
+#           bilinear=False
+#       fform=self.fillargs(form,paramlist)
+
+#       if intorder is None:
+#           # compute the maximum polynomial degree from elements
+#           intorder=self.elem_u.maxdeg+self.elem_v.maxdeg
+
+#       # quadrature points and weights
+#       X,W=get_quadrature(self.mesh.refdom,intorder)
+
+#       x=self.mapping.F(X,tind)
+
+#       # jacobian at quadrature points
+#       detDF=self.mapping.detDF(X,tind)
+
+#       # loop over elements and do assembly
+#       dim=self.mesh.p.shape[0]
+#       ktr=0
+
+#       if bilinear:
+#           # initialize sparse matrix
+#           data=np.zeros(tind.shape[0]*self.Nbfun_u*self.Nbfun_v)
+#           rows=np.zeros(tind.shape[0]*self.Nbfun_u*self.Nbfun_v)
+#           cols=np.zeros(tind.shape[0]*self.Nbfun_u*self.Nbfun_v)
+
+#           for k in tind:
+#               # quadrature points in current element
+#               xk={}
+#               for itr in range(dim):
+#                   xk[itr]=x[itr][k,:]
+
+#               h=np.abs(detDF[k])**(1.0/self.mesh.dim())
+#               # basis function and derivatives in quadrature points
+#               u,du,ddu=self.elem_u.gbasis(self.mesh,xk,k)
+#               v,dv,ddv=self.elem_v.gbasis(self.mesh,xk,k)
+
+#               # assemble local stiffness matrix
+#               for jtr in range(self.Nbfun_u):
+#                   for itr in range(self.Nbfun_v):
+#                       data[ktr]=np.dot(fform(u[jtr],v[itr],
+#                                              du[jtr],dv[itr],
+#                                              ddu[jtr],ddv[itr],h,xk),W*np.abs(detDF[k]))
+#                       rows[ktr]=self.dofnum_v.t_dof[itr,k]
+#                       cols[ktr]=self.dofnum_u.t_dof[jtr,k]
+#                       ktr+=1
+
+#           return coo_matrix((data,(rows,cols)),shape=(self.dofnum_v.N,self.dofnum_u.N)).tocsr()
+
+#       else:
+#           # initialize sparse matrix structures
+#           data=np.zeros(tind.shape[0]*self.Nbfun_v)
+#           rows=np.zeros(tind.shape[0]*self.Nbfun_v)
+#           cols=np.zeros(tind.shape[0]*self.Nbfun_v)
+
+#           for k in tind:
+#               # quadrature points in current element
+#               xk={}
+#               for itr in range(dim):
+#                   xk[itr]=x[itr][k,:]
+
+#               h=np.abs(detDF[k])**(1.0/self.mesh.dim())
+#               v,dv,ddv=self.elem_v.gbasis(self.mesh,xk,k)
+
+#               # assemble local load vector
+#               for itr in range(self.Nbfun_v):
+#                   data[ktr]=np.dot(fform(v[itr],dv[itr],ddv[itr],h,xk),W*np.abs(detDF[k]))
+#                   rows[ktr]=self.dofnum_v.t_dof[itr,k]
+#                   ktr+=1
+#           
+#           return coo_matrix((data,(rows,cols)),shape=(self.dofnum_v.N,1)).toarray().T[0]
+
 class AssemblerGlobal(Assembler):
     """An assembler for globally defined elements,
     cf. :class:`spfem.element.ElementGlobal`.
