@@ -139,25 +139,65 @@ class AbstractElement(object):
 class AbstractElementMorley(AbstractElement):
     """Morley element for fourth-order problems."""
 
-    n_dofs=1
-    f_dofs=1
-    dim=2
-    maxdeg=2
+    n_dofs = 1
+    f_dofs = 1
+    dim = 2
+    maxdeg = 2
 
-    def gdof(self,v,i,j):
+    def gdof(self, v, i, j):
         return [
-            lambda:self._pbasis[i](v['v1'][0,:],v['v1'][1,:]),
-            lambda:self._pbasis[i](v['v2'][0,:],v['v2'][1,:]),
-            lambda:self._pbasis[i](v['v3'][0,:],v['v3'][1,:]),
-            lambda:self._pbasisdx[i](v['e1'][0,:],v['e1'][1,:])*v['n1'][0,:]+\
-                   self._pbasisdy[i](v['e1'][0,:],v['e1'][1,:])*v['n1'][1,:],
-            lambda:self._pbasisdx[i](v['e2'][0,:],v['e2'][1,:])*v['n2'][0,:]+\
-                   self._pbasisdy[i](v['e2'][0,:],v['e2'][1,:])*v['n2'][1,:],
-            lambda:self._pbasisdx[i](v['e3'][0,:],v['e3'][1,:])*v['n3'][0,:]+\
-                   self._pbasisdy[i](v['e3'][0,:],v['e3'][1,:])*v['n3'][1,:],
+            lambda: self._pbasis[i](v['v1'][0, :], v['v1'][1, :]),
+            lambda: self._pbasis[i](v['v2'][0, :], v['v2'][1, :]),
+            lambda: self._pbasis[i](v['v3'][0, :], v['v3'][1, :]),
+            lambda: self._pbasisdx[i](v['e1'][0, :], v['e1'][1, :])*v['n1'][0, :]
+                  + self._pbasisdy[i](v['e1'][0, :], v['e1'][1, :])*v['n1'][1, :],
+            lambda: self._pbasisdx[i](v['e2'][0, :], v['e2'][1, :])*v['n2'][0, :]
+                  + self._pbasisdy[i](v['e2'][0, :], v['e2'][1, :])*v['n2'][1, :],
+            lambda: self._pbasisdx[i](v['e3'][0, :], v['e3'][1, :])*v['n3'][0, :]
+                  + self._pbasisdy[i](v['e3'][0, :], v['e3'][1, :])*v['n3'][1, :],
             ][j]()
 
 
+class AbstractElementArgyris(AbstractElement):
+    """Argyris element for fourth-order problems."""
+
+    n_dofs = 6
+    f_dofs = 1
+    dim = 2
+    maxdeg = 5
+
+    def gdof(self,v,i,j):
+        return [
+                # vertex 1
+                lambda: self._pbasis[i](v['v1'][0, :], v['v1'][1, :]),
+                lambda: self._pbasisdx[i](v['v1'][0, :], v['v1'][1, :]),
+                lambda: self._pbasisdy[i](v['v1'][0, :], v['v1'][1, :]),
+                lambda: self._pbasisdxx[i](v['v1'][0, :], v['v1'][1, :]),
+                lambda: self._pbasisdxy[i](v['v1'][0, :], v['v1'][1, :]),
+                lambda: self._pbasisdyy[i](v['v1'][0, :], v['v1'][1, :]),
+                # vertex 2
+                lambda: self._pbasis[i](v['v2'][0, :], v['v2'][1, :]),
+                lambda: self._pbasisdx[i](v['v2'][0, :], v['v2'][1, :]),
+                lambda: self._pbasisdy[i](v['v2'][0, :], v['v2'][1, :]),
+                lambda: self._pbasisdxx[i](v['v2'][0, :], v['v2'][1, :]),
+                lambda: self._pbasisdxy[i](v['v2'][0, :], v['v2'][1, :]),
+                lambda: self._pbasisdyy[i](v['v2'][0, :], v['v2'][1, :]),
+                # vertex 3
+                lambda: self._pbasis[i](v['v3'][0, :], v['v3'][1, :]),
+                lambda: self._pbasisdx[i](v['v3'][0, :], v['v3'][1, :]),
+                lambda: self._pbasisdy[i](v['v3'][0, :], v['v3'][1, :]),
+                lambda: self._pbasisdxx[i](v['v3'][0, :], v['v3'][1, :]),
+                lambda: self._pbasisdxy[i](v['v3'][0, :], v['v3'][1, :]),
+                lambda: self._pbasisdyy[i](v['v3'][0, :], v['v3'][1, :]),
+                # edges in the order 1,2,3
+                lambda: self._pbasisdx[i](v['e1'][0, :], v['e1'][1, :])*v['n1'][0, :]
+                      + self._pbasisdy[i](v['e1'][0, :], v['e1'][1, :])*v['n1'][1, :],
+                lambda: self._pbasisdx[i](v['e2'][0, :], v['e2'][1, :])*v['n2'][0, :]
+                      + self._pbasisdy[i](v['e2'][0, :], v['e2'][1, :])*v['n2'][1, :],
+                lambda: self._pbasisdx[i](v['e3'][0, :], v['e3'][1, :])*v['n3'][0, :]
+                      + self._pbasisdy[i](v['e3'][0, :], v['e3'][1, :])*v['n3'][1, :],
+               ][j]()
+                
 
 class ElementHdiv(Element):
     """Abstract :math:`H_{div}` conforming finite element."""

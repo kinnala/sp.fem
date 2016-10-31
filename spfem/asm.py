@@ -225,7 +225,7 @@ class AssemblerAbstract(Assembler):
             for j in range(Nbfun_u):
                 for i in range(Nbfun_v):
                     # find correct location in data,rows,cols
-                    ixs = slice(nt*(Nbfun_v*j+i), nt*(Nbfun_v*j+i+1))
+                    ixs = slice(nt*(Nbfun_v*j + i), nt*(Nbfun_v*j + i + 1))
                     
                     # compute entries of local stiffness matrices
                     data[ixs] = np.dot(fform(self.u[j], self.v[i],
@@ -246,7 +246,7 @@ class AssemblerAbstract(Assembler):
             
             for i in range(Nbfun_v):
                 # find correct location in data,rows,cols
-                ixs = slice(nt*i, nt*(i+1))
+                ixs = slice(nt*i, nt*(i + 1))
                 
                 # compute entries of local stiffness matrices
                 data[ixs] = np.dot(fform(self.v[i], self.dv[i], self.ddv[i],
