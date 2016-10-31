@@ -14,42 +14,44 @@ from spfem.utils import const_cell
 class Element(object):
     """Abstract finite element class."""
 
-    maxdeg=0 #: Maximum polynomial degree
-    dim=0 #: Spatial dimension
+    maxdeg = 0 #: Maximum polynomial degree
+    dim = 0 #: Spatial dimension
 
-    n_dofs=0 #: Number of nodal dofs
-    i_dofs=0 #: Number of interior dofs
-    f_dofs=0 #: Number of facet dofs (2d and 3d only)
-    e_dofs=0 #: Number of edge dofs (3d only)
+    n_dofs = 0 #: Number of nodal dofs
+    i_dofs = 0 #: Number of interior dofs
+    f_dofs = 0 #: Number of facet dofs (2d and 3d only)
+    e_dofs = 0 #: Number of edge dofs (3d only)
 
-    def lbasis(self,X,i):
+    def lbasis(self, X, i):
         """Returns local basis functions evaluated at some local points."""
-        raise NotImplementedError("Element.lbasis: local basis (lbasis) not implemented!")
+        raise NotImplementedError("Local basis (lbasis) not implemented!")
 
     def gbasis(self,X,i,tind):
         """Returns global basis functions evaluated at some local points."""
-        raise NotImplementedError("Element.gbasis: local basis (lbasis) not implemented!")
+        raise NotImplementedError("Global basis (gbasis) not implemented!")
 
 class AbstractElement(object):
     """This will replace ElementGlobal in the future."""
 
-    maxdeg=0 #: Maximum polynomial degree
-    dim=0 #: Spatial dimension
+    maxdeg = 0 #: Maximum polynomial degree
+    dim = 0 #: Spatial dimension
 
-    n_dofs=0 #: Number of nodal dofs
-    i_dofs=0 #: Number of interior dofs
-    f_dofs=0 #: Number of facet dofs (2d and 3d only)
-    e_dofs=0 #: Number of edge dofs (3d only)
+    n_dofs = 0 #: Number of nodal dofs
+    i_dofs = 0 #: Number of interior dofs
+    f_dofs = 0 #: Number of facet dofs (2d and 3d only)
+    e_dofs = 0 #: Number of edge dofs (3d only)
 
-    def _evaldofs(self,mesh):
+    def _evaldofs(self, mesh, tind=None):
+        if tind is None:
+            tind = np.arange(mesh.t.shape[1])
         N=len(self._pbasis)
 
-        V=np.zeros((mesh.t.shape[1],N,N))
+        V=np.zeros((len(tind),N,N))
 
         # TODO if triangle
-        v1=mesh.p[:,mesh.t[0,:]]
-        v2=mesh.p[:,mesh.t[1,:]]
-        v3=mesh.p[:,mesh.t[2,:]]
+        v1=mesh.p[:,mesh.t[0,tind]]
+        v2=mesh.p[:,mesh.t[1,tind]]
+        v3=mesh.p[:,mesh.t[2,tind]]
 
         e1=0.5*(v1+v2)
         e2=0.5*(v2+v3)
@@ -86,14 +88,14 @@ class AbstractElement(object):
 
         return V
 
-    def evalbasis(self,mesh,qps):
+    def evalbasis(self, mesh, qps, tind=None):
         self._pbasisNinit(self.dim,self.maxdeg)
-        N=len(self._pbasis)
-        V=self._evaldofs(mesh)
-        V=np.linalg.inv(V)
-        u=const_cell(0*qps[0],N)
-        du=const_cell(0*qps[0],N,self.dim)
-        ddu=const_cell(0*qps[0],N,self.dim,self.dim)
+        N = len(self._pbasis)
+        V = self._evaldofs(mesh, tind=tind)
+        V = np.linalg.inv(V)
+        u = const_cell(0*qps[0],N)
+        du = const_cell(0*qps[0],N,self.dim)
+        ddu = const_cell(0*qps[0],N,self.dim,self.dim)
         # loop over new basis
         for jtr in range(N):
             # loop over power basis

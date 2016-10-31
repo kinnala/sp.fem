@@ -199,22 +199,23 @@ class AssemblerAbstract(Assembler):
         # jacobian at quadrature points
         detDF = self.mapping.detDF(X, tind)
         
-        Nbfun_u = self.dofnum_u.t_dof.shape[0]
-        Nbfun_v = self.dofnum_v.t_dof.shape[0]  
+        Nbfun_u = self.Nbfun_u
+        Nbfun_v = self.Nbfun_v
 
         # interpolate some previous discrete function at quadrature points
         w={}
         if interp is not None:
             if not isinstance(interp,dict):
-                raise Exception("The input solution vector(s) must be in a dictionary! "
-                                "Pass e.g. {0:u} instead of u.")
+                raise Exception("The input solution vector(s) must be in a "
+                                "dictionary! Pass e.g. {0:u} instead of u.")
             # interpolate the solution vectors at quadrature points
             zero = 0.0*x[0]
             w = {}
             for k in interp:
                 w[k] = zero
                 for j in range(self.Nbfun_u):
-                    w[k] += interp[k][self.dofnum_u.t_dof[j, :]][:, None]*self.u[j]
+                    jdofs = self.dofnum_u.t_dof[j, :]
+                    w[k] += interp[k][jdofs][:, None]*self.u[j]
 
         # compute the mesh parameter from jacobian determinant
         h = np.abs(detDF)**(1.0/self.mesh.dim())
@@ -266,8 +267,8 @@ class AssemblerAbstract(Assembler):
         tind = range(self.mesh.t.shape[1])
 
         if not isinstance(interp,dict):
-            raise Exception("The input solution vector(s) must be in a dictionary! "
-                            "Pass e.g. {0:u} instead of u.")
+            raise Exception("The input solution vector(s) must be in a "
+                            "dictionary! Pass e.g. {0:u} instead of u.")
 
         if intorder is None:
             intorder = 2*self.elem_u.maxdeg
@@ -289,19 +290,19 @@ class AssemblerAbstract(Assembler):
 
         # interpolate the solution vectors at quadrature points
         zero = 0.0*x[0]
-        w = {}
-        dw = {}
-        ddw = {}
+        w, dw, ddw = ({} for i in range(3))
         for k in interp:
             w[k] = zero
             dw[k] = const_cell(zero,dim)
             ddw[k] = const_cell(zero,dim,dim)
             for j in range(self.Nbfun_u):
-                w[k] += interp[k][self.dofnum_u.t_dof[j, :]][:, None]*self.u[j]
+                jdofs = self.dofnum_u.t_dof[j, :]
+                w[k] += interp[k][jdofs][:, None]*self.u[j]
                 for a in range(dim):
-                    dw[k][a] += interp[k][self.dofnum_u.t_dof[j, :]][:, None]*self.du[j][a]
+                    dw[k][a] += interp[k][jdofs][:, None]*self.du[j][a]
                     for b in range(dim):
-                        ddw[k][a][b] += interp[k][self.dofnum_u.t_dof[j, :]][:, None]*self.ddu[j][a][b]
+                        ddw[k][a][b] += interp[k][jdofs][:, None]\
+                                        * self.ddu[j][a][b]
 
         # compute the mesh parameter from jacobian determinant
         h = np.abs(detDF)**(1.0/self.mesh.dim())
@@ -313,15 +314,16 @@ class AssemblerAbstract(Assembler):
         find = np.nonzero(self.mesh.f2t[1,:]>0)[0]
 
         if not isinstance(interp, dict):
-            raise Exception("The input solution vector(s) must be in a dictionary! "
-                            "Pass e.g. {0:u} instead of u.")
+            raise Exception("The input solution vector(s) must be in a "
+                            "dictionary! Pass e.g. {0:u} instead of u.")
 
         if intorder is None:
             intorder = 2*self.elem_u.maxdeg
 
         # check and fix parameters of form
         oldparams = inspect.getargspec(form).args
-        paramlist = ['u1', 'u2', 'du1', 'du2', 'ddu1', 'ddu2', 'x', 'n', 't', 'h']
+        paramlist = ['u1', 'u2', 'du1', 'du2', 'ddu1', 'ddu2',
+                     'x', 'n', 't', 'h']
         fform = self.fillargs(form, paramlist)
 
         X, W = get_quadrature(self.mesh.brefdom, intorder)
@@ -335,27 +337,25 @@ class AssemblerAbstract(Assembler):
         detDG = self.mapping.detDG(X, find)        
 
         # compute basis function values at quadrature points
-        u, du, ddu = self.elem_u.evalbasis(self.mesh, x)
+        u1, du1, ddu1 = self.elem_u.evalbasis(self.mesh, x, tind=tind1)
+        u2, du2, ddu2 = self.elem_u.evalbasis(self.mesh, x, tind=tind2)
 
         dim = self.mesh.p.shape[0]
 
-        if dim==2:
-            tangents = self.mesh.p[:, self.mesh.facets[0, :]]\
-                       - self.mesh.p[:, self.mesh.facets[1, :]]
+        if dim == 2:
+            tangents = self.mesh.p[:, self.mesh.facets[0, find]]\
+                       - self.mesh.p[:, self.mesh.facets[1, find]]
             h = np.linalg.norm(tangents, axis=0)
             tangents /= h
             normals = np.array([-tangents[1, :], tangents[0, :]])
+            n={}
         else:
             raise NotImplementedError("Normals not implemented for dim!=2.")
 
         # interpolate the solution vectors at quadrature points
         zero = np.zeros((len(find), len(W)))
-        w1 = {}
-        dw1 = {}
-        ddw1 = {}
-        w2 = {}
-        dw2 = {}
-        ddw2 = {}
+        w1, dw1, ddw1 = ({} for i in range(3))
+        w2, dw2, ddw2 = ({} for i in range(3))
         for k in interp:
             w1[k] = zero
             dw1[k] = const_cell(zero,dim)
@@ -364,16 +364,27 @@ class AssemblerAbstract(Assembler):
             dw2[k] = const_cell(zero,dim)
             ddw2[k] = const_cell(zero,dim,dim)
             for j in range(self.Nbfun_u):
-                w1[k] += interp[k][self.dofnum_u.t_dof[j, :]][:, None]*self.u[j][tind1, :]
-                w2[k] += interp[k][self.dofnum_u.t_dof[j, :]][:, None]*self.u[j][tind2, :]
+                jdofs1=self.dofnum_u.t_dof[j, tind1]
+                jdofs2=self.dofnum_u.t_dof[j, tind2]
+                w1[k] += interp[k][jdofs1][:, None]\
+                         * u1[j]
+                w2[k] += interp[k][jdofs2][:, None]\
+                         * u2[j]
                 for a in range(dim):
-                    dw1[k][a] += interp[k][self.dofnum_u.t_dof[j, :]][:, None]*self.du[j][a][tind1, :]
-                    dw2[k][a] += interp[k][self.dofnum_u.t_dof[j, :]][:, None]*self.du[j][a][tind2, :]
+                    dw1[k][a] += interp[k][jdofs1][:, None]\
+                                 * du1[j][a]
+                    dw2[k][a] += interp[k][jdofs2][:, None]\
+                                 * du2[j][a]
                     for b in range(dim):
-                        ddw1[k][a][b] += interp[k][self.dofnum_u.t_dof[j, :]][:, None]*self.ddu[j][a][b][tind1, :]
-                        ddw2[k][a][b] += interp[k][self.dofnum_u.t_dof[j, :]][:, None]*self.ddu[j][a][b][tind2, :]
+                        ddw1[k][a][b] += interp[k][jdofs1][:, None]\
+                                         * ddu1[j][a][b]
+                        ddw2[k][a][b] += interp[k][jdofs2][:, None]\
+                                         * ddu2[j][a][b]
 
-        return np.dot(fform(w1,w2,dw1,dw2,ddw1,ddw2,0,0,0,0)**2*np.abs(detDG),W)
+        h = np.abs(detDG)**(1.0/(self.mesh.dim()-1.0))
+
+        return np.dot(fform(w1, w2, dw1, dw2, ddw1, ddw2,
+                            x, 0, 0, h)**2*np.abs(detDG), W)
 
 
 class AssemblerElement(Assembler):
