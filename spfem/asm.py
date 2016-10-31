@@ -179,6 +179,7 @@ class AssemblerGlobal(Assembler):
             ddU=const_cell(U,dim,dim)
             # interpolate basis functions and solution vector
             # at quadrature points
+            # TODO add support for a dictionary of w's (see ifposteriori)
             for jtr in range(self.Nbfun_u):
                 ix=self.dofnum_u.t_dof[jtr,k]
                 U+=w[ix]*u[jtr]
@@ -197,6 +198,10 @@ class AssemblerGlobal(Assembler):
     def ifposteriori(self,form,w,intorder=None):
         # evaluate norm on all interior facets
         find=np.nonzero(self.mesh.f2t[1,:]>0)[0]
+
+        if not isinstance(w,dict):
+            raise Exception("The input solution vector(s) must be in a dictionary! "\
+                +"Pass e.g. {0:u} instead of u.")
 
         if intorder is None:
             intorder=2*self.elem_u.maxdeg
