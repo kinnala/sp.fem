@@ -9,8 +9,31 @@ import spfem.mapping as fmap
 import spfem.element as felem
 import matplotlib.pyplot as plt
 
-# TODO AssemblerGlobal: compute derivative of P1
-# through projection and compare to utils.gradient.
+class AssemblerAbstractCheckNormEval(unittest.TestCase):
+    def runTest(self):
+        import numpy as np
+        from spfem.mesh import MeshTri
+        from spfem.asm import AssemblerAbstract, AssemblerElement
+        from spfem.element import AbstractElementTriPp, ElementTriP1
+        from spfem.utils import direct
+
+        m = MeshTri()
+        m.refine(3)
+
+        e = AbstractElementTriPp(1)
+        e1 = ElementTriP1()
+        a = AssemblerAbstract(m,e)
+        b = AssemblerElement(m,e1)
+
+        A=a.iasm(lambda du,dv: du[0]*dv[0]+du[1]*dv[1])
+        f=a.iasm(lambda v: 1.0*v)
+
+        x=direct(A,f,I=m.boundary_nodes())
+
+        K=a.inorm(lambda u: u[0], {0:x})
+
+        self.assertAlmostEqual(np.sqrt(np.sum(K)),b.L2error(x,lambda X:0*X[0]))
+
 
 class AssemblerGlobalP2Comparison(unittest.TestCase):
     """Build some matrices with AssemblerGlobal

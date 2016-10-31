@@ -136,6 +136,32 @@ class AbstractElement(object):
             else:
                 raise NotImplementedError("The given dimension not implemented!")
 
+class AbstractElementTriPp(AbstractElement):
+    """Triangular Pp element, Lagrange DOFs."""
+
+    dim = 2
+
+    def __init__(self, p=1):
+        if p<1:
+            raise NotImplementedError("Degree p<1 not supported.")
+
+        self.p=p
+        self.maxdeg=p
+
+        self.n_dofs=1
+        self.f_dofs=np.max([p-1,0])
+        self.i_dofs=np.max([(p-1)*(p-2)/2,0])
+
+        self.nbdofs=3*self.n_dofs+3*self.f_dofs+self.i_dofs
+
+    def gdof(self, v, i, j):
+        # TODO this is only P1 so far.
+        return [
+                lambda: self._pbasis[i](v['v1'][0, :], v['v1'][1, :]),
+                lambda: self._pbasis[i](v['v2'][0, :], v['v2'][1, :]),
+                lambda: self._pbasis[i](v['v3'][0, :], v['v3'][1, :]),
+                ][j]()
+
 class AbstractElementMorley(AbstractElement):
     """Morley element for fourth-order problems."""
 
