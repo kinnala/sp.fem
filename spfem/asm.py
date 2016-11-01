@@ -30,7 +30,7 @@ from scipy.sparse import coo_matrix
 import spfem.mesh
 import spfem.mapping
 from spfem.quadrature import get_quadrature
-from spfem.utils import const_cell
+from spfem.utils import const_cell, cell_shape
 
 class Assembler(object):
     """Finite element assembler.
@@ -698,73 +698,68 @@ class AssemblerElement(Assembler):
         # bilinear form
         if bilinear:
             # initialize sparse matrix structures
+            ndata = Nbfun_u*Nbfun_v*ne
             if interior:
-                data = const_cell(np.zeros(Nbfun_u*Nbfun_v*ne), 4)
-                rows = const_cell(np.zeros(Nbfun_u*Nbfun_v*ne), 4)
-                cols = const_cell(np.zeros(Nbfun_u*Nbfun_v*ne), 4)
+                data = np.zeros(4*ndata)
+                rows = np.zeros(4*ndata)
+                cols = np.zeros(4*ndata)
             else:
-                data = np.zeros(Nbfun_u*Nbfun_v*ne)
-                rows = np.zeros(Nbfun_u*Nbfun_v*ne)
-                cols = np.zeros(Nbfun_u*Nbfun_v*ne)
+                data = np.zeros(ndata)
+                rows = np.zeros(ndata)
+                cols = np.zeros(ndata)
 
             for j in range(Nbfun_u):
                 u1, du1 = self.elem_u.gbasis(self.mapping, Y1, j, tind1)
                 if interior:
                     u2, du2 = self.elem_u.gbasis(self.mapping, Y2, j, tind2)
+                    if j == 0:
+                        # these are zeros corresponding to the shapes of u,du
+                        z = const_cell(0, *cell_shape(u2))
+                        dz = const_cell(0, *cell_shape(du2))
                 for i in range(Nbfun_v):
                     v1, dv1 = self.elem_v.gbasis(self.mapping, Y1, i, tind1)
                     if interior:
                         v2, dv2 = self.elem_v.gbasis(self.mapping, Y2, i, tind2)
            
-                    # find correct location in data,rows,cols
-                    ixs = slice(ne*(Nbfun_v*j + i), ne*(Nbfun_v*j + i + 1))
-                    
                     # compute entries of local stiffness matrices
                     if interior:
-                        Z={0:0,1:0}
+                        ixs1 = slice(ne*(Nbfun_v*j + i), ne*(Nbfun_v*j + i + 1))
+                        ixs2 = slice(ne*(Nbfun_v*j + i) + ndata, ne*(Nbfun_v*j + i + 1) + ndata)
+                        ixs3 = slice(ne*(Nbfun_v*j + i) + 2*ndata, ne*(Nbfun_v*j + i + 1) + 2*ndata)
+                        ixs4 = slice(ne*(Nbfun_v*j + i) + 3*ndata, ne*(Nbfun_v*j + i + 1) + 3*ndata)
 
-                        data[0][ixs] = np.dot(fform(u1, 0, v1, 0,
-                                                    du1, Z, dv1, Z,
-                                                    x, h, n, w)*np.abs(detDG), W)
-                        rows[0][ixs] = self.dofnum_v.t_dof[i, tind1]
-                        cols[0][ixs] = self.dofnum_u.t_dof[j, tind1]
+                        data[ixs1] = np.dot(fform(u1, z, v1, z,
+                                                  du1, dz, dv1, dz,
+                                                  x, h, n, w)*np.abs(detDG), W)
+                        rows[ixs1] = self.dofnum_v.t_dof[i, tind1]
+                        cols[ixs1] = self.dofnum_u.t_dof[j, tind1]
 
-                        data[1][ixs] = np.dot(fform(0, u2, 0, v2,
-                                                    Z, du2, Z, dv2,
-                                                    x, h, n, w)*np.abs(detDG), W)
-                        rows[1][ixs] = self.dofnum_v.t_dof[i, tind2]
-                        cols[1][ixs] = self.dofnum_u.t_dof[j, tind2]
+                        data[ixs2] = np.dot(fform(z, u2, z, v2,
+                                                  dz, du2, dz, dv2,
+                                                  x, h, n, w)*np.abs(detDG), W)
+                        rows[ixs2] = self.dofnum_v.t_dof[i, tind2]
+                        cols[ixs2] = self.dofnum_u.t_dof[j, tind2]
 
-                        data[2][ixs] = np.dot(fform(0, u2, v1, 0,
-                                                    Z, du2, dv1, Z,
-                                                    x, h, n, w)*np.abs(detDG), W)
-                        rows[2][ixs] = self.dofnum_v.t_dof[i, tind1]
-                        cols[2][ixs] = self.dofnum_u.t_dof[j, tind2]
+                        data[ixs3] = np.dot(fform(z, u2, v1, z,
+                                                  dz, du2, dv1, dz,
+                                                  x, h, n, w)*np.abs(detDG), W)
+                        rows[ixs3] = self.dofnum_v.t_dof[i, tind1]
+                        cols[ixs3] = self.dofnum_u.t_dof[j, tind2]
 
-                        data[3][ixs] = np.dot(fform(u1, 0, 0, v2,
-                                                    du1, Z, Z, dv2,
-                                                    x, h, n, w)*np.abs(detDG), W)
-                        rows[3][ixs] = self.dofnum_v.t_dof[i, tind2]
-                        cols[3][ixs] = self.dofnum_u.t_dof[j, tind1]
+                        data[ixs4] = np.dot(fform(u1, z, z, v2,
+                                                  du1, dz, dz, dv2,
+                                                  x, h, n, w)*np.abs(detDG), W)
+                        rows[ixs4] = self.dofnum_v.t_dof[i, tind2]
+                        cols[ixs4] = self.dofnum_u.t_dof[j, tind1]
                     else:
+                        ixs = slice(ne*(Nbfun_v*j + i), ne*(Nbfun_v*j + i + 1))
                         data[ixs] = np.dot(fform(u1, v1, du1, dv1,
                                                  x, h, n, w)*np.abs(detDG), W)
                         rows[ixs] = self.dofnum_v.t_dof[i, tind1]
                         cols[ixs] = self.dofnum_u.t_dof[j, tind1]
         
-            if interior:
-                A=coo_matrix((data[0], (rows[0], cols[0])),
-                                  shape=(self.dofnum_v.N, self.dofnum_u.N)).tocsr()
-                B=coo_matrix((data[1], (rows[1], cols[1])),
-                                  shape=(self.dofnum_v.N, self.dofnum_u.N)).tocsr()
-                C=coo_matrix((data[2], (rows[2], cols[2])),
-                                  shape=(self.dofnum_v.N, self.dofnum_u.N)).tocsr()
-                D=coo_matrix((data[3], (rows[3], cols[3])),
-                                  shape=(self.dofnum_v.N, self.dofnum_u.N)).tocsr()
-                return A+B+C+D
-            else:
-                return coo_matrix((data, (rows, cols)),
-                                  shape=(self.dofnum_v.N, self.dofnum_u.N)).tocsr()
+            return coo_matrix((data, (rows, cols)),
+                              shape=(self.dofnum_v.N, self.dofnum_u.N)).tocsr()
 
         # linear form
         else:

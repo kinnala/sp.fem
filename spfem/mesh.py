@@ -905,7 +905,7 @@ class MeshTri(Mesh):
             raise NotImplementedError("MeshTri.plot3: not implemented for "
                                       "the given shape of input vector!")
 
-    def refine(self,N=1):
+    def refine(self, N=1):
         """Perform one or more refines on the mesh."""
         for itr in range(N):
             self._single_refine()

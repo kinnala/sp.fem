@@ -9,7 +9,17 @@ import pickle
 import matplotlib.pyplot as plt
 from copy import deepcopy
 
-def const_cell(nparr,*arg):
+def cell_shape(x, *rest):
+    """
+    Find out the shape of a cell array.
+    """
+    if isinstance(x, dict):
+        s = len(x)
+        return cell_shape(x[0], s, *rest)
+    else:
+        return rest[::-1]
+
+def const_cell(nparr, *arg):
     """
     Initialize a cell array (i.e. python dictionary)
     with the given parameter array/float by performing
@@ -20,16 +30,18 @@ def const_cell(nparr,*arg):
     .. code-block:: python
 
         >>> from fem.utils import const_cell
-        >>> const_cell(0.0,3,2)
+        >>> const_cell(0.0, 3, 2)
         {0: {0: 0.0, 1: 0.0}, 1: {0: 0.0, 1: 0.0}, 2: {0: 0.0, 1: 0.0}}
     """
-    if len(arg)==1:
-        u={i: deepcopy(nparr) for (i,_) in enumerate(range(arg[0]))}
+    if len(arg) == 1:
+        u={i: deepcopy(nparr) for (i, _) in enumerate(range(arg[0]))}
+    elif len(arg) == 0:
+        return nparr
     else:
-        u={i: const_cell(nparr,*arg[1:]) for (i,_) in enumerate(range(arg[0]))}
+        u={i: const_cell(nparr, *arg[1:]) for (i, _) in enumerate(range(arg[0]))}
     return u
 
-def direct(A,b,x=None,I=None,use_umfpack=True):
+def direct(A, b, x=None, I=None, use_umfpack=True):
     """Solve system Ax=b with Dirichlet boundary conditions."""
 
     if I is None:
