@@ -9,15 +9,19 @@ Currently implemented mesh types are
     * :class:`spfem.mesh.MeshQuad`, a mesh consisting of quadrilaterals
     * :class:`spfem.mesh.MeshLine`, one-dimensional mesh
 
-*Example 1*. Obtain a three times refined mesh of the unit square and draw it.
+Example
+=======
+
+Obtain a three times refined mesh of the unit square and draw it.
 
 .. code-block:: python
 
-    import spfem.mesh as fmsh
-    m=fmsh.MeshTri()
+    from spfem.mesh import MeshTri
+    m = MeshTri()
     m.refine(3)
     m.draw()
     m.show()
+
 """
 try:
     from mayavi import mlab
@@ -28,7 +32,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.tri as mtri
 import scipy.interpolate as spi
-import spfem.mapping as fmap
+import spfem.mapping
 import copy
 from mpl_toolkits.mplot3d import Axes3D
 
@@ -191,7 +195,7 @@ class MeshLine(Mesh):
         plt.plot(xs,ys,color)
 
     def mapping(self):
-        return fmap.MappingAffine(self)
+        return spfem.mapping.MappingAffine(self)
 
 
 class MeshQuad(Mesh):
@@ -366,7 +370,7 @@ class MeshQuad(Mesh):
         return fig
 
     def mapping(self):
-        return fmap.MappingQ1(self)
+        return spfem.mapping.MappingQ1(self)
 
 
 class MeshTet(Mesh):
@@ -695,7 +699,7 @@ class MeshTet(Mesh):
         return np.max(np.max(edgelenmat,axis=0)/np.min(edgelenmat,axis=0))
 
     def mapping(self):
-        return fmap.MappingAffine(self)
+        return spfem.mapping.MappingAffine(self)
 
 
 class MeshTri(Mesh):
@@ -760,6 +764,10 @@ class MeshTri(Mesh):
     def boundary_facets(self):
         """Return an array of boundary facet indices."""
         return np.nonzero(self.f2t[1,:]==-1)[0]
+
+    def interior_facets(self):
+        """Return an array of interior facet indices."""
+        return np.nonzero(self.f2t[1,:]>0)[0]
 
     def nodes_satisfying(self,test):
         """Return nodes that satisfy some condition."""
@@ -914,5 +922,5 @@ class MeshTri(Mesh):
         self.build_mappings()
 
     def mapping(self):
-        return fmap.MappingAffine(self)
+        return spfem.mapping.MappingAffine(self)
 
