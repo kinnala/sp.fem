@@ -705,13 +705,13 @@ class MeshTet(Mesh):
 class MeshTri(Mesh):
     """Triangular mesh."""
 
-    refdom="tri"
-    brefdom="line"
+    refdom = "tri"
+    brefdom = "line"
 
-    def __init__(self,p=None,t=None,validate=True):
+    def __init__(self, p=None, t=None, validate=True):
         if p is None and t is None:
-            p=np.array([[0,1,0,1],[0,0,1,1]],dtype=np.float_)
-            t=np.array([[0,1,2],[1,3,2]],dtype=np.intp).T
+            p = np.array([[0,1,0,1],[0,0,1,1]], dtype=np.float_)
+            t = np.array([[0,1,2],[1,3,2]], dtype=np.intp).T
         elif p is None or t is None:
             raise Exception("Must provide p AND t or neither")
         self.p=p
@@ -859,35 +859,46 @@ class MeshTri(Mesh):
                         vmin=zlim[0],vmax=zlim[1])
         return fig
 
-    def plot3(self,z,smooth=False):
+    def plot3(self, z, smooth=False):
         """Visualize nodal function (3d i.e. three axes)."""
-        fig=plt.figure()
-        if len(z)==self.p.shape[1]:
+        fig = plt.figure()
+        if len(z) == self.p.shape[1]:
             # one value per node (piecewise linear, globally cont)
             if smooth:
                 # use mayavi
                 if opt_mayavi:
-                    mlab.triangular_mesh(self.p[0,:],self.p[1,:],z,self.t.T)
+                    mlab.triangular_mesh(self.p[0, :], self.p[1, :], z, self.t.T)
                 else:
-                    raise ImportError("MeshTri: Mayavi not supported "
+                    raise ImportError("Mayavi not supported "
                                       "by the host system!")
             else:
                 # use matplotlib
-                ax=fig.gca(projection='3d')
-                ts=mtri.Triangulation(self.p[0,:],self.p[1,:],self.t.T)
-                ax.plot_trisurf(self.p[0,:],self.p[1,:],z,
+                ax = fig.gca(projection='3d')
+                ts = mtri.Triangulation(self.p[0, :], self.p[1, :], self.t.T)
+                ax.plot_trisurf(self.p[0, :], self.p[1, :], z,
                                 triangles=ts.triangles,
                                 cmap=plt.cm.Spectral)
-        elif len(z)==self.t.shape[1]:
+        elif len(z) == self.t.shape[1]:
             # one value per element (piecewise const)
-            nt=self.t.shape[1]
-            newt=np.arange(3*nt,dtype=np.int64).reshape((nt,3))
-            newpx=self.p[0,self.t].flatten(order='F')
-            newpy=self.p[1,self.t].flatten(order='F')
-            newz=np.vstack((z,z,z)).flatten(order='F')
-            ax=fig.gca(projection='3d')
-            ts=mtri.Triangulation(newpx,newpx,newt)
-            ax.plot_trisurf(newpx,newpy,newz,
+            nt = self.t.shape[1]
+            newt = np.arange(3*nt, dtype=np.int64).reshape((nt, 3))
+            newpx = self.p[0, self.t].flatten(order='F')
+            newpy = self.p[1, self.t].flatten(order='F')
+            newz = np.vstack((z, z, z)).flatten(order='F')
+            ax = fig.gca(projection='3d')
+            ts = mtri.Triangulation(newpx, newpx, newt)
+            ax.plot_trisurf(newpx, newpy, newz,
+                            triangles=ts.triangles,
+                            cmap=plt.cm.Spectral)
+        elif len(z) == 3*self.t.shape[1]:
+            # three values per element (piecewise linear)
+            nt = self.t.shape[1]
+            newt = np.arange(3*nt, dtype=np.int64).reshape((nt, 3))
+            newpx = self.p[0, self.t].flatten(order='F')
+            newpy = self.p[1, self.t].flatten(order='F')
+            ax = fig.gca(projection='3d')
+            ts = mtri.Triangulation(newpx, newpx, newt)
+            ax.plot_trisurf(newpx, newpy, z,
                             triangles=ts.triangles,
                             cmap=plt.cm.Spectral)
         else:

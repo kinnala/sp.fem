@@ -91,6 +91,21 @@ class Assembler(object):
             def newform(*x):
                 return oldform(x[y[0]], x[y[1]], x[y[2]], x[y[3]], x[y[4]],
                                x[y[5]], x[y[6]], x[y[7]], x[y[8]], x[y[9]])
+        elif len(oldargs) == 11:
+            def newform(*x):
+                return oldform(x[y[0]], x[y[1]], x[y[2]], x[y[3]], x[y[4]],
+                               x[y[5]], x[y[6]], x[y[7]], x[y[8]], x[y[9]],
+                               x[y[10]])
+        elif len(oldargs) == 12:
+            def newform(*x):
+                return oldform(x[y[0]], x[y[1]], x[y[2]], x[y[3]], x[y[4]],
+                               x[y[5]], x[y[6]], x[y[7]], x[y[8]], x[y[9]],
+                               x[y[10]], x[y[11]])
+        elif len(oldargs) == 13:
+            def newform(*x):
+                return oldform(x[y[0]], x[y[1]], x[y[2]], x[y[3]], x[y[4]],
+                               x[y[5]], x[y[6]], x[y[7]], x[y[8]], x[y[9]],
+                               x[y[10]], x[y[11]], x[y[12]])
         else:
             raise NotImplementedError("Maximum number of arguments reached.")
 
@@ -664,7 +679,7 @@ class AssemblerElement(Assembler):
 
         # compute the mesh parameter from jacobian determinant
         if self.mesh.dim() > 1.0:
-            h = np.abs(detDG)**(1.0/(self.mesh.dim()-1.0))
+            h = np.abs(detDG)**(1.0/(self.mesh.dim() - 1.0))
         else: # exception for 1D mesh (no boundary h defined)
             h = None
 
@@ -684,9 +699,9 @@ class AssemblerElement(Assembler):
         if bilinear:
             # initialize sparse matrix structures
             if interior:
-                data = const_cell(np.zeros(Nbfun_u*Nbfun_v*ne),4)
-                rows = const_cell(np.zeros(Nbfun_u*Nbfun_v*ne),4)
-                cols = const_cell(np.zeros(Nbfun_u*Nbfun_v*ne),4)
+                data = const_cell(np.zeros(Nbfun_u*Nbfun_v*ne), 4)
+                rows = const_cell(np.zeros(Nbfun_u*Nbfun_v*ne), 4)
+                cols = const_cell(np.zeros(Nbfun_u*Nbfun_v*ne), 4)
             else:
                 data = np.zeros(Nbfun_u*Nbfun_v*ne)
                 rows = np.zeros(Nbfun_u*Nbfun_v*ne)

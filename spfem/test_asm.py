@@ -9,6 +9,56 @@ import spfem.mapping as fmap
 import spfem.element as felem
 import matplotlib.pyplot as plt
 
+class AssemblerElementFasmInteriorFacet(unittest.TestCase):
+    def runTest(self):
+        # solve Poisson by standard P1 method
+        # and P1(dg) interior penalty method.
+        #
+        # this will test interior facet assembly and normal
+        # vectors.
+        from spfem.mesh import MeshTri
+        from spfem.asm import AssemblerElement
+        from spfem.element import ElementTriP1, ElementTriDG
+        from spfem.utils import direct
+        import numpy as np
+
+        m = MeshTri()
+        m.refine(3)
+
+        e = ElementTriDG(ElementTriP1())
+        e1 = ElementTriP1()
+        a = AssemblerElement(m, e)
+        a1 = AssemblerElement(m, e1)
+        b1 = AssemblerElement(m, e1, e)
+
+        A = a.iasm(lambda du, dv: du[0]*dv[0] + du[1]*dv[1])
+        M = a.iasm(lambda u, v: u*v)
+        b = a.iasm(lambda v, x: np.sin(2.0*np.pi*x[0])*v)
+
+        B1 = a.fasm(lambda u1,u2,v1,v2,h: 1/h*(u1-u2)*(v1-v2), interior=True)
+        B2 = a.fasm(lambda u,v,h: 1/h*u*v)
+        B=B1+B2
+
+        C1 = a.fasm(lambda du1,du2,v1,v2,n: 0.5*(du1[0]*n[0]*v1 - du2[0]*n[0]*v2
+                                           + du1[1]*n[1]*v1 - du2[1]*n[1]*v2), interior=True)
+        C2 = a.fasm(lambda du,v,n: (du[0]*n[0]+du[1]*n[1])*v)
+        C=C1+C2
+
+        D = C+C.T
+
+        eps = 1e-3
+        eta = 1e5
+        x = direct(A + eta*B - 0*D, b)
+
+        K = a1.iasm(lambda du, dv: du[0]*dv[0] + du[1]*dv[1])
+        f = a1.iasm(lambda v, x: np.sin(2.0*np.pi*x[0])*v)
+
+        y = direct(K, f, I=m.interior_nodes())
+
+        P = b1.iasm(lambda u,v: u*v)
+
+        self.assertAlmostEqual(np.linalg.norm(x-direct(M,P*y)),0,places=4)
+
 class AssemblerAbstractCheckNormEval(unittest.TestCase):
     def runTest(self):
         import numpy as np
