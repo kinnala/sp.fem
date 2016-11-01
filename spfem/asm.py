@@ -309,9 +309,13 @@ class AssemblerAbstract(Assembler):
 
         return np.dot(fform(w, dw, ddw, x, h)**2*np.abs(detDF), W)
 
-    def ifnorm(self, form, interp, intorder=None):
-        # evaluate norm on all interior facets
-        find = np.nonzero(self.mesh.f2t[1,:]>0)[0]
+    def fnorm(self, form, interp, intorder=None, interior=False, normals=True):
+        if interior:
+            # evaluate norm on all interior facets
+            find = np.nonzero(self.mesh.f2t[1,:]>0)[0]
+        else:
+            # evaluate norm on all boundary facets
+            find = np.nonzero(self.mesh.f2t[1,:]<0)[0]
 
         if not isinstance(interp, dict):
             raise Exception("The input solution vector(s) must be in a "
@@ -323,7 +327,7 @@ class AssemblerAbstract(Assembler):
         # check and fix parameters of form
         oldparams = inspect.getargspec(form).args
         paramlist = ['u1', 'u2', 'du1', 'du2', 'ddu1', 'ddu2',
-                     'x', 'n', 't', 'h']
+                     'x', 'n', 'h']
         fform = self.fillargs(form, paramlist)
 
         X, W = get_quadrature(self.mesh.brefdom, intorder)
@@ -342,15 +346,10 @@ class AssemblerAbstract(Assembler):
 
         dim = self.mesh.p.shape[0]
 
-        if dim == 2:
-            tangents = self.mesh.p[:, self.mesh.facets[0, find]]\
-                       - self.mesh.p[:, self.mesh.facets[1, find]]
-            h = np.linalg.norm(tangents, axis=0)
-            tangents /= h
-            normals = np.array([-tangents[1, :], tangents[0, :]])
-            n={}
-        else:
-            raise NotImplementedError("Normals not implemented for dim!=2.")
+        n = {}
+        if normals:
+            Y = self.mapping.invF(x, tind=tind1) # global facet to reference element
+            n = self.mapping.normals(Y, tind1, find, self.mesh.t2f)
 
         # interpolate the solution vectors at quadrature points
         zero = np.zeros((len(find), len(W)))
@@ -384,7 +383,7 @@ class AssemblerAbstract(Assembler):
         h = np.abs(detDG)**(1.0/(self.mesh.dim()-1.0))
 
         return np.dot(fform(w1, w2, dw1, dw2, ddw1, ddw2,
-                            x, 0, 0, h)**2*np.abs(detDG), W)
+                            x, n, h)**2*np.abs(detDG), W), find
 
 
 class AssemblerElement(Assembler):
