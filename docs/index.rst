@@ -31,8 +31,8 @@ by running
 
     make install-conda
 
-Next you can create a new virtual environment and install the required packages
-by running
+Next you can create a new conda environment and install the required packages by
+running
 
 .. code-block:: bash
 
