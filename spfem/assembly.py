@@ -10,7 +10,7 @@ the Poisson problem using the piecewise linear elements.
 .. code-block:: python
 
     from spfem.mesh import MeshTri
-    from spfem.asm import AssemblerElement
+    from spfem.assembly import AssemblerElement
     from spfem.element import ElementTriP1
 
     m = MeshTri()
@@ -119,7 +119,7 @@ class AssemblerAbstract(Assembler):
     These elements are defined through degrees of freedom but
     are not limited to H^1-conforming elements. As a result,
     this assembler is more computationally intensive than
-    :class:`spfem.asm.AssemblerElement` so use it instead
+    :class:`spfem.assembly.AssemblerElement` so use it instead
     if possible.
     
     Parameters

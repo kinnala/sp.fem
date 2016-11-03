@@ -10,7 +10,7 @@ The code is (c) Tom Gustafsson and licensed under AGPLv3.
 The following code solves the Poisson equation in a unit square with zero boundary conditions and unit loading.
 ```python
 from spfem.mesh import MeshTri
-from spfem.asm import AssemblerElement
+from spfem.assembly import AssemblerElement
 from spfem.element import ElementTriP1
 from spfem.utils import direct
 

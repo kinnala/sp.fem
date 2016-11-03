@@ -885,7 +885,7 @@ class ElementTetP1(ElementH1):
 #
 
 class ElementGlobal(Element):
-    """An element defined globally. These elements are used by :class:`spfem.asm.AssemblerGlobal`."""
+    """An element defined globally. These elements are used by :class:`spfem.assembly.AssemblerGlobal`."""
 
     def gbasis(self,mesh,qps,k):
         """Return the global basis functions of an element evaluated at
