@@ -22,6 +22,7 @@ run-coverage: ## Run the unit tests with coverage.py
 
 build-docs: ## Run Sphinx to build the documentation
 	@make -C docs html
+	@yes | cp -r docs/_build/html/* docs/
 
 help: ## Show this help (default)
 	@echo "                     _____               "
