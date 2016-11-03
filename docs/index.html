@@ -1,0 +1,1237 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Hello, sp.fem! &mdash; sp.fem 0.1.0 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="sp.fem 0.1.0 documentation" href="#"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="#" class="icon icon-home"> sp.fem
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.1.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <!-- Local TOC -->
+                <div class="local-toc"><ul>
+<li><a class="reference internal" href="#">Hello, sp.fem!</a></li>
+<li><a class="reference internal" href="#getting-started">Getting started</a></li>
+<li><a class="reference internal" href="#tutorial">Tutorial</a></li>
+<li><a class="reference internal" href="#classes">Classes</a><ul>
+<li><a class="reference internal" href="#module-spfem.mesh">fem.mesh</a><ul>
+<li><a class="reference internal" href="#examples">Examples</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-spfem.asm">fem.asm</a><ul>
+<li><a class="reference internal" href="#id1">Examples</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-spfem.element">fem.element</a></li>
+<li><a class="reference internal" href="#module-spfem.mapping">fem.mapping</a></li>
+<li><a class="reference internal" href="#module-spfem.utils">fem.utils</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#tips">Tips</a></li>
+<li><a class="reference internal" href="#license">License</a></li>
+<li><a class="reference internal" href="#indices-and-tables">Indices and tables</a></li>
+</ul>
+</div>
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="#">sp.fem</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="#">Docs</a> &raquo;</li>
+      
+    <li>Hello, sp.fem!</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/index.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="hello-sp-fem">
+<h1>Hello, sp.fem!<a class="headerlink" href="#hello-sp-fem" title="Permalink to this headline">¶</a></h1>
+<p>This is the documentation of a simple finite element assembler library written
+in Python 2.7. The library is useful for quickly creating numerical solvers for
+various PDE-based models.</p>
+<p>The library is currently work-in-progress and there is a fair amount of work to
+be done until it can be considered complete. The current state is however more
+than usable.</p>
+</div>
+<div class="section" id="getting-started">
+<h1>Getting started<a class="headerlink" href="#getting-started" title="Permalink to this headline">¶</a></h1>
+<p>You can download the library and get started by running the following commands</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>git clone https://github.com/kinnala/sp.fem
+<span class="nb">cd</span> sp.fem
+</pre></div>
+</div>
+<p>If you are a well-seasoned Python developer you may look into the contents of
+requirements.txt, check that you have all the required libraries and do whatever
+you wish.</p>
+<p>Otherwise, we suggest that you use <em>miniconda</em> for managing Python virtual
+environments and installing packages. You can download and install <em>miniconda</em>
+by running</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>make install-conda
+</pre></div>
+</div>
+<p>Next you can create a new virtual environment and install the required packages
+by running</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>make dev-install
+</pre></div>
+</div>
+<p>The newly created virtual environment can be activated by writing</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span><span class="nb">source</span> activate spfemenv
+</pre></div>
+</div>
+<p>Optionally, in order to use the geometry module, you should install MeshPy
+dependency by running</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>pip install meshpy
+</pre></div>
+</div>
+</div>
+<div class="section" id="tutorial">
+<h1>Tutorial<a class="headerlink" href="#tutorial" title="Permalink to this headline">¶</a></h1>
+<p>We begin by importing the necessary library functions.</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">spfem.mesh</span> <span class="kn">import</span> <span class="n">MeshTri</span>
+<span class="kn">from</span> <span class="nn">spfem.assembly</span> <span class="kn">import</span> <span class="n">AssemblerElement</span>
+<span class="kn">from</span> <span class="nn">spfem.element</span> <span class="kn">import</span> <span class="n">ElementTriP1</span>
+<span class="kn">from</span> <span class="nn">spfem.utils</span> <span class="kn">import</span> <span class="n">direct</span>
+</pre></div>
+</div>
+<p>Let us solve the Poisson equation in a unit square <span class="math">\(\Omega = [0,1]^2\)</span> with
+unit loading. We can obtain a mesh of the unit square and refine it six times by</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">m</span> <span class="o">=</span> <span class="n">MeshTri</span><span class="p">()</span>
+<span class="n">m</span><span class="o">.</span><span class="n">refine</span><span class="p">(</span><span class="mi">6</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>By default, the initializer of <a class="reference internal" href="#spfem.mesh.MeshTri" title="spfem.mesh.MeshTri"><code class="xref py py-class docutils literal"><span class="pre">spfem.mesh.MeshTri</span></code></a> returns a mesh of the
+unit square with two elements. The <a class="reference internal" href="#spfem.mesh.MeshTri.refine" title="spfem.mesh.MeshTri.refine"><code class="xref py py-meth docutils literal"><span class="pre">spfem.mesh.MeshTri.refine()</span></code></a> method
+refines the mesh by splitting each triangle into four subtriangles. Let us
+denote the finite element mesh by <span class="math">\(\mathcal{T}_h\)</span> and an arbitrary element
+by <span class="math">\(K\)</span>.</p>
+<p>The governing equation is</p>
+<div class="math">
+\[-\Delta u=1,\]</div>
+<p>and it is combined with the boundary condition</p>
+<div class="math">
+\[u=0.\]</div>
+<p>The weak formulation reads: find <span class="math">\(u \in H^1_0(\Omega)\)</span> satisfying</p>
+<div class="math">
+\[(\nabla u, \nabla v)=(1,v)\]</div>
+<p>for every <span class="math">\(v \in H^1_0(\Omega)\)</span>.</p>
+<p>We use a conforming piecewise linear finite element approximation space</p>
+<div class="math">
+\[V_h = \{ w_h \in H^1_0(\Omega) : w_h|_K \in P_1(K)~\forall K \in \mathcal{T}_h \}.\]</div>
+<p>The finite element method reads: find <span class="math">\(u_h \in V_h\)</span> satisfying</p>
+<div class="math">
+\[(\nabla u_h, \nabla v_h) = (1,v_h)\]</div>
+<p>for every <span class="math">\(v_h \in V_h\)</span>. A typical approach to impose the boundary
+condition <span class="math">\(u_h=0\)</span> (which is implicitly included in the definition of
+<span class="math">\(V_h\)</span>) is to initially build the matrix and the vector corresponding to
+the discrete space</p>
+<div class="math">
+\[W_h = \{ w_h \in H^1(\Omega) : w_h|_K \in P_1(K)~\forall K \in \mathcal{T}_h \}\]</div>
+<p>and afterwards remove the rows and columns corresponding to the boundary nodes.
+An assembler object corresponding to the mesh <span class="math">\(\mathcal{T}_h\)</span> and the
+discrete space <span class="math">\(W_h\)</span> can be initialized by</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">a</span> <span class="o">=</span> <span class="n">AssemblerElement</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">ElementTriP1</span><span class="p">())</span>
+</pre></div>
+</div>
+<p>and the stiffness matrix and the load vector can be assembled by writing</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">A</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">iasm</span><span class="p">(</span><span class="k">lambda</span> <span class="n">du</span><span class="p">,</span> <span class="n">dv</span><span class="p">:</span> <span class="n">du</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="n">dv</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">du</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="n">dv</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+<span class="n">b</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">iasm</span><span class="p">(</span><span class="k">lambda</span> <span class="n">v</span><span class="p">:</span> <span class="mf">1.0</span><span class="o">*</span><span class="n">v</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Finally you can solve the resulting linear system and visualize the resulting
+solution by</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">x</span> <span class="o">=</span> <span class="n">direct</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">I</span><span class="o">=</span><span class="n">m</span><span class="o">.</span><span class="n">interior_nodes</span><span class="p">())</span>
+<span class="n">m</span><span class="o">.</span><span class="n">plot3</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+<span class="n">m</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>The outputted image should be similar to this:</p>
+<img alt="_images/tutorial.png" src="_images/tutorial.png" />
+</div>
+<div class="section" id="classes">
+<h1>Classes<a class="headerlink" href="#classes" title="Permalink to this headline">¶</a></h1>
+<p>This section contains documentation generated automatically from the source code of the relevant classes.</p>
+<div class="section" id="module-spfem.mesh">
+<span id="fem-mesh"></span><h2>fem.mesh<a class="headerlink" href="#module-spfem.mesh" title="Permalink to this headline">¶</a></h2>
+<p>Classes that represent different types of meshes.</p>
+<p>Currently implemented mesh types are</p>
+<blockquote>
+<div><ul class="simple">
+<li><a class="reference internal" href="#spfem.mesh.MeshTri" title="spfem.mesh.MeshTri"><code class="xref py py-class docutils literal"><span class="pre">spfem.mesh.MeshTri</span></code></a>, a triangular mesh</li>
+<li><a class="reference internal" href="#spfem.mesh.MeshTet" title="spfem.mesh.MeshTet"><code class="xref py py-class docutils literal"><span class="pre">spfem.mesh.MeshTet</span></code></a>, a tetrahedral mesh</li>
+<li><a class="reference internal" href="#spfem.mesh.MeshQuad" title="spfem.mesh.MeshQuad"><code class="xref py py-class docutils literal"><span class="pre">spfem.mesh.MeshQuad</span></code></a>, a mesh consisting of quadrilaterals</li>
+<li><a class="reference internal" href="#spfem.mesh.MeshLine" title="spfem.mesh.MeshLine"><code class="xref py py-class docutils literal"><span class="pre">spfem.mesh.MeshLine</span></code></a>, one-dimensional mesh</li>
+</ul>
+</div></blockquote>
+<div class="section" id="examples">
+<h3>Examples<a class="headerlink" href="#examples" title="Permalink to this headline">¶</a></h3>
+<p>Obtain a three times refined mesh of the unit square and draw it.</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">spfem.mesh</span> <span class="kn">import</span> <span class="n">MeshTri</span>
+<span class="n">m</span> <span class="o">=</span> <span class="n">MeshTri</span><span class="p">()</span>
+<span class="n">m</span><span class="o">.</span><span class="n">refine</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+<span class="n">m</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+<span class="n">m</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+<dl class="class">
+<dt id="spfem.mesh.Mesh">
+<em class="property">class </em><code class="descclassname">spfem.mesh.</code><code class="descname">Mesh</code><span class="sig-paren">(</span><em>p</em>, <em>t</em><span class="sig-paren">)</span><a class="headerlink" href="#spfem.mesh.Mesh" title="Permalink to this definition">¶</a></dt>
+<dd><p>Abstract finite element mesh class.</p>
+<dl class="method">
+<dt id="spfem.mesh.Mesh.dim">
+<code class="descname">dim</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#spfem.mesh.Mesh.dim" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the spatial dimension of the mesh.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spfem.mesh.Mesh.remove_elements">
+<code class="descname">remove_elements</code><span class="sig-paren">(</span><em>ix</em><span class="sig-paren">)</span><a class="headerlink" href="#spfem.mesh.Mesh.remove_elements" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return new mesh with elements removed
+based on their indices.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>ix</strong> : numpy array</p>
+<blockquote class="last">
+<div><p>List of element indices to remove.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="spfem.mesh.Mesh.scale">
+<code class="descname">scale</code><span class="sig-paren">(</span><em>scale</em><span class="sig-paren">)</span><a class="headerlink" href="#spfem.mesh.Mesh.scale" title="Permalink to this definition">¶</a></dt>
+<dd><p>Scale the mesh.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>scale</strong> : float OR tuple of size dim</p>
+<blockquote class="last">
+<div><p>Scale each dimension by a factor. If a floating
+point number is provided, same scale is used
+for each dimension.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="spfem.mesh.Mesh.show">
+<code class="descname">show</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#spfem.mesh.Mesh.show" title="Permalink to this definition">¶</a></dt>
+<dd><p>Call the correct pyplot/mayavi show commands after plotting.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spfem.mesh.Mesh.translate">
+<code class="descname">translate</code><span class="sig-paren">(</span><em>vec</em><span class="sig-paren">)</span><a class="headerlink" href="#spfem.mesh.Mesh.translate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Translate the mesh.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>vec</strong> : tuple of size dim</p>
+<blockquote class="last">
+<div><p>Translate the mesh by a vector.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="spfem.mesh.MeshLine">
+<em class="property">class </em><code class="descclassname">spfem.mesh.</code><code class="descname">MeshLine</code><span class="sig-paren">(</span><em>p=None</em>, <em>t=None</em>, <em>validate=True</em><span class="sig-paren">)</span><a class="headerlink" href="#spfem.mesh.MeshLine" title="Permalink to this definition">¶</a></dt>
+<dd><p>One-dimensional mesh.</p>
+<dl class="method">
+<dt id="spfem.mesh.MeshLine.plot">
+<code class="descname">plot</code><span class="sig-paren">(</span><em>u</em>, <em>color='ko-'</em><span class="sig-paren">)</span><a class="headerlink" href="#spfem.mesh.MeshLine.plot" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot a function defined on the nodes of the mesh.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spfem.mesh.MeshLine.refine">
+<code class="descname">refine</code><span class="sig-paren">(</span><em>N=1</em><span class="sig-paren">)</span><a class="headerlink" href="#spfem.mesh.MeshLine.refine" title="Permalink to this definition">¶</a></dt>
+<dd><p>Perform one or more uniform refines on the mesh.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="spfem.mesh.MeshQuad">
+<em class="property">class </em><code class="descclassname">spfem.mesh.</code><code class="descname">MeshQuad</code><span class="sig-paren">(</span><em>p=None</em>, <em>t=None</em>, <em>validate=True</em><span class="sig-paren">)</span><a class="headerlink" href="#spfem.mesh.MeshQuad" title="Permalink to this definition">¶</a></dt>
+<dd><p>A mesh consisting of quadrilateral elements.</p>
+<dl class="method">
+<dt id="spfem.mesh.MeshQuad.boundary_facets">
+<code class="descname">boundary_facets</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#spfem.mesh.MeshQuad.boundary_facets" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return an array of boundary facet indices.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spfem.mesh.MeshQuad.boundary_nodes">
+<code class="descname">boundary_nodes</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#spfem.mesh.MeshQuad.boundary_nodes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return an array of boundary node indices.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spfem.mesh.MeshQuad.draw">
+<code class="descname">draw</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#spfem.mesh.MeshQuad.draw" title="Permalink to this definition">¶</a></dt>
+<dd><p>Draw the mesh.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spfem.mesh.MeshQuad.facets_satisfying">
+<code class="descname">facets_satisfying</code><span class="sig-paren">(</span><em>test</em><span class="sig-paren">)</span><a class="headerlink" href="#spfem.mesh.MeshQuad.facets_satisfying" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return facets whose midpoints satisfy some condition.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spfem.mesh.MeshQuad.interior_nodes">
+<code class="descname">interior_nodes</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#spfem.mesh.MeshQuad.interior_nodes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return an array of interior node indices.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spfem.mesh.MeshQuad.jiggle">
+<code class="descname">jiggle</code><span class="sig-paren">(</span><em>z=None</em><span class="sig-paren">)</span><a class="headerlink" href="#spfem.mesh.MeshQuad.jiggle" title="Permalink to this definition">¶</a></dt>
+<dd><p>Jiggle the interior nodes of the mesh.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spfem.mesh.MeshQuad.nodes_satisfying">
+<code class="descname">nodes_satisfying</code><span class="sig-paren">(</span><em>test</em><span class="sig-paren">)</span><a class="headerlink" href="#spfem.mesh.MeshQuad.nodes_satisfying" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return nodes that satisfy some condition.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spfem.mesh.MeshQuad.param">
+<code class="descname">param</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#spfem.mesh.MeshQuad.param" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return mesh parameter.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spfem.mesh.MeshQuad.plot">
+<code class="descname">plot</code><span class="sig-paren">(</span><em>z</em>, <em>smooth=False</em><span class="sig-paren">)</span><a class="headerlink" href="#spfem.mesh.MeshQuad.plot" title="Permalink to this definition">¶</a></dt>
+<dd><p>Visualize nodal or elemental function (2d).</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spfem.mesh.MeshQuad.plot3">
+<code class="descname">plot3</code><span class="sig-paren">(</span><em>z</em>, <em>smooth=False</em><span class="sig-paren">)</span><a class="headerlink" href="#spfem.mesh.MeshQuad.plot3" title="Permalink to this definition">¶</a></dt>
+<dd><p>Visualize nodal function (3d i.e. three axes).</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spfem.mesh.MeshQuad.refine">
+<code class="descname">refine</code><span class="sig-paren">(</span><em>N=1</em><span class="sig-paren">)</span><a class="headerlink" href="#spfem.mesh.MeshQuad.refine" title="Permalink to this definition">¶</a></dt>
+<dd><p>Perform one or more refines on the mesh.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spfem.mesh.MeshQuad.splitquads">
+<code class="descname">splitquads</code><span class="sig-paren">(</span><em>z</em><span class="sig-paren">)</span><a class="headerlink" href="#spfem.mesh.MeshQuad.splitquads" title="Permalink to this definition">¶</a></dt>
+<dd><p>Split each quad into a triangle and return MeshTri.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="spfem.mesh.MeshTet">
+<em class="property">class </em><code class="descclassname">spfem.mesh.</code><code class="descname">MeshTet</code><span class="sig-paren">(</span><em>p=None</em>, <em>t=None</em>, <em>validate=True</em><span class="sig-paren">)</span><a class="headerlink" href="#spfem.mesh.MeshTet" title="Permalink to this definition">¶</a></dt>
+<dd><p>Tetrahedral mesh.</p>
+<dl class="method">
+<dt id="spfem.mesh.MeshTet.boundary_edges">
+<code class="descname">boundary_edges</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#spfem.mesh.MeshTet.boundary_edges" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return an array of boundary edge indices.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spfem.mesh.MeshTet.boundary_facets">
+<code class="descname">boundary_facets</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#spfem.mesh.MeshTet.boundary_facets" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return an array of boundary facet indices.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spfem.mesh.MeshTet.boundary_nodes">
+<code class="descname">boundary_nodes</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#spfem.mesh.MeshTet.boundary_nodes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return an array of boundary node indices.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spfem.mesh.MeshTet.build_mappings">
+<code class="descname">build_mappings</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#spfem.mesh.MeshTet.build_mappings" title="Permalink to this definition">¶</a></dt>
+<dd><p>Build element-to-facet, element-to-edges, etc. mappings.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spfem.mesh.MeshTet.draw">
+<code class="descname">draw</code><span class="sig-paren">(</span><em>test=None</em>, <em>u=None</em><span class="sig-paren">)</span><a class="headerlink" href="#spfem.mesh.MeshTet.draw" title="Permalink to this definition">¶</a></dt>
+<dd><p>Draw all tetrahedra.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spfem.mesh.MeshTet.draw_edges">
+<code class="descname">draw_edges</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#spfem.mesh.MeshTet.draw_edges" title="Permalink to this definition">¶</a></dt>
+<dd><p>Draw all edges in a wireframe representation.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spfem.mesh.MeshTet.draw_facets">
+<code class="descname">draw_facets</code><span class="sig-paren">(</span><em>test=None</em>, <em>u=None</em><span class="sig-paren">)</span><a class="headerlink" href="#spfem.mesh.MeshTet.draw_facets" title="Permalink to this definition">¶</a></dt>
+<dd><p>Draw all facets.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spfem.mesh.MeshTet.draw_vertices">
+<code class="descname">draw_vertices</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#spfem.mesh.MeshTet.draw_vertices" title="Permalink to this definition">¶</a></dt>
+<dd><p>Draw all vertices using mplot3d.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spfem.mesh.MeshTet.edges_satisfying">
+<code class="descname">edges_satisfying</code><span class="sig-paren">(</span><em>test</em><span class="sig-paren">)</span><a class="headerlink" href="#spfem.mesh.MeshTet.edges_satisfying" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return edges whose midpoints satisfy some condition.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spfem.mesh.MeshTet.facets_satisfying">
+<code class="descname">facets_satisfying</code><span class="sig-paren">(</span><em>test</em><span class="sig-paren">)</span><a class="headerlink" href="#spfem.mesh.MeshTet.facets_satisfying" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return facets whose midpoints satisfy some condition.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spfem.mesh.MeshTet.interior_nodes">
+<code class="descname">interior_nodes</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#spfem.mesh.MeshTet.interior_nodes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return an array of interior node indices.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spfem.mesh.MeshTet.nodes_satisfying">
+<code class="descname">nodes_satisfying</code><span class="sig-paren">(</span><em>test</em><span class="sig-paren">)</span><a class="headerlink" href="#spfem.mesh.MeshTet.nodes_satisfying" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return nodes that satisfy some condition.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spfem.mesh.MeshTet.param">
+<code class="descname">param</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#spfem.mesh.MeshTet.param" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return (maximum) mesh parameter.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spfem.mesh.MeshTet.refine">
+<code class="descname">refine</code><span class="sig-paren">(</span><em>N=1</em><span class="sig-paren">)</span><a class="headerlink" href="#spfem.mesh.MeshTet.refine" title="Permalink to this definition">¶</a></dt>
+<dd><p>Perform one or more refines on the mesh.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spfem.mesh.MeshTet.shapereg">
+<code class="descname">shapereg</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#spfem.mesh.MeshTet.shapereg" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the largest shape-regularity constant.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="spfem.mesh.MeshTri">
+<em class="property">class </em><code class="descclassname">spfem.mesh.</code><code class="descname">MeshTri</code><span class="sig-paren">(</span><em>p=None</em>, <em>t=None</em>, <em>validate=True</em><span class="sig-paren">)</span><a class="headerlink" href="#spfem.mesh.MeshTri" title="Permalink to this definition">¶</a></dt>
+<dd><p>Triangular mesh.</p>
+<dl class="method">
+<dt id="spfem.mesh.MeshTri.boundary_facets">
+<code class="descname">boundary_facets</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#spfem.mesh.MeshTri.boundary_facets" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return an array of boundary facet indices.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spfem.mesh.MeshTri.boundary_nodes">
+<code class="descname">boundary_nodes</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#spfem.mesh.MeshTri.boundary_nodes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return an array of boundary node indices.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spfem.mesh.MeshTri.draw">
+<code class="descname">draw</code><span class="sig-paren">(</span><em>nofig=False</em><span class="sig-paren">)</span><a class="headerlink" href="#spfem.mesh.MeshTri.draw" title="Permalink to this definition">¶</a></dt>
+<dd><p>Draw the mesh.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spfem.mesh.MeshTri.draw_nodes">
+<code class="descname">draw_nodes</code><span class="sig-paren">(</span><em>nodes</em>, <em>mark='bo'</em><span class="sig-paren">)</span><a class="headerlink" href="#spfem.mesh.MeshTri.draw_nodes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Highlight some nodes.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spfem.mesh.MeshTri.elements_satisfying">
+<code class="descname">elements_satisfying</code><span class="sig-paren">(</span><em>test</em><span class="sig-paren">)</span><a class="headerlink" href="#spfem.mesh.MeshTri.elements_satisfying" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return elements whose midpoints satisfy some condition.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spfem.mesh.MeshTri.facets_satisfying">
+<code class="descname">facets_satisfying</code><span class="sig-paren">(</span><em>test</em><span class="sig-paren">)</span><a class="headerlink" href="#spfem.mesh.MeshTri.facets_satisfying" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return facets whose midpoints satisfy some condition.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spfem.mesh.MeshTri.interior_facets">
+<code class="descname">interior_facets</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#spfem.mesh.MeshTri.interior_facets" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return an array of interior facet indices.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spfem.mesh.MeshTri.interior_nodes">
+<code class="descname">interior_nodes</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#spfem.mesh.MeshTri.interior_nodes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return an array of interior node indices.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spfem.mesh.MeshTri.interpolator">
+<code class="descname">interpolator</code><span class="sig-paren">(</span><em>x</em><span class="sig-paren">)</span><a class="headerlink" href="#spfem.mesh.MeshTri.interpolator" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a function which interpolates values with P1 basis.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spfem.mesh.MeshTri.nodes_satisfying">
+<code class="descname">nodes_satisfying</code><span class="sig-paren">(</span><em>test</em><span class="sig-paren">)</span><a class="headerlink" href="#spfem.mesh.MeshTri.nodes_satisfying" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return nodes that satisfy some condition.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spfem.mesh.MeshTri.param">
+<code class="descname">param</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#spfem.mesh.MeshTri.param" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return mesh parameter.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spfem.mesh.MeshTri.plot">
+<code class="descname">plot</code><span class="sig-paren">(</span><em>z</em>, <em>smooth=False</em>, <em>nofig=False</em>, <em>zlim=None</em><span class="sig-paren">)</span><a class="headerlink" href="#spfem.mesh.MeshTri.plot" title="Permalink to this definition">¶</a></dt>
+<dd><p>Visualize nodal or elemental function (2d).</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spfem.mesh.MeshTri.plot3">
+<code class="descname">plot3</code><span class="sig-paren">(</span><em>z</em>, <em>smooth=False</em><span class="sig-paren">)</span><a class="headerlink" href="#spfem.mesh.MeshTri.plot3" title="Permalink to this definition">¶</a></dt>
+<dd><p>Visualize nodal function (3d i.e. three axes).</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spfem.mesh.MeshTri.refine">
+<code class="descname">refine</code><span class="sig-paren">(</span><em>N=1</em><span class="sig-paren">)</span><a class="headerlink" href="#spfem.mesh.MeshTri.refine" title="Permalink to this definition">¶</a></dt>
+<dd><p>Perform one or more refines on the mesh.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+<div class="section" id="module-spfem.asm">
+<span id="fem-asm"></span><h2>fem.asm<a class="headerlink" href="#module-spfem.asm" title="Permalink to this headline">¶</a></h2>
+<p>Assembly of matrices related to linear and bilinear forms.</p>
+<div class="section" id="id1">
+<h3>Examples<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h3>
+<p>Assemble the stiffness matrix related to
+the Poisson problem using the piecewise linear elements.</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">spfem.mesh</span> <span class="kn">import</span> <span class="n">MeshTri</span>
+<span class="kn">from</span> <span class="nn">spfem.assembly</span> <span class="kn">import</span> <span class="n">AssemblerElement</span>
+<span class="kn">from</span> <span class="nn">spfem.element</span> <span class="kn">import</span> <span class="n">ElementTriP1</span>
+
+<span class="n">m</span> <span class="o">=</span> <span class="n">MeshTri</span><span class="p">()</span>
+<span class="n">m</span><span class="o">.</span><span class="n">refine</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+<span class="n">e</span> <span class="o">=</span> <span class="n">ElementTriP1</span><span class="p">()</span>
+<span class="n">a</span> <span class="o">=</span> <span class="n">AssemblerElement</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">bilinear_form</span><span class="p">(</span><span class="n">du</span><span class="p">,</span> <span class="n">dv</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">du</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="n">dv</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">du</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="n">dv</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+<span class="n">K</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">iasm</span><span class="p">(</span><span class="n">bilinear_form</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="module-spfem.element">
+<span id="fem-element"></span><h2>fem.element<a class="headerlink" href="#module-spfem.element" title="Permalink to this headline">¶</a></h2>
+<p>The finite element definitions.</p>
+<dl class="docutils">
+<dt>Try for example the following actual implementations:</dt>
+<dd><ul class="first last simple">
+<li><a class="reference internal" href="#spfem.element.ElementTriP1" title="spfem.element.ElementTriP1"><code class="xref py py-class docutils literal"><span class="pre">spfem.element.ElementTriP1</span></code></a></li>
+<li><a class="reference internal" href="#spfem.element.ElementTriP2" title="spfem.element.ElementTriP2"><code class="xref py py-class docutils literal"><span class="pre">spfem.element.ElementTriP2</span></code></a></li>
+</ul>
+</dd>
+</dl>
+<dl class="class">
+<dt id="spfem.element.AbstractElement">
+<em class="property">class </em><code class="descclassname">spfem.element.</code><code class="descname">AbstractElement</code><a class="headerlink" href="#spfem.element.AbstractElement" title="Permalink to this definition">¶</a></dt>
+<dd><p>This will replace ElementGlobal in the future.</p>
+<dl class="attribute">
+<dt id="spfem.element.AbstractElement.dim">
+<code class="descname">dim</code><em class="property"> = 0</em><a class="headerlink" href="#spfem.element.AbstractElement.dim" title="Permalink to this definition">¶</a></dt>
+<dd><p>Spatial dimension</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="spfem.element.AbstractElement.e_dofs">
+<code class="descname">e_dofs</code><em class="property"> = 0</em><a class="headerlink" href="#spfem.element.AbstractElement.e_dofs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Number of edge dofs (3d only)</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="spfem.element.AbstractElement.f_dofs">
+<code class="descname">f_dofs</code><em class="property"> = 0</em><a class="headerlink" href="#spfem.element.AbstractElement.f_dofs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Number of facet dofs (2d and 3d only)</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="spfem.element.AbstractElement.i_dofs">
+<code class="descname">i_dofs</code><em class="property"> = 0</em><a class="headerlink" href="#spfem.element.AbstractElement.i_dofs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Number of interior dofs</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="spfem.element.AbstractElement.maxdeg">
+<code class="descname">maxdeg</code><em class="property"> = 0</em><a class="headerlink" href="#spfem.element.AbstractElement.maxdeg" title="Permalink to this definition">¶</a></dt>
+<dd><p>Maximum polynomial degree</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="spfem.element.AbstractElement.n_dofs">
+<code class="descname">n_dofs</code><em class="property"> = 0</em><a class="headerlink" href="#spfem.element.AbstractElement.n_dofs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Number of nodal dofs</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="spfem.element.AbstractElementArgyris">
+<em class="property">class </em><code class="descclassname">spfem.element.</code><code class="descname">AbstractElementArgyris</code><a class="headerlink" href="#spfem.element.AbstractElementArgyris" title="Permalink to this definition">¶</a></dt>
+<dd><p>Argyris element for fourth-order problems.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="spfem.element.AbstractElementMorley">
+<em class="property">class </em><code class="descclassname">spfem.element.</code><code class="descname">AbstractElementMorley</code><a class="headerlink" href="#spfem.element.AbstractElementMorley" title="Permalink to this definition">¶</a></dt>
+<dd><p>Morley element for fourth-order problems.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="spfem.element.AbstractElementTriPp">
+<em class="property">class </em><code class="descclassname">spfem.element.</code><code class="descname">AbstractElementTriPp</code><span class="sig-paren">(</span><em>p=1</em><span class="sig-paren">)</span><a class="headerlink" href="#spfem.element.AbstractElementTriPp" title="Permalink to this definition">¶</a></dt>
+<dd><p>Triangular Pp element, Lagrange DOFs.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="spfem.element.Element">
+<em class="property">class </em><code class="descclassname">spfem.element.</code><code class="descname">Element</code><a class="headerlink" href="#spfem.element.Element" title="Permalink to this definition">¶</a></dt>
+<dd><p>Abstract finite element class.</p>
+<dl class="attribute">
+<dt id="spfem.element.Element.dim">
+<code class="descname">dim</code><em class="property"> = 0</em><a class="headerlink" href="#spfem.element.Element.dim" title="Permalink to this definition">¶</a></dt>
+<dd><p>Spatial dimension</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="spfem.element.Element.e_dofs">
+<code class="descname">e_dofs</code><em class="property"> = 0</em><a class="headerlink" href="#spfem.element.Element.e_dofs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Number of edge dofs (3d only)</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="spfem.element.Element.f_dofs">
+<code class="descname">f_dofs</code><em class="property"> = 0</em><a class="headerlink" href="#spfem.element.Element.f_dofs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Number of facet dofs (2d and 3d only)</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spfem.element.Element.gbasis">
+<code class="descname">gbasis</code><span class="sig-paren">(</span><em>X</em>, <em>i</em>, <em>tind</em><span class="sig-paren">)</span><a class="headerlink" href="#spfem.element.Element.gbasis" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns global basis functions evaluated at some local points.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="spfem.element.Element.i_dofs">
+<code class="descname">i_dofs</code><em class="property"> = 0</em><a class="headerlink" href="#spfem.element.Element.i_dofs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Number of interior dofs</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spfem.element.Element.lbasis">
+<code class="descname">lbasis</code><span class="sig-paren">(</span><em>X</em>, <em>i</em><span class="sig-paren">)</span><a class="headerlink" href="#spfem.element.Element.lbasis" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns local basis functions evaluated at some local points.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="spfem.element.Element.maxdeg">
+<code class="descname">maxdeg</code><em class="property"> = 0</em><a class="headerlink" href="#spfem.element.Element.maxdeg" title="Permalink to this definition">¶</a></dt>
+<dd><p>Maximum polynomial degree</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="spfem.element.Element.n_dofs">
+<code class="descname">n_dofs</code><em class="property"> = 0</em><a class="headerlink" href="#spfem.element.Element.n_dofs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Number of nodal dofs</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="spfem.element.ElementGlobal">
+<em class="property">class </em><code class="descclassname">spfem.element.</code><code class="descname">ElementGlobal</code><a class="headerlink" href="#spfem.element.ElementGlobal" title="Permalink to this definition">¶</a></dt>
+<dd><p>An element defined globally. These elements are used by <code class="xref py py-class docutils literal"><span class="pre">spfem.assembly.AssemblerGlobal</span></code>.</p>
+<dl class="method">
+<dt id="spfem.element.ElementGlobal.gbasis">
+<code class="descname">gbasis</code><span class="sig-paren">(</span><em>mesh</em>, <em>qps</em>, <em>k</em><span class="sig-paren">)</span><a class="headerlink" href="#spfem.element.ElementGlobal.gbasis" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the global basis functions of an element evaluated at
+the given quadrature points.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>mesh</strong></p>
+<blockquote>
+<div><p>The <a class="reference internal" href="#spfem.mesh.Mesh" title="spfem.mesh.Mesh"><code class="xref py py-class docutils literal"><span class="pre">spfem.mesh.Mesh</span></code></a> object.</p>
+</div></blockquote>
+<p><strong>qps</strong> : dict of global quadrature points</p>
+<blockquote>
+<div><p>The global quadrature points in the element k.</p>
+</div></blockquote>
+<p><strong>k</strong> : int</p>
+<blockquote>
+<div><p>The index of the element in mesh structure.</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>u</strong> : dict</p>
+<blockquote>
+<div><p>A dictionary with integer keys from 0 to Nbfun.
+Here u[i] contains the values
+of the i&#8217;th basis function of the element k
+evaluated at the given quadrature points (np.array).</p>
+</div></blockquote>
+<p><strong>du</strong> : dict</p>
+<blockquote>
+<div><p>The first derivatives. The actual contents
+are 100% defined by the element implementation
+although du[i] should correspond to the
+i&#8217;th basis function.</p>
+</div></blockquote>
+<p><strong>ddu</strong> : dict</p>
+<blockquote class="last">
+<div><p>The second derivatives. The actual contents
+are 100% defined by the element implementation
+although ddu[i] should correspond to the i&#8217;th
+basis function.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="spfem.element.ElementGlobal.visualize_basis_2d">
+<code class="descname">visualize_basis_2d</code><span class="sig-paren">(</span><em>show_du=False</em>, <em>show_ddu=False</em>, <em>save_figures=False</em><span class="sig-paren">)</span><a class="headerlink" href="#spfem.element.ElementGlobal.visualize_basis_2d" title="Permalink to this definition">¶</a></dt>
+<dd><p>Draw the basis functions given by self.gbasis.
+Only for 2D triangular elements. For debugging purposes.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="spfem.element.ElementGlobalArgyris">
+<em class="property">class </em><code class="descclassname">spfem.element.</code><code class="descname">ElementGlobalArgyris</code><span class="sig-paren">(</span><em>optimize_u=False</em>, <em>optimize_du=False</em>, <em>optimize_ddu=False</em><span class="sig-paren">)</span><a class="headerlink" href="#spfem.element.ElementGlobalArgyris" title="Permalink to this definition">¶</a></dt>
+<dd><p>Argyris element for fourth-order problems.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="spfem.element.ElementGlobalDGTriP0">
+<em class="property">class </em><code class="descclassname">spfem.element.</code><code class="descname">ElementGlobalDGTriP0</code><a class="headerlink" href="#spfem.element.ElementGlobalDGTriP0" title="Permalink to this definition">¶</a></dt>
+<dd><p>A triangular constant DG element.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="spfem.element.ElementGlobalDGTriP1">
+<em class="property">class </em><code class="descclassname">spfem.element.</code><code class="descname">ElementGlobalDGTriP1</code><a class="headerlink" href="#spfem.element.ElementGlobalDGTriP1" title="Permalink to this definition">¶</a></dt>
+<dd><p>A triangular first-order DG element.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="spfem.element.ElementGlobalDGTriP2">
+<em class="property">class </em><code class="descclassname">spfem.element.</code><code class="descname">ElementGlobalDGTriP2</code><a class="headerlink" href="#spfem.element.ElementGlobalDGTriP2" title="Permalink to this definition">¶</a></dt>
+<dd><p>A triangular second-order DG element.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="spfem.element.ElementGlobalDGTriP3">
+<em class="property">class </em><code class="descclassname">spfem.element.</code><code class="descname">ElementGlobalDGTriP3</code><a class="headerlink" href="#spfem.element.ElementGlobalDGTriP3" title="Permalink to this definition">¶</a></dt>
+<dd><p>A triangular third-order DG element.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="spfem.element.ElementGlobalMorley">
+<em class="property">class </em><code class="descclassname">spfem.element.</code><code class="descname">ElementGlobalMorley</code><a class="headerlink" href="#spfem.element.ElementGlobalMorley" title="Permalink to this definition">¶</a></dt>
+<dd><p>Morley element for fourth-order problems.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="spfem.element.ElementGlobalTriP1">
+<em class="property">class </em><code class="descclassname">spfem.element.</code><code class="descname">ElementGlobalTriP1</code><a class="headerlink" href="#spfem.element.ElementGlobalTriP1" title="Permalink to this definition">¶</a></dt>
+<dd><p>The simplest possible globally defined elements.
+This should only be used for debugging purposes.
+Use <a class="reference internal" href="#spfem.element.ElementTriP1" title="spfem.element.ElementTriP1"><code class="xref py py-class docutils literal"><span class="pre">ElementTriP1</span></code></a> instead.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="spfem.element.ElementGlobalTriP2">
+<em class="property">class </em><code class="descclassname">spfem.element.</code><code class="descname">ElementGlobalTriP2</code><a class="headerlink" href="#spfem.element.ElementGlobalTriP2" title="Permalink to this definition">¶</a></dt>
+<dd><p>Second-order triangular elements, globally
+defined version. This should only be used for debugging purposes.
+Use <a class="reference internal" href="#spfem.element.ElementTriP2" title="spfem.element.ElementTriP2"><code class="xref py py-class docutils literal"><span class="pre">ElementTriP2</span></code></a> instead.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="spfem.element.ElementH1">
+<em class="property">class </em><code class="descclassname">spfem.element.</code><code class="descname">ElementH1</code><a class="headerlink" href="#spfem.element.ElementH1" title="Permalink to this definition">¶</a></dt>
+<dd><p>Abstract <span class="math">\(H^1\)</span> conforming finite element.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="spfem.element.ElementH1Vec">
+<em class="property">class </em><code class="descclassname">spfem.element.</code><code class="descname">ElementH1Vec</code><span class="sig-paren">(</span><em>elem</em><span class="sig-paren">)</span><a class="headerlink" href="#spfem.element.ElementH1Vec" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert <span class="math">\(H^1\)</span> element to vectorial <span class="math">\(H^1\)</span> element.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="spfem.element.ElementHdiv">
+<em class="property">class </em><code class="descclassname">spfem.element.</code><code class="descname">ElementHdiv</code><a class="headerlink" href="#spfem.element.ElementHdiv" title="Permalink to this definition">¶</a></dt>
+<dd><p>Abstract <span class="math">\(H_{div}\)</span> conforming finite element.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="spfem.element.ElementLineP1">
+<em class="property">class </em><code class="descclassname">spfem.element.</code><code class="descname">ElementLineP1</code><a class="headerlink" href="#spfem.element.ElementLineP1" title="Permalink to this definition">¶</a></dt>
+<dd><p>Linear element for one dimension.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="spfem.element.ElementQ1">
+<em class="property">class </em><code class="descclassname">spfem.element.</code><code class="descname">ElementQ1</code><a class="headerlink" href="#spfem.element.ElementQ1" title="Permalink to this definition">¶</a></dt>
+<dd><p>Simplest quadrilateral element.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="spfem.element.ElementQ2">
+<em class="property">class </em><code class="descclassname">spfem.element.</code><code class="descname">ElementQ2</code><a class="headerlink" href="#spfem.element.ElementQ2" title="Permalink to this definition">¶</a></dt>
+<dd><p>Second order quadrilateral element.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="spfem.element.ElementTetDG">
+<em class="property">class </em><code class="descclassname">spfem.element.</code><code class="descname">ElementTetDG</code><span class="sig-paren">(</span><em>elem</em><span class="sig-paren">)</span><a class="headerlink" href="#spfem.element.ElementTetDG" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert a H1 tetrahedral element into a DG element.
+All DOFs are converted to interior DOFs.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="spfem.element.ElementTetP0">
+<em class="property">class </em><code class="descclassname">spfem.element.</code><code class="descname">ElementTetP0</code><a class="headerlink" href="#spfem.element.ElementTetP0" title="Permalink to this definition">¶</a></dt>
+<dd><p>Piecewise constant element for tetrahedral mesh.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="spfem.element.ElementTetP1">
+<em class="property">class </em><code class="descclassname">spfem.element.</code><code class="descname">ElementTetP1</code><a class="headerlink" href="#spfem.element.ElementTetP1" title="Permalink to this definition">¶</a></dt>
+<dd><p>The simplest tetrahedral element.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="spfem.element.ElementTetP2">
+<em class="property">class </em><code class="descclassname">spfem.element.</code><code class="descname">ElementTetP2</code><a class="headerlink" href="#spfem.element.ElementTetP2" title="Permalink to this definition">¶</a></dt>
+<dd><p>The quadratic tetrahedral element.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="spfem.element.ElementTriDG">
+<em class="property">class </em><code class="descclassname">spfem.element.</code><code class="descname">ElementTriDG</code><span class="sig-paren">(</span><em>elem</em><span class="sig-paren">)</span><a class="headerlink" href="#spfem.element.ElementTriDG" title="Permalink to this definition">¶</a></dt>
+<dd><p>Transform a H1 conforming triangular element
+into a discontinuous one by turning all DOFs into
+interior DOFs.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="spfem.element.ElementTriMini">
+<em class="property">class </em><code class="descclassname">spfem.element.</code><code class="descname">ElementTriMini</code><a class="headerlink" href="#spfem.element.ElementTriMini" title="Permalink to this definition">¶</a></dt>
+<dd><p>The MINI-element for triangular mesh.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="spfem.element.ElementTriP0">
+<em class="property">class </em><code class="descclassname">spfem.element.</code><code class="descname">ElementTriP0</code><a class="headerlink" href="#spfem.element.ElementTriP0" title="Permalink to this definition">¶</a></dt>
+<dd><p>Piecewise constant element for triangular mesh.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="spfem.element.ElementTriP1">
+<em class="property">class </em><code class="descclassname">spfem.element.</code><code class="descname">ElementTriP1</code><a class="headerlink" href="#spfem.element.ElementTriP1" title="Permalink to this definition">¶</a></dt>
+<dd><p>The simplest triangular element.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="spfem.element.ElementTriP2">
+<em class="property">class </em><code class="descclassname">spfem.element.</code><code class="descname">ElementTriP2</code><a class="headerlink" href="#spfem.element.ElementTriP2" title="Permalink to this definition">¶</a></dt>
+<dd><p>The quadratic triangular element.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="spfem.element.ElementTriPp">
+<em class="property">class </em><code class="descclassname">spfem.element.</code><code class="descname">ElementTriPp</code><span class="sig-paren">(</span><em>p</em><span class="sig-paren">)</span><a class="headerlink" href="#spfem.element.ElementTriPp" title="Permalink to this definition">¶</a></dt>
+<dd><p>A somewhat slow implementation of hierarchical
+p-basis for triangular mesh.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="spfem.element.ElementTriRT0">
+<em class="property">class </em><code class="descclassname">spfem.element.</code><code class="descname">ElementTriRT0</code><a class="headerlink" href="#spfem.element.ElementTriRT0" title="Permalink to this definition">¶</a></dt>
+<dd><p>Lowest order Raviart-Thomas element for triangle.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-spfem.mapping">
+<span id="fem-mapping"></span><h2>fem.mapping<a class="headerlink" href="#module-spfem.mapping" title="Permalink to this headline">¶</a></h2>
+<p>The mappings defining relationships between reference and global elements.</p>
+<p>Currently these classes have quite a lot of undocumented behavior and
+untested code. The following mappings are implemented to some extent:</p>
+<blockquote>
+<div><ul class="simple">
+<li><a class="reference internal" href="#spfem.mapping.MappingAffine" title="spfem.mapping.MappingAffine"><code class="xref py py-class docutils literal"><span class="pre">spfem.mapping.MappingAffine</span></code></a>, the standard affine local-to-global mapping that can be used with triangular and tetrahedral elements.</li>
+<li><a class="reference internal" href="#spfem.mapping.MappingQ1" title="spfem.mapping.MappingQ1"><code class="xref py py-class docutils literal"><span class="pre">spfem.mapping.MappingQ1</span></code></a>, the local-to-global mapping defined by the Q1 basis functions. This is required for quadrilateral meshes.</li>
+</ul>
+</div></blockquote>
+<dl class="class">
+<dt id="spfem.mapping.Mapping">
+<em class="property">class </em><code class="descclassname">spfem.mapping.</code><code class="descname">Mapping</code><span class="sig-paren">(</span><em>mesh</em><span class="sig-paren">)</span><a class="headerlink" href="#spfem.mapping.Mapping" title="Permalink to this definition">¶</a></dt>
+<dd><p>Abstract class for mappings.</p>
+<dl class="method">
+<dt id="spfem.mapping.Mapping.F">
+<code class="descname">F</code><span class="sig-paren">(</span><em>X</em>, <em>tind</em><span class="sig-paren">)</span><a class="headerlink" href="#spfem.mapping.Mapping.F" title="Permalink to this definition">¶</a></dt>
+<dd><p>Element local to global.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spfem.mapping.Mapping.G">
+<code class="descname">G</code><span class="sig-paren">(</span><em>X</em>, <em>find</em><span class="sig-paren">)</span><a class="headerlink" href="#spfem.mapping.Mapping.G" title="Permalink to this definition">¶</a></dt>
+<dd><p>Boundary local to global.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="spfem.mapping.MappingAffine">
+<em class="property">class </em><code class="descclassname">spfem.mapping.</code><code class="descname">MappingAffine</code><span class="sig-paren">(</span><em>mesh</em><span class="sig-paren">)</span><a class="headerlink" href="#spfem.mapping.MappingAffine" title="Permalink to this definition">¶</a></dt>
+<dd><p>Affine mappings for simplex (=line,tri,tet) mesh.</p>
+<dl class="method">
+<dt id="spfem.mapping.MappingAffine.F">
+<code class="descname">F</code><span class="sig-paren">(</span><em>X</em>, <em>tind=None</em><span class="sig-paren">)</span><a class="headerlink" href="#spfem.mapping.MappingAffine.F" title="Permalink to this definition">¶</a></dt>
+<dd><p>Affine map F(X)=AX+b.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spfem.mapping.MappingAffine.G">
+<code class="descname">G</code><span class="sig-paren">(</span><em>X</em>, <em>find=None</em><span class="sig-paren">)</span><a class="headerlink" href="#spfem.mapping.MappingAffine.G" title="Permalink to this definition">¶</a></dt>
+<dd><p>Boundary mapping G(X)=Bx+c.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spfem.mapping.MappingAffine.invF">
+<code class="descname">invF</code><span class="sig-paren">(</span><em>x</em>, <em>tind=None</em><span class="sig-paren">)</span><a class="headerlink" href="#spfem.mapping.MappingAffine.invF" title="Permalink to this definition">¶</a></dt>
+<dd><p>Inverse map F^{-1}(x)=A^{-1}(x-b).</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="spfem.mapping.MappingQ1">
+<em class="property">class </em><code class="descclassname">spfem.mapping.</code><code class="descname">MappingQ1</code><span class="sig-paren">(</span><em>mesh</em><span class="sig-paren">)</span><a class="headerlink" href="#spfem.mapping.MappingQ1" title="Permalink to this definition">¶</a></dt>
+<dd><p>Mapping for quadrilaterals.</p>
+<dl class="method">
+<dt id="spfem.mapping.MappingQ1.F">
+<code class="descname">F</code><span class="sig-paren">(</span><em>Y</em>, <em>tind=None</em><span class="sig-paren">)</span><a class="headerlink" href="#spfem.mapping.MappingQ1.F" title="Permalink to this definition">¶</a></dt>
+<dd><p>Mapping defined by Q1 basis.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spfem.mapping.MappingQ1.G">
+<code class="descname">G</code><span class="sig-paren">(</span><em>X</em>, <em>find=None</em><span class="sig-paren">)</span><a class="headerlink" href="#spfem.mapping.MappingQ1.G" title="Permalink to this definition">¶</a></dt>
+<dd><p>Boundary mapping <span class="math">\(G(X)=BX+c\)</span>.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spfem.mapping.MappingQ1.invF">
+<code class="descname">invF</code><span class="sig-paren">(</span><em>x</em>, <em>tind=None</em><span class="sig-paren">)</span><a class="headerlink" href="#spfem.mapping.MappingQ1.invF" title="Permalink to this definition">¶</a></dt>
+<dd><p>Inverse map. Perform Newton iteration.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-spfem.utils">
+<span id="fem-utils"></span><h2>fem.utils<a class="headerlink" href="#module-spfem.utils" title="Permalink to this headline">¶</a></h2>
+<p>Utility functions.</p>
+<dl class="class">
+<dt id="spfem.utils.ConvergenceStudy">
+<em class="property">class </em><code class="descclassname">spfem.utils.</code><code class="descname">ConvergenceStudy</code><span class="sig-paren">(</span><em>fname</em><span class="sig-paren">)</span><a class="headerlink" href="#spfem.utils.ConvergenceStudy" title="Permalink to this definition">¶</a></dt>
+<dd><p>A module to simplify creating convergence studies.
+Uses <a href="#id2"><span class="problematic" id="id3">*</span></a>.pkl (pickle) files as key-value-type storage
+and enables simple plotting and fitting of linear
+functions on logarithmic scale.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="spfem.utils.cell_shape">
+<code class="descclassname">spfem.utils.</code><code class="descname">cell_shape</code><span class="sig-paren">(</span><em>x</em>, <em>*rest</em><span class="sig-paren">)</span><a class="headerlink" href="#spfem.utils.cell_shape" title="Permalink to this definition">¶</a></dt>
+<dd><p>Find out the shape of a cell array.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="spfem.utils.cg">
+<code class="descclassname">spfem.utils.</code><code class="descname">cg</code><span class="sig-paren">(</span><em>A</em>, <em>b</em>, <em>tol</em>, <em>maxiter</em>, <em>x0=None</em>, <em>I=None</em>, <em>pc='diag'</em>, <em>verbose=True</em>, <em>viewiters=False</em><span class="sig-paren">)</span><a class="headerlink" href="#spfem.utils.cg" title="Permalink to this definition">¶</a></dt>
+<dd><p>Conjugate gradient solver wrapped for FEM purposes.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="spfem.utils.const_cell">
+<code class="descclassname">spfem.utils.</code><code class="descname">const_cell</code><span class="sig-paren">(</span><em>nparr</em>, <em>*arg</em><span class="sig-paren">)</span><a class="headerlink" href="#spfem.utils.const_cell" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize a cell array (i.e. python dictionary)
+with the given parameter array/float by performing
+a deep copy.</p>
+<p><em>Example</em>. Initializing a cell array with zeroes.</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">fem.utils</span> <span class="kn">import</span> <span class="n">const_cell</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">const_cell</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+<span class="go">{0: {0: 0.0, 1: 0.0}, 1: {0: 0.0, 1: 0.0}, 2: {0: 0.0, 1: 0.0}}</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="spfem.utils.direct">
+<code class="descclassname">spfem.utils.</code><code class="descname">direct</code><span class="sig-paren">(</span><em>A</em>, <em>b</em>, <em>x=None</em>, <em>I=None</em>, <em>use_umfpack=True</em><span class="sig-paren">)</span><a class="headerlink" href="#spfem.utils.direct" title="Permalink to this definition">¶</a></dt>
+<dd><p>Solve system Ax=b with Dirichlet boundary conditions.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="spfem.utils.gradient">
+<code class="descclassname">spfem.utils.</code><code class="descname">gradient</code><span class="sig-paren">(</span><em>u</em>, <em>mesh</em><span class="sig-paren">)</span><a class="headerlink" href="#spfem.utils.gradient" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the gradient of a piecewise linear function.</p>
+</dd></dl>
+
+</div>
+</div>
+<div class="section" id="tips">
+<h1>Tips<a class="headerlink" href="#tips" title="Permalink to this headline">¶</a></h1>
+<ul class="simple">
+<li>Errors related to qt4, wx, mayavi, etc. can be sometimes fixed by simply changing environment variables or running ipython with the following flags:</li>
+</ul>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>ipython --gui<span class="o">=</span>wx --pylab<span class="o">=</span>wx
+</pre></div>
+</div>
+<div class="highlight-bash"><div class="highlight"><pre><span></span><span class="nv">ETS_TOOLKIT</span><span class="o">=</span>qt4 ipython --gui<span class="o">=</span>wx --pylab<span class="o">=</span>wx
+</pre></div>
+</div>
+<ul class="simple">
+<li>Simplest way to run tests is to discover them all using unittest as follows:</li>
+</ul>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>ipython -m unittest discover ./spfem
+</pre></div>
+</div>
+<ul class="simple">
+<li>In order to estimate test coverage you can install coverage.py and run it</li>
+</ul>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>pip install coverage
+coverage run -m unittest discover ./spfem
+coverage html
+</pre></div>
+</div>
+</div>
+<div class="section" id="license">
+<h1>License<a class="headerlink" href="#license" title="Permalink to this headline">¶</a></h1>
+<p>sp.fem is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.</p>
+<p>sp.fem is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details.</p>
+<p>You should have received a copy of the GNU Affero General Public License along with sp.fem. If not, see &lt;<a class="reference external" href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.</p>
+</div>
+<div class="section" id="indices-and-tables">
+<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h1>
+<ul class="simple">
+<li><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></li>
+<li><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></li>
+<li><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></li>
+</ul>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, Tom Gustafsson.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'0.1.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+      <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

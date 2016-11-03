@@ -147,7 +147,8 @@ solution by
 Classes
 =======
 
-This section contains documentation generated automatically from the source code of the relevant classes.
+This section contains documentation generated automatically from the source code
+of the relevant classes.
 
 fem.mesh
 ########
@@ -182,7 +183,8 @@ fem.utils
 Tips
 ====
 
-* Errors related to qt4, wx, mayavi, etc. can be sometimes fixed by simply changing environment variables or running ipython with the following flags:
+* Errors related to qt4, wx, mayavi, etc. can be sometimes fixed by simply
+  changing environment variables or running ipython with the following flags:
 
 .. code-block:: bash
 
@@ -209,11 +211,17 @@ Tips
 License
 =======
 
-sp.fem is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+sp.fem is free software: you can redistribute it and/or modify it under the
+terms of the GNU Affero General Public License as published by the Free Software
+Foundation, either version 3 of the License, or (at your option) any later
+version.
 
-sp.fem is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details.
+sp.fem is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE. See the GNU Affero General Public License for more details.
 
-You should have received a copy of the GNU Affero General Public License along with sp.fem. If not, see <http://www.gnu.org/licenses/>.
+You should have received a copy of the GNU Affero General Public License along
+with sp.fem. If not, see <http://www.gnu.org/licenses/>.
 
 Indices and tables
 ==================
