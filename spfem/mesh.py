@@ -9,8 +9,8 @@ Currently implemented mesh types are
     * :class:`spfem.mesh.MeshQuad`, a mesh consisting of quadrilaterals
     * :class:`spfem.mesh.MeshLine`, one-dimensional mesh
 
-Example
-=======
+Examples
+========
 
 Obtain a three times refined mesh of the unit square and draw it.
 

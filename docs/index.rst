@@ -1,9 +1,13 @@
 Hello, sp.fem!
 ==============
 
-This is the documentation of a simple finite element assembler library written in Python 2.7. The library is useful for quickly creating numerical solvers for various PDE-based models.
+This is the documentation of a simple finite element assembler library written
+in Python 2.7. The library is useful for quickly creating numerical solvers for
+various PDE-based models.
 
-The library is currently work-in-progress and there is a fair amount of work to be done until it can be considered complete. The current state is however more than usable.
+The library is currently work-in-progress and there is a fair amount of work to
+be done until it can be considered complete. The current state is however more
+than usable.
 
 Getting started
 ===============
@@ -15,15 +19,20 @@ You can download the library and get started by running the following commands
     git clone https://github.com/kinnala/sp.fem
     cd sp.fem
 
-If you are a well-seasoned Python developer you may look into the contents of requirements.txt, check that you have all the required libraries and do whatever you wish.
+If you are a well-seasoned Python developer you may look into the contents of
+requirements.txt, check that you have all the required libraries and do whatever
+you wish.
 
-Otherwise, we suggest that you use *miniconda* for managing Python virtual environments and installing packages. You can download and install *miniconda* by running
+Otherwise, we suggest that you use *miniconda* for managing Python virtual
+environments and installing packages. You can download and install *miniconda*
+by running
 
 .. code-block:: bash
 
     make install-conda
 
-Next you can create a new virtual environment and install the required packages by running
+Next you can create a new virtual environment and install the required packages
+by running
 
 .. code-block:: bash
 
@@ -35,7 +44,8 @@ The newly created virtual environment can be activated by writing
 
     source activate spfemenv
 
-Optionally, in order to use the geometry module, you should install MeshPy dependency by running
+Optionally, in order to use the geometry module, you should install MeshPy
+dependency by running
 
 .. code-block:: bash
 
@@ -49,18 +59,23 @@ We begin by importing the necessary library functions.
 .. code-block:: python
 
     from spfem.mesh import MeshTri
-    from spfem.asm import AssemblerElement
+    from spfem.assembly import AssemblerElement
     from spfem.element import ElementTriP1
     from spfem.utils import direct
 
-Let us solve the Poisson equation in a unit square :math:`\Omega = [0,1]^2` with unit loading. We can obtain a mesh of the unit square and refine it six times by
+Let us solve the Poisson equation in a unit square :math:`\Omega = [0,1]^2` with
+unit loading. We can obtain a mesh of the unit square and refine it six times by
 
 .. code-block:: python
 
-    m=MeshTri()
+    m = MeshTri()
     m.refine(6)
 
-By default, the initializer of :class:`spfem.mesh.MeshTri` returns a mesh of the unit square with two elements. The :py:meth:`spfem.mesh.MeshTri.refine` method refines the mesh by splitting each triangle into four subtriangles. Let us denote the finite element mesh by :math:`\mathcal{T}_h` and an arbitrary element by :math:`K`.
+By default, the initializer of :class:`spfem.mesh.MeshTri` returns a mesh of the
+unit square with two elements. The :py:meth:`spfem.mesh.MeshTri.refine` method
+refines the mesh by splitting each triangle into four subtriangles. Let us
+denote the finite element mesh by :math:`\mathcal{T}_h` and an arbitrary element
+by :math:`K`.
 
 The governing equation is
 
@@ -94,24 +109,40 @@ The finite element method reads: find :math:`u_h \in V_h` satisfying
     
     (\nabla u_h, \nabla v_h) = (1,v_h)
 
-for every :math:`v_h \in V_h`. A typical approach to impose the boundary condition :math:`u_h=0` (which is implicitly included in the definition of :math:`V_h`) is to initially build the matrix and the vector corresponding to the discrete space
+for every :math:`v_h \in V_h`. A typical approach to impose the boundary
+condition :math:`u_h=0` (which is implicitly included in the definition of
+:math:`V_h`) is to initially build the matrix and the vector corresponding to
+the discrete space
 
 .. math::
     
     W_h = \{ w_h \in H^1(\Omega) : w_h|_K \in P_1(K)~\forall K \in \mathcal{T}_h \}
 
-and afterwards remove the rows and columns corresponding to the boundary nodes. An assembler object corresponding to the mesh :math:`\mathcal{T}_h` and the discrete space :math:`W_h` can be initialized by
+and afterwards remove the rows and columns corresponding to the boundary nodes.
+An assembler object corresponding to the mesh :math:`\mathcal{T}_h` and the
+discrete space :math:`W_h` can be initialized by
 
 .. code-block:: python
 
-    a=AssemblerElement(m,ElementTriP1())
+    a = AssemblerElement(m, ElementTriP1())
 
 and the stiffness matrix and the load vector can be assembled by writing
 
 .. code-block:: python
 
-    A=a.iasm(lambda du,dv: du[0]*dv[0]+du[1]*dv[1])
-    b=a.iasm(lambda v: 1.0*v)
+    A = a.iasm(lambda du, dv: du[0]*dv[0] + du[1]*dv[1])
+    b = a.iasm(lambda v: 1.0*v)
+
+Finally you can solve the resulting linear system and visualize the resulting
+solution by
+
+.. code-block:: python
+
+    x = direct(A, b, I=m.interior_nodes())
+    m.plot3(x)
+    m.show()
+
+.. image:: tutorial.png
 
 Classes
 =======

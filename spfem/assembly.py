@@ -2,8 +2,8 @@
 """
 Assembly of matrices related to linear and bilinear forms.
 
-Example
-=======
+Examples
+========
 Assemble the stiffness matrix related to
 the Poisson problem using the piecewise linear elements.
 
