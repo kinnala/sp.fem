@@ -1,6 +1,6 @@
 *~
 *.swp
 *.pyc
-oldassembly.py
-play.py
-play*.py
+*.plk
+/*.py
+!/setup.py

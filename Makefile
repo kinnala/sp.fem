@@ -5,21 +5,11 @@ install-conda: ## Download and install miniconda
 	@bash miniconda.sh
 	@rm miniconda.sh
 
-dev-scripts: ## Create scripts that are useful while developing (with) sp.fem
-	@printf "#!/bin/bash\ntmux -2 new-session -d 'TERM=screen-256color vim spfem/*'\ntmux split-window -h \ntmux split-window -v\ntmux -2 attach-session -d" > dev-tmux
-	@chmod 744 dev-tmux
-
 dev-install-yml: ## Create a development environment from environment.yml
 	@conda env create -f environment.yml
 
 dev-install: ## Create a development environment
 	@conda create -q -n spfemenv python numpy scipy matplotlib sympy ipython pyqt=4.11.4 mayavi
-
-activate: ## Type ". activate spfemenv" to start the conda environment
-	@echo "Activate the development environment by typing: \". activate spfemenv\""
-
-deactivate: ## Type ". deactivate" to quit the conda environment
-	@echo "Deactivate the development environment by typing: \". deactivate\""
 
 run-tests: ## Run the unit tests
 	@ipython -m unittest discover ./spfem
