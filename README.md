@@ -2,10 +2,25 @@
 
 [![Build Status](https://travis-ci.org/kinnala/sp.fem.svg)](https://travis-ci.org/kinnala/sp.fem) [![codecov](https://codecov.io/gh/kinnala/sp.fem/branch/master/graph/badge.svg)](https://codecov.io/gh/kinnala/sp.fem)
 
-In this repository you find the working draft of a flexible, fully-interpreted
-and yet well-performing finite element code written in SciPy/Python.
+In this repository you find the working draft of a lightweight,
+fully-interpreted and yet well-performing finite element code written in
+SciPy/Python.
 
 The code is (c) Tom Gustafsson and licensed under AGPLv3.
+
+## Ideology
+
+The main task of the library is to perform *finite element assembly* for various
+types of *finite elements* and *meshes*. Thus, the core functionality can be
+summarized in the following heuristic identity:
+
+```
+Mesh (spfem) + Bilinear form (function) + Element (spfem) = Sparse Matrix (scipy)
+```
+
+This implies that the library is not suitable for developers who wish to have a
+blackbox PDE solver. The user must have a basic understanding of finite elements
+in order to successfully apply the resulting matrices.
 
 ## Minimal example
 The following code solves the Poisson equation in a unit square with zero
