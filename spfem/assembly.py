@@ -155,7 +155,7 @@ class AssemblerAbstract(Assembler):
 
         self.mesh = mesh
         self.elem_u = elem_u
-        self.dofnum_u = Dofnum(mesh,elem_u)
+        self.dofnum_u = Dofnum(mesh, elem_u)
         self.mapping = mesh.mapping()
 
         # duplicate test function element type if None is given
@@ -177,7 +177,7 @@ class AssemblerAbstract(Assembler):
         # global quadrature points
         x = self.mapping.F(X, range(self.mesh.t.shape[1]))
         # pre-compute basis functions at quadrature points
-        self.u, self.du, self.ddu = self.elem_u.evalbasis(self.mesh,x)
+        self.u, self.du, self.ddu = self.elem_u.evalbasis(self.mesh, x)
 
         if elem_v is None:
             self.v = self.u
@@ -215,9 +215,9 @@ class AssemblerAbstract(Assembler):
         Nbfun_v = self.dofnum_v.t_dof.shape[0]
 
         # interpolate some previous discrete function at quadrature points
-        w={}
+        w = {}
         if interp is not None:
-            if not isinstance(interp,dict):
+            if not isinstance(interp, dict):
                 raise Exception("The input solution vector(s) must be in a "
                                 "dictionary! Pass e.g. {0:u} instead of u.")
             # interpolate the solution vectors at quadrature points
@@ -271,14 +271,14 @@ class AssemblerAbstract(Assembler):
                 rows[ixs] = self.dofnum_v.t_dof[i, :]
                 cols[ixs] = np.zeros(nt)
         
-            return coo_matrix((data, (rows,cols)),
+            return coo_matrix((data, (rows, cols)),
                               shape=(self.dofnum_v.N, 1)).toarray().T[0]
 
-    def inorm(self,form,interp,intorder=None):
+    def inorm(self, form, interp, intorder=None):
         # evaluate norm on all elements
         tind = range(self.mesh.t.shape[1])
 
-        if not isinstance(interp,dict):
+        if not isinstance(interp, dict):
             raise Exception("The input solution vector(s) must be in a "
                             "dictionary! Pass e.g. {0:u} instead of u.")
 
@@ -288,7 +288,7 @@ class AssemblerAbstract(Assembler):
         # check and fix parameters of form
         oldparams = inspect.getargspec(form).args
         paramlist = ['u', 'du', 'ddu', 'x', 'h']
-        fform = self.fillargs(form,paramlist)
+        fform = self.fillargs(form, paramlist)
 
         X, W = get_quadrature(self.mesh.refdom, intorder)
 
@@ -306,8 +306,8 @@ class AssemblerAbstract(Assembler):
         w, dw, ddw = ({} for i in range(3))
         for k in interp:
             w[k] = zero
-            dw[k] = const_cell(zero,dim)
-            ddw[k] = const_cell(zero,dim,dim)
+            dw[k] = const_cell(zero, dim)
+            ddw[k] = const_cell(zero, dim, dim)
             for j in range(Nbfun_u):
                 jdofs = self.dofnum_u.t_dof[j, :]
                 w[k] += interp[k][jdofs][:, None]*self.u[j]
@@ -366,7 +366,7 @@ class AssemblerAbstract(Assembler):
 
         n = {}
         if normals:
-            Y = self.mapping.invF(x, tind=tind1) # global facet to reference element
+            Y = self.mapping.invF(x, tind=tind1) # global facet to ref element
             n = self.mapping.normals(Y, tind1, find, self.mesh.t2f)
 
         # interpolate the solution vectors at quadrature points
@@ -376,15 +376,15 @@ class AssemblerAbstract(Assembler):
             w2, dw2, ddw2 = ({} for i in range(3))
         for k in interp:
             w1[k] = zero
-            dw1[k] = const_cell(zero,dim)
-            ddw1[k] = const_cell(zero,dim,dim)
+            dw1[k] = const_cell(zero, dim)
+            ddw1[k] = const_cell(zero, dim, dim)
             if interior:
                 w2[k] = zero
-                dw2[k] = const_cell(zero,dim)
-                ddw2[k] = const_cell(zero,dim,dim)
+                dw2[k] = const_cell(zero, dim)
+                ddw2[k] = const_cell(zero, dim, dim)
             for j in range(Nbfun_u):
-                jdofs1=self.dofnum_u.t_dof[j, tind1]
-                jdofs2=self.dofnum_u.t_dof[j, tind2]
+                jdofs1 = self.dofnum_u.t_dof[j, tind1]
+                jdofs2 = self.dofnum_u.t_dof[j, tind2]
                 w1[k] += interp[k][jdofs1][:, None]*u1[j]
                 if interior:
                     w2[k] += interp[k][jdofs2][:, None]*u2[j]
@@ -424,7 +424,8 @@ class AssemblerElement(Assembler):
         The element for the solution function.
         
     elem_v : (OPTIONAL) :class:`spfem.element.Element`
-        The element for the test function. By default, same element is used for both.
+        The element for the test function. By default,
+        the same element is used for both.
         
     mapping : (OPTIONAL) :class:`spfem.mapping.Mapping`
         The mesh will give some sort of default mapping but sometimes, e.g.
@@ -460,7 +461,7 @@ class AssemblerElement(Assembler):
     def iasm(self, form, intorder=None, tind=None, interp=None):
         """Return a matrix related to a bilinear or linear form
         where the integral is over the interior of the domain.
-        
+         
         Parameters
         ----------
         form : function handle
@@ -573,7 +574,7 @@ class AssemblerElement(Assembler):
                 w[k] = 0.0*x[0]
                 for j in range(Nbfun_u):
                     phi, _ = self.elem_u.lbasis(X, j)
-                    w[k] += np.outer(interp[k][self.dofnum_u.t_dof[j,:]], phi)
+                    w[k] += np.outer(interp[k][self.dofnum_u.t_dof[j, :]], phi)
 
         # compute the mesh parameter from jacobian determinant
         h = np.abs(detDF)**(1.0/self.mesh.dim())
@@ -586,40 +587,44 @@ class AssemblerElement(Assembler):
             cols = np.zeros(Nbfun_u*Nbfun_v*nt)
         
             for j in range(Nbfun_u):
-                u,du=self.elem_u.gbasis(self.mapping,X,j,tind)
+                u, du = self.elem_u.gbasis(self.mapping, X, j, tind)
                 for i in range(Nbfun_v):
-                    v,dv=self.elem_v.gbasis(self.mapping,X,i,tind)
+                    v, dv = self.elem_v.gbasis(self.mapping, X, i, tind)
             
                     # find correct location in data,rows,cols
-                    ixs=slice(nt*(Nbfun_v*j+i),nt*(Nbfun_v*j+i+1))
+                    ixs = slice(nt*(Nbfun_v*j+i), nt*(Nbfun_v*j+i+1))
                     
                     # compute entries of local stiffness matrices
-                    data[ixs]=np.dot(fform(u,v,du,dv,x,w,h)*np.abs(detDF),W)
-                    rows[ixs]=self.dofnum_v.t_dof[i,tind]
-                    cols[ixs]=self.dofnum_u.t_dof[j,tind]
+                    data[ixs] = np.dot(fform(u, v, du, dv, x, w, h)
+                                       * np.abs(detDF), W)
+                    rows[ixs] = self.dofnum_v.t_dof[i, tind]
+                    cols[ixs] = self.dofnum_u.t_dof[j, tind]
         
-            return coo_matrix((data,(rows,cols)),shape=(self.dofnum_v.N,self.dofnum_u.N)).tocsr()
+            return coo_matrix((data, (rows, cols)),
+                              shape=(self.dofnum_v.N, self.dofnum_u.N)).tocsr()
             
         else:
             # initialize sparse matrix structures
-            data=np.zeros(Nbfun_v*nt)
-            rows=np.zeros(Nbfun_v*nt)
-            cols=np.zeros(Nbfun_v*nt)
+            data = np.zeros(Nbfun_v*nt)
+            rows = np.zeros(Nbfun_v*nt)
+            cols = np.zeros(Nbfun_v*nt)
             
             for i in range(Nbfun_v):
-                v,dv=self.elem_v.gbasis(self.mapping,X,i,tind)
+                v, dv = self.elem_v.gbasis(self.mapping, X, i, tind)
 
                 # find correct location in data,rows,cols
-                ixs=slice(nt*i,nt*(i+1))
+                ixs = slice(nt*i, nt*(i+1))
                 
                 # compute entries of local stiffness matrices
-                data[ixs]=np.dot(fform(v,dv,x,w,h)*np.abs(detDF),W)
-                rows[ixs]=self.dofnum_v.t_dof[i,:]
-                cols[ixs]=np.zeros(nt)
+                data[ixs] = np.dot(fform(v, dv, x, w, h)*np.abs(detDF), W)
+                rows[ixs] = self.dofnum_v.t_dof[i, :]
+                cols[ixs] = np.zeros(nt)
         
-            return coo_matrix((data,(rows,cols)),shape=(self.dofnum_v.N,1)).toarray().T[0]
+            return coo_matrix((data, (rows, cols)),
+                              shape=(self.dofnum_v.N, 1)).toarray().T[0]
 
-    def fasm(self, form, find=None, interior=False, intorder=None, normals=True, interp=None):
+    def fasm(self, form, find=None, interior=False, intorder=None,
+             normals=True, interp=None):
         """Facet assembly."""
         if find is None:
             if interior:
@@ -663,8 +668,8 @@ class AssemblerElement(Assembler):
 
         # mappings
         x = self.mapping.G(X, find=find) # reference facet to global facet
-        Y1 = self.mapping.invF(x, tind=tind1) # global facet to reference element
-        Y2 = self.mapping.invF(x, tind=tind2) # global facet to reference element
+        Y1 = self.mapping.invF(x, tind=tind1) # global facet to ref element
+        Y2 = self.mapping.invF(x, tind=tind2) # global facet to ref element
         
         Nbfun_u = self.dofnum_u.t_dof.shape[0]
         Nbfun_v = self.dofnum_v.t_dof.shape[0] 
@@ -723,10 +728,14 @@ class AssemblerElement(Assembler):
            
                     # compute entries of local stiffness matrices
                     if interior:
-                        ixs1 = slice(ne*(Nbfun_v*j + i), ne*(Nbfun_v*j + i + 1))
-                        ixs2 = slice(ne*(Nbfun_v*j + i) + ndata, ne*(Nbfun_v*j + i + 1) + ndata)
-                        ixs3 = slice(ne*(Nbfun_v*j + i) + 2*ndata, ne*(Nbfun_v*j + i + 1) + 2*ndata)
-                        ixs4 = slice(ne*(Nbfun_v*j + i) + 3*ndata, ne*(Nbfun_v*j + i + 1) + 3*ndata)
+                        ixs1 = slice(ne*(Nbfun_v*j + i),
+                                     ne*(Nbfun_v*j + i + 1))
+                        ixs2 = slice(ne*(Nbfun_v*j + i) + ndata,
+                                     ne*(Nbfun_v*j + i + 1) + ndata)
+                        ixs3 = slice(ne*(Nbfun_v*j + i) + 2*ndata,
+                                     ne*(Nbfun_v*j + i + 1) + 2*ndata)
+                        ixs4 = slice(ne*(Nbfun_v*j + i) + 3*ndata,
+                                     ne*(Nbfun_v*j + i + 1) + 3*ndata)
 
                         data[ixs1] = np.dot(fform(u1, z, v1, z,
                                                   du1, dz, dv1, dz,
@@ -762,6 +771,7 @@ class AssemblerElement(Assembler):
                               shape=(self.dofnum_v.N, self.dofnum_u.N)).tocsr()
 
         # linear form
+        # TODO do something to interior linear form assembly
         else:
             # initialize sparse matrix structures
             data = np.zeros(Nbfun_v*ne)
@@ -787,7 +797,7 @@ class AssemblerElement(Assembler):
             return coo_matrix((data, (rows, cols)),
                               shape=(self.dofnum_v.N, 1)).toarray().T[0]
             
-    def L2error(self,uh,exact,intorder=None):
+    def L2error(self, uh, exact, intorder=None):
         """
         Compute :math:`L^2` error against exact solution.
         
@@ -797,32 +807,33 @@ class AssemblerElement(Assembler):
             
             \|u-u_h\|_0^2 = (u,u)+(u_h,u_h)-2(u,u_h).
         """
-        if self.elem_u.maxdeg!=self.elem_v.maxdeg:
-            raise NotImplementedError("AssemblyElement.L2error: elem_u.maxdeg must be elem_v.maxdeg when computing errors!")
+        if self.elem_u.maxdeg != self.elem_v.maxdeg:
+            raise NotImplementedError("elem_u.maxdeg must be elem_v.maxdeg "
+                                      "when computing errors!")
         if intorder is None:
-            intorder=2*self.elem_u.maxdeg
+            intorder = 2*self.elem_u.maxdeg
             
-        X,W=get_quadrature(self.mesh.refdom,intorder)
+        X, W = get_quadrature(self.mesh.refdom, intorder)
             
         # assemble some helper matrices
         # the idea is to use the identity: (u-uh,u-uh)=(u,u)+(uh,uh)-2(u,uh)
-        def uv(u,v):
+        def uv(u, v):
             return u*v
     
-        def fv(v,x):
+        def fv(v, x):
             return exact(x)*v
             
-        M=self.iasm(uv)
-        f=self.iasm(fv)
+        M = self.iasm(uv)
+        f = self.iasm(fv)
         
-        detDF=self.mapping.detDF(X)
-        x=self.mapping.F(X)
+        detDF = self.mapping.detDF(X)
+        x = self.mapping.F(X)
         
-        uu=np.sum(np.dot(exact(x)**2*np.abs(detDF),W))
+        uu = np.sum(np.dot(exact(x)**2*np.abs(detDF), W))
         
-        return np.sqrt(uu+np.dot(uh,M.dot(uh))-2.*np.dot(uh,f))
+        return np.sqrt(uu + np.dot(uh, M.dot(uh)) - 2.*np.dot(uh, f))
         
-    def H1error(self,uh,dexact,intorder=None):
+    def H1error(self, uh, dexact, intorder=None):
         """
         Compute :math:`H^1` seminorm error against exact solution.
 
@@ -830,103 +841,142 @@ class AssemblerElement(Assembler):
             
         .. math::
             
-            \|\\nabla(u-u_h)\|_0^2 = (\\nabla u,\\nabla u)+(\\nabla u_h, \\nabla u_h)-2(\\nabla u, \\nabla u_h).
+            \|\\nabla(u-u_h)\|_0^2 = (\\nabla u,\\nabla u)
+                                     + (\\nabla u_h, \\nabla u_h)
+                                     - 2(\\nabla u, \\nabla u_h).
         """
-        if self.elem_u.maxdeg!=self.elem_v.maxdeg:
-            raise NotImplementedError("AssemblyElement.H1error: elem_u.maxdeg must be elem_v.maxdeg when computing errors!")
+        if self.elem_u.maxdeg != self.elem_v.maxdeg:
+            raise NotImplementedError("elem_u.maxdeg must be elem_v.maxdeg "
+                                      "when computing errors!")
         if intorder is None:
-            intorder=2*self.elem_u.maxdeg
+            intorder = 2*self.elem_u.maxdeg
             
-        X,W=get_quadrature(self.mesh.refdom,intorder)
+        X, W = get_quadrature(self.mesh.refdom, intorder)
             
         # assemble some helper matrices
         # the idea is to use the identity: (u-uh,u-uh)=(u,u)+(uh,uh)-2(u,uh)
-        def uv(du,dv):
-            if not isinstance(du,dict):
+        def uv(du, dv):
+            if not isinstance(du, dict):
                 return du*dv
-            elif len(du)==2:
-                return du[0]*dv[0]+du[1]*dv[1]
-            elif len(du)==3:
-                return du[0]*dv[0]+du[1]*dv[1]+du[2]*dv[2]
+            elif len(du) == 2:
+                return du[0]*dv[0] + du[1]*dv[1]
+            elif len(du) == 3:
+                return du[0]*dv[0] + du[1]*dv[1] + du[2]*dv[2]
             else:
-                raise NotImplementedError("AssemblerElement.H1error: not implemented for current domain dimension!")
+                raise NotImplementedError("AssemblerElement.H1error not "
+                                          "implemented for current domain "
+                                          "dimension!")
     
-        def fv(dv,x):
-            if not isinstance(x,dict):
+        def fv(dv, x):
+            if not isinstance(x, dict):
                 return dexact(x)*dv
-            elif len(x)==2:
-                return dexact[0](x)*dv[0]+dexact[1](x)*dv[1]
-            elif len(x)==3:
-                return dexact[0](x)*dv[0]+dexact[1](x)*dv[1]+dexact[2](x)*dv[2]
+            elif len(x) == 2:
+                return dexact[0](x)*dv[0] + dexact[1](x)*dv[1]
+            elif len(x) == 3:
+                return dexact[0](x)*dv[0] + dexact[1](x)*dv[1]\
+                       + dexact[2](x)*dv[2]
             else:
-                raise NotImplementedError("AssemblerElement.H1error: not implemented for current domain dimension!")
+                raise NotImplementedError("AssemblerElement.H1error not "
+                                          "implemented for current domain "
+                                          "dimension!")
             
-        M=self.iasm(uv)
-        f=self.iasm(fv)
+        M = self.iasm(uv)
+        f = self.iasm(fv)
         
-        detDF=self.mapping.detDF(X)
-        x=self.mapping.F(X)
+        detDF = self.mapping.detDF(X)
+        x = self.mapping.F(X)
         
-        if not isinstance(x,dict):
-            uu=np.sum(np.dot((dexact(x)**2)*np.abs(detDF),W))
-        elif len(x)==2:
-            uu=np.sum(np.dot((dexact[0](x)**2+dexact[1](x)**2)*np.abs(detDF),W))
-        elif len(x)==3:
-            uu=np.sum(np.dot((dexact[0](x)**2+dexact[1](x)**2+dexact[2](x)**2)*np.abs(detDF),W))
+        if not isinstance(x, dict):
+            uu = np.sum(np.dot((dexact(x)**2) * np.abs(detDF), W))
+        elif len(x) == 2:
+            uu = np.sum(np.dot((dexact[0](x)**2+dexact[1](x)**2)
+                               * np.abs(detDF), W))
+        elif len(x) == 3:
+            uu = np.sum(np.dot((dexact[0](x)**2+dexact[1](x)**2
+                                + dexact[2](x)**2) * np.abs(detDF), W))
         else:
-            raise NotImplementedError("AssemblerElement.H1error: not implemented for current domain dimension!")
+            raise NotImplementedError("AssemblerElement.H1error not "
+                                      "implemented for current domain "
+                                      "dimension!")
         
-        return np.sqrt(uu+np.dot(uh,M.dot(uh))-2.*np.dot(uh,f))
+        return np.sqrt(uu + np.dot(uh, M.dot(uh)) - 2.*np.dot(uh, f))
 
-class Dofnum():
+class Dofnum(object):
     """Generate a global degree-of-freedom numbering for arbitrary mesh."""
-    def __init__(self,mesh,element):
-        self.n_dof=np.reshape(np.arange(element.n_dofs*mesh.p.shape[1],dtype=np.int64),
-                (element.n_dofs,mesh.p.shape[1]),order='F')
-        offset=element.n_dofs*mesh.p.shape[1]
-        if hasattr(mesh,'edges'): # 3d mesh
-            self.e_dof=np.reshape(np.arange(element.e_dofs*mesh.edges.shape[1],dtype=np.int64),
-                    (element.e_dofs,mesh.edges.shape[1]),order='F')+offset
-            offset=offset+element.e_dofs*mesh.edges.shape[1]
-        if hasattr(mesh,'facets'): # 2d or 3d mesh
-            self.f_dof=np.reshape(np.arange(element.f_dofs*mesh.facets.shape[1],dtype=np.int64),
-                    (element.f_dofs,mesh.facets.shape[1]),order='F')+offset
-            offset=offset+element.f_dofs*mesh.facets.shape[1]
-        self.i_dof=np.reshape(np.arange(element.i_dofs*mesh.t.shape[1],dtype=np.int64),
-                (element.i_dofs,mesh.t.shape[1]),order='F')+offset
+
+    n_dof = np.array([]) #: Nodal DOFs
+    e_dof = np.array([]) #: Edge DOFs (3D only)
+    f_dof = np.array([]) #: Facet DOFs (corresponds to edges in 2D)
+    i_dof = np.array([]) #: Interior DOFs
+    t_dof = np.array([]) #: Global DOFs, number-of-dofs x number-of-triangles
+    N = 0 #: Total number of DOFs
+
+    def __init__(self, mesh, element):
+        # vertex dofs
+        self.n_dof = np.reshape(np.arange(element.n_dofs*mesh.p.shape[1],
+                                          dtype=np.int64),
+                                (element.n_dofs, mesh.p.shape[1]), order='F')
+        offset = element.n_dofs*mesh.p.shape[1]
+
+        # edge dofs
+        if hasattr(mesh, 'edges'): # 3D mesh
+            self.e_dof = np.reshape(np.arange(element.e_dofs
+                                              * mesh.edges.shape[1],
+                                              dtype=np.int64),
+                                    (element.e_dofs, mesh.edges.shape[1]),
+                                    order='F') + offset
+            offset = offset + element.e_dofs*mesh.edges.shape[1]
+
+        # facet dofs
+        if hasattr(mesh, 'facets'): # 2D or 3D mesh
+            self.f_dof = np.reshape(np.arange(element.f_dofs
+                                              * mesh.facets.shape[1],
+                                              dtype=np.int64),
+                                    (element.f_dofs, mesh.facets.shape[1]),
+                                    order='F') + offset
+            offset = offset+element.f_dofs*mesh.facets.shape[1]
+
+        # interior dofs
+        self.i_dof = np.reshape(np.arange(element.i_dofs*mesh.t.shape[1],
+                                          dtype=np.int64),
+                                (element.i_dofs, mesh.t.shape[1]),
+                                order='F') + offset
         
         # global numbering
-        self.t_dof=np.zeros((0,mesh.t.shape[1]),dtype=np.int64)
+        self.t_dof = np.zeros((0, mesh.t.shape[1]), dtype=np.int64)
         
         # nodal dofs
         for itr in range(mesh.t.shape[0]):
-            self.t_dof=np.vstack((self.t_dof,self.n_dof[:,mesh.t[itr,:]]))
+            self.t_dof = np.vstack((self.t_dof, self.n_dof[:, mesh.t[itr, :]]))
         
         # edge dofs (if 3D)
-        if hasattr(mesh,'edges'):
+        if hasattr(mesh, 'edges'):
             for itr in range(mesh.t2e.shape[0]):
-                self.t_dof=np.vstack((self.t_dof,self.e_dof[:,mesh.t2e[itr,:]]))
+                self.t_dof = np.vstack((self.t_dof,
+                                        self.e_dof[:, mesh.t2e[itr, :]]))
 
         # facet dofs (if 2D or 3D)
-        if hasattr(mesh,'facets'):      
+        if hasattr(mesh, 'facets'):      
             for itr in range(mesh.t2f.shape[0]):
-                self.t_dof=np.vstack((self.t_dof,self.f_dof[:,mesh.t2f[itr,:]]))
+                self.t_dof = np.vstack((self.t_dof,
+                                        self.f_dof[:, mesh.t2f[itr, :]]))
         
-        self.t_dof=np.vstack((self.t_dof,self.i_dof))
+        self.t_dof = np.vstack((self.t_dof, self.i_dof))
         
-        self.N=np.max(self.t_dof)+1
+        self.N = np.max(self.t_dof) + 1
         
-    def getdofs(self,N=None,F=None,E=None,T=None):
-        """Return global DOF numbers corresponding to each node(N), facet(F) and triangle(T)"""
-        dofs=np.zeros(0,dtype=np.int64)        
+    def getdofs(self, N=None, F=None, E=None, T=None):
+        """Return global DOF numbers corresponding to each
+        node(N), facet(F), edge(E) and triangle(T)."""
+        dofs = np.zeros(0, dtype=np.int64)
         if N is not None:
-            dofs=np.hstack((dofs,self.n_dof[:,N].flatten()))
+            dofs = np.hstack((dofs, self.n_dof[:, N].flatten()))
         if F is not None:
-            dofs=np.hstack((dofs,self.f_dof[:,F].flatten()))
+            dofs = np.hstack((dofs, self.f_dof[:, F].flatten()))
         if E is not None:
-            dofs=np.hstack((dofs,self.e_dof[:,E].flatten()))
+            dofs = np.hstack((dofs, self.e_dof[:, E].flatten()))
         if T is not None:
-            dofs=np.hstack((dofs,self.i_dof[:,T].flatten()))
+            dofs = np.hstack((dofs, self.i_dof[:, T].flatten()))
         return dofs.flatten()
 
 #
