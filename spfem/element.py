@@ -90,7 +90,7 @@ class AbstractElement(object):
 
     def evalbasis(self, mesh, qps, tind=None):
         # initialize power basis
-        self._pbasisNinit(self.dim,self.maxdeg)
+        self._pbasisNinit(self.dim, self.maxdeg)
         N = len(self._pbasis)
 
         # construct Vandermonde matrix and invert it
@@ -151,6 +151,45 @@ class AbstractElement(object):
             else:
                 raise NotImplementedError("The given dimension not implemented!")
 
+    def visualize_basis_tri(self, save_figures=False):
+        """Draw the basis functions given by self.evalbasis.
+        Only for triangular elements. For debugging purposes."""
+        if self.dim!=2:
+            raise NotImplementedError("visualize_basis_tri supports "
+                                      "only triangular elements.")
+        import copy
+        import spfem.mesh as fmsh
+        m = fmsh.MeshTri(np.array([[0.5, 0.0, 1.0], [0.0, 1.0, 1.0]]),
+                        np.array([[0], [1], [2]]))
+        M = copy.deepcopy(m)
+        m.refine(4)
+        qps = {}
+        qps[0] = np.array([m.p[0,:]])
+        qps[1] = np.array([m.p[1,:]])
+        u, du, ddu = self.evalbasis(M, qps, [0])
+
+        for itr in range(len(u)):
+            m.plot3(u[itr].flatten())
+            if save_figures:
+                plt.savefig('bfun' + str(itr) + '.pdf')
+
+        if not save_figures:
+            m.show()
+
+class AbstractElementTriDG(AbstractElement):
+    """Transform all dofs into interior dofs."""
+
+    def __init__(self, elem):
+        # change all dofs to interior dofs
+        self.elem = elem
+        self.maxdeg = elem.maxdeg
+        self.i_dofs = 3*elem.n_dofs + 3*elem.f_dofs + elem.i_dofs
+        self.dim = 2
+        elem._pbasisNinit(self.dim, self.maxdeg)
+
+    def gdof(self, v, i, j):
+        return self.elem.gdof(v, i, j)
+
 class AbstractElementTriPp(AbstractElement):
     """Triangular Pp element, Lagrange DOFs."""
 
@@ -164,18 +203,48 @@ class AbstractElementTriPp(AbstractElement):
         self.maxdeg = p
 
         self.n_dofs = 1
-        self.f_dofs = np.max([p-1, 0])
-        self.i_dofs = np.max([(p-1)*(p-2)/2, 0])
+        self.f_dofs = np.max([p - 1, 0])
+        self.i_dofs = np.max([(p - 1)*(p - 2)/2, 0])
 
         self.nbdofs = 3*self.n_dofs + 3*self.f_dofs + self.i_dofs
 
     def gdof(self, v, i, j):
-        # TODO this is only P1 so far.
-        return [
-                lambda: self._pbasis[i](v['v1'][0, :], v['v1'][1, :]),
-                lambda: self._pbasis[i](v['v2'][0, :], v['v2'][1, :]),
-                lambda: self._pbasis[i](v['v3'][0, :], v['v3'][1, :]),
-                ][j]()
+        if j < 3: # vertex dofs
+            return [
+                    lambda: self._pbasis[i](v['v1'][0, :], v['v1'][1, :]),
+                    lambda: self._pbasis[i](v['v2'][0, :], v['v2'][1, :]),
+                    lambda: self._pbasis[i](v['v3'][0, :], v['v3'][1, :]),
+                    ][j]()
+        elif j < 3*self.f_dofs + 3: # edge dofs
+            j = j - 3
+            # generate node locations on edge
+            points = np.linspace(0, 1, self.p + 1)
+            points = points[1:-1]
+            if j < self.f_dofs: # edge 1->2
+                return self._pbasis[i](points[j]*v['v1'][0, :]
+                                       + (1 - points[j])*v['v2'][0, :],
+                                       points[j]*v['v1'][1, :]
+                                       + (1 - points[j])*v['v2'][1, :])
+            elif j < 2*self.f_dofs: # edge 2->3
+                j = j - self.f_dofs
+                return self._pbasis[i](points[j]*v['v2'][0, :]
+                                       + (1 - points[j])*v['v3'][0, :],
+                                       points[j]*v['v2'][1, :]
+                                       + (1 - points[j])*v['v3'][1, :])
+            else: # edge 1->3
+                j = j - 2*self.f_dofs
+                return self._pbasis[i](points[j]*v['v1'][0, :]
+                                       + (1 - points[j])*v['v3'][0, :],
+                                       points[j]*v['v1'][1, :]
+                                       + (1 - points[j])*v['v3'][1, :])
+        else: # interior dofs
+            if self.i_dofs>1:
+                raise NotImplementedError("TODO fix i_dofs for p>3")
+            j = j - 3 - 3*self.f_dofs
+
+            return self._pbasis[i]((v['v1'][0, :]+v['v2'][0, :]+v['v3'][0, :])/3,
+                                   (v['v1'][1, :]+v['v2'][1, :]+v['v3'][1, :])/3)
+
 
 class AbstractElementMorley(AbstractElement):
     """Morley element for fourth-order problems."""

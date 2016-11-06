@@ -339,11 +339,15 @@ class AssemblerAbstract(Assembler):
 
         # check and fix parameters of form
         oldparams = inspect.getargspec(form).args
+        if 'u1' in oldparams or 'du1' in oldparams or 'ddu1' in oldparams:
+            if interior is False:
+                raise Exception("The supplied form contains u1 although "
+                                "no interior=True is given.")
         if interior:
             paramlist = ['u1', 'u2', 'du1', 'du2', 'ddu1', 'ddu2',
-                         'x', 'n', 'h']
+                         'x', 'n', 't', 'h']
         else:
-            paramlist = ['u', 'du', 'ddu', 'x', 'n', 'h']
+            paramlist = ['u', 'du', 'ddu', 'x', 'n', 't', 'h']
         fform = self.fillargs(form, paramlist)
 
         X, W = get_quadrature(self.mesh.brefdom, intorder)
@@ -365,9 +369,13 @@ class AssemblerAbstract(Assembler):
         dim = self.mesh.p.shape[0]
 
         n = {}
+        t = {}
         if normals:
             Y = self.mapping.invF(x, tind=tind1) # global facet to ref element
             n = self.mapping.normals(Y, tind1, find, self.mesh.t2f)
+            if len(n)==2: # TODO fix for 3D and other than triangles?
+                t[0] = -n[1]
+                t[1] = n[0]
 
         # interpolate the solution vectors at quadrature points
         zero = np.zeros((len(find), len(W)))
@@ -403,10 +411,10 @@ class AssemblerAbstract(Assembler):
 
         if interior:
             return np.dot(fform(w1, w2, dw1, dw2, ddw1, ddw2,
-                                x, n, h)**2*np.abs(detDG), W), find
+                                x, n, t, h)**2*np.abs(detDG), W), find
         else:
             return np.dot(fform(w1, dw1, ddw1,
-                                x, n, h)**2*np.abs(detDG), W), find
+                                x, n, t, h)**2*np.abs(detDG), W), find
 
 
 class AssemblerElement(Assembler):
