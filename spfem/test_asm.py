@@ -85,14 +85,14 @@ class AssemblerAbstractCheckNormEval(unittest.TestCase):
         self.assertAlmostEqual(np.sqrt(np.sum(K)),b.L2error(x,lambda X:0*X[0]))
 
 
-class AssemblerGlobalP2Comparison(unittest.TestCase):
-    """Build some matrices with AssemblerGlobal
+class AssemblerAbstractP2Comparison(unittest.TestCase):
+    """Build some matrices with AssemblerAbstract
     and AssemblerElement. Compare the results."""
     def runTest(self):
         m=fmsh.MeshTri()
         m.refine(5)
 
-        a=fasm.AssemblerGlobal(m,felem.ElementGlobalTriP2())
+        a=fasm.AssemblerAbstract(m,felem.AbstractElementTriPp(2))
         b=fasm.AssemblerElement(m,felem.ElementTriP2())
 
         A=a.iasm(lambda u,v: u*v)
@@ -105,14 +105,14 @@ class AssemblerGlobalP2Comparison(unittest.TestCase):
 
         self.assertAlmostEqual(C.data[0],D.data[0],places=10)
 
-class AssemblerGlobalP1Comparison(unittest.TestCase):
-    """Build some matrices with AssemblerGlobal
+class AssemblerAbstractP1Comparison(unittest.TestCase):
+    """Build some matrices with AssemblerAbstract
     and AssemblerElement. Compare the results."""
     def runTest(self):
         m=fmsh.MeshTri()
         m.refine(5)
 
-        a=fasm.AssemblerGlobal(m,felem.ElementGlobalTriP1())
+        a=fasm.AssemblerAbstract(m,felem.AbstractElementTriPp(1))
         b=fasm.AssemblerElement(m,felem.ElementTriP1())
 
         A=a.iasm(lambda u,v: u*v)
