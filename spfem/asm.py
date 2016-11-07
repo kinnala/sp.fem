@@ -1,3 +1,6 @@
+"""
+For backwards compatiblity.
+"""
 import sys
 import spfem.assembly
 

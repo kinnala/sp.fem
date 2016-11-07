@@ -3,7 +3,7 @@
 Assembly of matrices related to linear and bilinear forms.
 
 Examples
-========
+--------
 Assemble the stiffness matrix related to
 the Poisson problem using the piecewise linear elements.
 
@@ -25,6 +25,7 @@ the Poisson problem using the piecewise linear elements.
 """
 import numpy as np
 import inspect
+import abc
 from scipy.sparse import coo_matrix
 
 import spfem.mesh
@@ -33,12 +34,12 @@ from spfem.quadrature import get_quadrature
 from spfem.utils import const_cell, cell_shape
 
 class Assembler(object):
-    """Finite element assembler.
- 
-    This an abstract class and should not be used directly."""
+    """Finite element assembler."""
+    __metaclass__ = abc.ABCMeta
 
+    @abc.abstractmethod
     def __init__(self):
-        raise NotImplementedError("Constructor not implemented.")
+        pass
 
     def fillargs(self, oldform, newargs):
         """Used for filling functions with required set of arguments."""
@@ -115,13 +116,13 @@ class Assembler(object):
 class AssemblerAbstract(Assembler):
     """An assembler for elements of type
     :class:`spfem.element.AbstractElement`.
-    
+
     These elements are defined through degrees of freedom but
     are not limited to H^1-conforming elements. As a result,
     this assembler is more computationally intensive than
     :class:`spfem.assembly.AssemblerElement` so use it instead
     if possible.
-    
+
     Parameters
     ----------
     mesh : :class:`spfem.mesh.Mesh`
@@ -129,12 +130,12 @@ class AssemblerAbstract(Assembler):
 
     elem_u : :class:`spfem.element.Element`
         The element for the solution function.
-        
+
     elem_v : (OPTIONAL) :class:`spfem.element.Element`
         The element for the test function. By default, same element
         is used for both.
-        
-    intorder : (OPTIONAL) int 
+
+    intorder : (OPTIONAL) int
         The used quadrature order.
 
         The basis functions at quadrature points are precomputed
@@ -191,7 +192,7 @@ class AssemblerAbstract(Assembler):
             # assemble on all elements by default
             tind = range(self.mesh.t.shape[1])
         nt = len(tind)
-        
+
         # check and fix parameters of form
         oldparams = inspect.getargspec(form).args
         if 'u' in oldparams or 'du' in oldparams or 'ddu' in oldparams:
@@ -201,7 +202,7 @@ class AssemblerAbstract(Assembler):
             paramlist = ['v', 'dv', 'ddv', 'x', 'w', 'h']
             bilinear = False
         fform = self.fillargs(form, paramlist)
-        
+
         # quadrature points and weights
         X, W = get_quadrature(self.mesh.refdom, self.intorder)
 
@@ -210,7 +211,7 @@ class AssemblerAbstract(Assembler):
 
         # jacobian at quadrature points
         detDF = self.mapping.detDF(X, tind)
-        
+
         Nbfun_u = self.dofnum_u.t_dof.shape[0]
         Nbfun_v = self.dofnum_v.t_dof.shape[0]
 
@@ -238,12 +239,12 @@ class AssemblerAbstract(Assembler):
             data = np.zeros(Nbfun_u*Nbfun_v*nt)
             rows = np.zeros(Nbfun_u*Nbfun_v*nt)
             cols = np.zeros(Nbfun_u*Nbfun_v*nt)
-        
+
             for j in range(Nbfun_u):
                 for i in range(Nbfun_v):
                     # find correct location in data,rows,cols
                     ixs = slice(nt*(Nbfun_v*j + i), nt*(Nbfun_v*j + i + 1))
-                    
+
                     # compute entries of local stiffness matrices
                     data[ixs] = np.dot(fform(self.u[j], self.v[i],
                                              self.du[j], self.dv[i],
@@ -251,26 +252,26 @@ class AssemblerAbstract(Assembler):
                                              x, w, h)*np.abs(detDF), W)
                     rows[ixs] = self.dofnum_v.t_dof[i, tind]
                     cols[ixs] = self.dofnum_u.t_dof[j, tind]
-        
+
             return coo_matrix((data, (rows, cols)),
                               shape=(self.dofnum_v.N, self.dofnum_u.N)).tocsr()
-            
+
         else:
             # initialize sparse matrix structures
             data = np.zeros(Nbfun_v*nt)
             rows = np.zeros(Nbfun_v*nt)
             cols = np.zeros(Nbfun_v*nt)
-            
+
             for i in range(Nbfun_v):
                 # find correct location in data,rows,cols
                 ixs = slice(nt*i, nt*(i + 1))
-                
+
                 # compute entries of local stiffness matrices
                 data[ixs] = np.dot(fform(self.v[i], self.dv[i], self.ddv[i],
                                          x, w, h)*np.abs(detDF), W)
                 rows[ixs] = self.dofnum_v.t_dof[i, :]
                 cols[ixs] = np.zeros(nt)
-        
+
             return coo_matrix((data, (rows, cols)),
                               shape=(self.dofnum_v.N, 1)).toarray().T[0]
 
@@ -358,7 +359,7 @@ class AssemblerAbstract(Assembler):
 
         # mappings
         x = self.mapping.G(X, find=find) # reference facet to global facet
-        detDG = self.mapping.detDG(X, find)        
+        detDG = self.mapping.detDG(X, find)
 
         # compute basis function values at quadrature points
         u1, du1, ddu1 = self.elem_u.evalbasis(self.mesh, x, tind=tind1)
@@ -373,7 +374,7 @@ class AssemblerAbstract(Assembler):
         if normals:
             Y = self.mapping.invF(x, tind=tind1) # global facet to ref element
             n = self.mapping.normals(Y, tind1, find, self.mesh.t2f)
-            if len(n)==2: # TODO fix for 3D and other than triangles?
+            if len(n) == 2: # TODO fix for 3D and other than triangles?
                 t[0] = -n[1]
                 t[1] = n[0]
 
@@ -422,7 +423,7 @@ class AssemblerElement(Assembler):
 
     These elements are defined through reference elements
     and are limited to H^1-conforming elements.
-    
+
     Parameters
     ----------
     mesh : :class:`spfem.mesh.Mesh`
@@ -430,11 +431,11 @@ class AssemblerElement(Assembler):
 
     elem_u : :class:`spfem.element.Element`
         The element for the solution function.
-        
+
     elem_v : (OPTIONAL) :class:`spfem.element.Element`
         The element for the test function. By default,
         the same element is used for both.
-        
+
     mapping : (OPTIONAL) :class:`spfem.mapping.Mapping`
         The mesh will give some sort of default mapping but sometimes, e.g.
         when using isoparametric elements, the user might have to provide
@@ -465,11 +466,11 @@ class AssemblerElement(Assembler):
         else:
             self.elem_v = elem_v
             self.dofnum_v = Dofnum(mesh, elem_v)
-     
+
     def iasm(self, form, intorder=None, tind=None, interp=None):
         """Return a matrix related to a bilinear or linear form
         where the integral is over the interior of the domain.
-         
+
         Parameters
         ----------
         form : function handle
@@ -497,10 +498,10 @@ class AssemblerElement(Assembler):
 
             The function handle must use these exact names for
             the variables. Unused variable names can be omitted.
-            
+
             Examples of valid bilinear forms:
             ::
-                
+
                 def bilin_form1(du, dv):
                     # Note that the element must be
                     # defined for two-dimensional
@@ -514,7 +515,7 @@ class AssemblerElement(Assembler):
 
             Examples of valid linear forms:
             ::
-                
+
                 def lin_form1(v):
                     return v
 
@@ -549,7 +550,7 @@ class AssemblerElement(Assembler):
         if intorder is None:
             # compute the maximum polynomial degree from elements
             intorder = self.elem_u.maxdeg + self.elem_v.maxdeg
-        
+
         # check and fix parameters of form
         oldparams = inspect.getargspec(form).args
         if 'u' in oldparams or 'du' in oldparams:
@@ -559,7 +560,7 @@ class AssemblerElement(Assembler):
             paramlist = ['v', 'dv', 'x', 'w', 'h']
             bilinear = False
         fform = self.fillargs(form, paramlist)
-        
+
         # quadrature points and weights
         X, W = get_quadrature(self.mesh.refdom, intorder)
 
@@ -568,9 +569,9 @@ class AssemblerElement(Assembler):
 
         # jacobian at quadrature points
         detDF = self.mapping.detDF(X, tind)
-        
+
         Nbfun_u = self.dofnum_u.t_dof.shape[0]
-        Nbfun_v = self.dofnum_v.t_dof.shape[0]  
+        Nbfun_v = self.dofnum_v.t_dof.shape[0]
 
         # interpolate some previous discrete function at quadrature points
         w = {}
@@ -593,41 +594,41 @@ class AssemblerElement(Assembler):
             data = np.zeros(Nbfun_u*Nbfun_v*nt)
             rows = np.zeros(Nbfun_u*Nbfun_v*nt)
             cols = np.zeros(Nbfun_u*Nbfun_v*nt)
-        
+
             for j in range(Nbfun_u):
                 u, du = self.elem_u.gbasis(self.mapping, X, j, tind)
                 for i in range(Nbfun_v):
                     v, dv = self.elem_v.gbasis(self.mapping, X, i, tind)
-            
+
                     # find correct location in data,rows,cols
                     ixs = slice(nt*(Nbfun_v*j+i), nt*(Nbfun_v*j+i+1))
-                    
+
                     # compute entries of local stiffness matrices
                     data[ixs] = np.dot(fform(u, v, du, dv, x, w, h)
                                        * np.abs(detDF), W)
                     rows[ixs] = self.dofnum_v.t_dof[i, tind]
                     cols[ixs] = self.dofnum_u.t_dof[j, tind]
-        
+
             return coo_matrix((data, (rows, cols)),
                               shape=(self.dofnum_v.N, self.dofnum_u.N)).tocsr()
-            
+
         else:
             # initialize sparse matrix structures
             data = np.zeros(Nbfun_v*nt)
             rows = np.zeros(Nbfun_v*nt)
             cols = np.zeros(Nbfun_v*nt)
-            
+
             for i in range(Nbfun_v):
                 v, dv = self.elem_v.gbasis(self.mapping, X, i, tind)
 
                 # find correct location in data,rows,cols
                 ixs = slice(nt*i, nt*(i+1))
-                
+
                 # compute entries of local stiffness matrices
                 data[ixs] = np.dot(fform(v, dv, x, w, h)*np.abs(detDF), W)
                 rows[ixs] = self.dofnum_v.t_dof[i, :]
                 cols[ixs] = np.zeros(nt)
-        
+
             return coo_matrix((data, (rows, cols)),
                               shape=(self.dofnum_v.N, 1)).toarray().T[0]
 
@@ -642,7 +643,7 @@ class AssemblerElement(Assembler):
 
         if intorder is None:
             intorder = self.elem_u.maxdeg + self.elem_v.maxdeg
-            
+
         nv = self.mesh.p.shape[1]
         nt = self.mesh.t.shape[1]
         ne = find.shape[0]
@@ -669,7 +670,7 @@ class AssemblerElement(Assembler):
         fform = self.fillargs(form, paramlist)
 
         X, W = get_quadrature(self.mesh.brefdom, intorder)
-        
+
         # boundary element indices
         tind1 = self.mesh.f2t[0, find]
         tind2 = self.mesh.f2t[1, find]
@@ -678,11 +679,11 @@ class AssemblerElement(Assembler):
         x = self.mapping.G(X, find=find) # reference facet to global facet
         Y1 = self.mapping.invF(x, tind=tind1) # global facet to ref element
         Y2 = self.mapping.invF(x, tind=tind2) # global facet to ref element
-        
-        Nbfun_u = self.dofnum_u.t_dof.shape[0]
-        Nbfun_v = self.dofnum_v.t_dof.shape[0] 
 
-        detDG = self.mapping.detDG(X, find)        
+        Nbfun_u = self.dofnum_u.t_dof.shape[0]
+        Nbfun_v = self.dofnum_v.t_dof.shape[0]
+
+        detDG = self.mapping.detDG(X, find)
 
         # compute normal vectors
         n = {}
@@ -707,7 +708,7 @@ class AssemblerElement(Assembler):
                 for j in range(Nbfun_u):
                     phi, _ = self.elem_u.gbasis(self.mapping, Y1, j, tind1)
                     w[k] += interp[k][self.dofnum_u.t_dof[j, tind1], None]*phi
-        
+
         # bilinear form
         if bilinear:
             # initialize sparse matrix structures
@@ -733,7 +734,7 @@ class AssemblerElement(Assembler):
                     v1, dv1 = self.elem_v.gbasis(self.mapping, Y1, i, tind1)
                     if interior:
                         v2, dv2 = self.elem_v.gbasis(self.mapping, Y2, i, tind2)
-           
+
                     # compute entries of local stiffness matrices
                     if interior:
                         ixs1 = slice(ne*(Nbfun_v*j + i),
@@ -774,7 +775,7 @@ class AssemblerElement(Assembler):
                                                  x, h, n, w)*np.abs(detDG), W)
                         rows[ixs] = self.dofnum_v.t_dof[i, tind1]
                         cols[ixs] = self.dofnum_u.t_dof[j, tind1]
-        
+
             return coo_matrix((data, (rows, cols)),
                               shape=(self.dofnum_v.N, self.dofnum_u.N)).tocsr()
 
@@ -790,10 +791,10 @@ class AssemblerElement(Assembler):
                 v1, dv1 = self.elem_v.gbasis(self.mapping, Y1, i, tind1)
                 if interior:
                     v2, dv2 = self.elem_v.gbasis(self.mapping, Y2, i, tind2)
-        
+
                 # find correct location in data,rows,cols
                 ixs = slice(ne*i, ne*(i + 1))
-                
+
                 # compute entries of local stiffness matrices
                 if interior:
                     data[ixs] = np.dot(fform(v, dv, x, h, n, w)*np.abs(detDG), W)
@@ -801,66 +802,96 @@ class AssemblerElement(Assembler):
                     data[ixs] = np.dot(fform(v1, dv1, x, h, n, w)*np.abs(detDG), W)
                 rows[ixs] = self.dofnum_v.t_dof[i, tind1]
                 cols[ixs] = np.zeros(ne)
-        
+
             return coo_matrix((data, (rows, cols)),
                               shape=(self.dofnum_v.N, 1)).toarray().T[0]
-            
+
     def L2error(self, uh, exact, intorder=None):
-        """
-        Compute :math:`L^2` error against exact solution.
-        
+        """Compute :math:`L^2` error against exact solution.
+
         The computation is based on the following identity:
-            
+
         .. math::
-            
+
             \|u-u_h\|_0^2 = (u,u)+(u_h,u_h)-2(u,u_h).
+
+        Parameters
+        ----------
+        uh : np.array
+            The discrete solution.
+
+        exact : function handle
+            The exact solution.
+
+        intorder : (OPTIONAL) int
+            The integration order.
+
+        Returns
+        -------
+        float
+            The global :math:`L^2` error.
         """
         if self.elem_u.maxdeg != self.elem_v.maxdeg:
             raise NotImplementedError("elem_u.maxdeg must be elem_v.maxdeg "
                                       "when computing errors!")
         if intorder is None:
             intorder = 2*self.elem_u.maxdeg
-            
+
         X, W = get_quadrature(self.mesh.refdom, intorder)
-            
+
         # assemble some helper matrices
         # the idea is to use the identity: (u-uh,u-uh)=(u,u)+(uh,uh)-2(u,uh)
         def uv(u, v):
             return u*v
-    
+
         def fv(v, x):
             return exact(x)*v
-            
+
         M = self.iasm(uv)
         f = self.iasm(fv)
-        
+
         detDF = self.mapping.detDF(X)
         x = self.mapping.F(X)
-        
+
         uu = np.sum(np.dot(exact(x)**2*np.abs(detDF), W))
-        
+
         return np.sqrt(uu + np.dot(uh, M.dot(uh)) - 2.*np.dot(uh, f))
-        
+
     def H1error(self, uh, dexact, intorder=None):
-        """
-        Compute :math:`H^1` seminorm error against exact solution.
+        """Compute :math:`H^1` seminorm error against exact solution.
 
         The computation is based on the following identity:
-            
+
         .. math::
-            
+
             \|\\nabla(u-u_h)\|_0^2 = (\\nabla u,\\nabla u)
                                      + (\\nabla u_h, \\nabla u_h)
                                      - 2(\\nabla u, \\nabla u_h).
+
+        Parameters
+        ----------
+        uh : np.array
+            The discrete solution.
+
+        dexact : function handle
+            The derivative of the exact solution.
+
+        intorder : (OPTIONAL) int
+            The integration order.
+
+        Returns
+        -------
+        float
+            The global :math:`H^1` error.
         """
         if self.elem_u.maxdeg != self.elem_v.maxdeg:
             raise NotImplementedError("elem_u.maxdeg must be elem_v.maxdeg "
                                       "when computing errors!")
         if intorder is None:
             intorder = 2*self.elem_u.maxdeg
-            
+
         X, W = get_quadrature(self.mesh.refdom, intorder)
-            
+
         # assemble some helper matrices
         # the idea is to use the identity: (u-uh,u-uh)=(u,u)+(uh,uh)-2(u,uh)
         def uv(du, dv):
@@ -874,7 +905,7 @@ class AssemblerElement(Assembler):
                 raise NotImplementedError("AssemblerElement.H1error not "
                                           "implemented for current domain "
                                           "dimension!")
-    
+
         def fv(dv, x):
             if not isinstance(x, dict):
                 return dexact(x)*dv
@@ -887,13 +918,13 @@ class AssemblerElement(Assembler):
                 raise NotImplementedError("AssemblerElement.H1error not "
                                           "implemented for current domain "
                                           "dimension!")
-            
+
         M = self.iasm(uv)
         f = self.iasm(fv)
-        
+
         detDF = self.mapping.detDF(X)
         x = self.mapping.F(X)
-        
+
         if not isinstance(x, dict):
             uu = np.sum(np.dot((dexact(x)**2) * np.abs(detDF), W))
         elif len(x) == 2:
@@ -906,7 +937,7 @@ class AssemblerElement(Assembler):
             raise NotImplementedError("AssemblerElement.H1error not "
                                       "implemented for current domain "
                                       "dimension!")
-        
+
         return np.sqrt(uu + np.dot(uh, M.dot(uh)) - 2.*np.dot(uh, f))
 
 class Dofnum(object):
@@ -949,14 +980,14 @@ class Dofnum(object):
                                           dtype=np.int64),
                                 (element.i_dofs, mesh.t.shape[1]),
                                 order='F') + offset
-        
+
         # global numbering
         self.t_dof = np.zeros((0, mesh.t.shape[1]), dtype=np.int64)
-        
+
         # nodal dofs
         for itr in range(mesh.t.shape[0]):
             self.t_dof = np.vstack((self.t_dof, self.n_dof[:, mesh.t[itr, :]]))
-        
+
         # edge dofs (if 3D)
         if hasattr(mesh, 'edges'):
             for itr in range(mesh.t2e.shape[0]):
@@ -964,15 +995,15 @@ class Dofnum(object):
                                         self.e_dof[:, mesh.t2e[itr, :]]))
 
         # facet dofs (if 2D or 3D)
-        if hasattr(mesh, 'facets'):      
+        if hasattr(mesh, 'facets'):
             for itr in range(mesh.t2f.shape[0]):
                 self.t_dof = np.vstack((self.t_dof,
                                         self.f_dof[:, mesh.t2f[itr, :]]))
-        
+
         self.t_dof = np.vstack((self.t_dof, self.i_dof))
-        
+
         self.N = np.max(self.t_dof) + 1
-        
+
     def getdofs(self, N=None, F=None, E=None, T=None):
         """Return global DOF numbers corresponding to each
         node(N), facet(F), edge(E) and triangle(T)."""
