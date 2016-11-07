@@ -15,11 +15,11 @@ types of *finite elements* and *meshes*. Thus, the core functionality can be
 summarized in the following heuristic identity:
 
 ```
-Mesh (spfem) + Bilinear form (function) + Element (spfem) = Sparse Matrix (scipy)
+Mesh (spfem) + Bilinear form (function) + Element (spfem) = Sparse matrix (scipy)
 ```
 
 This implies that the library is not suitable for developers who wish to have a
-blackbox PDE solver. The user must have a basic understanding of finite elements
+fully blackbox PDE solver. A basic understanding of finite elements is required
 in order to successfully apply the resulting matrices.
 
 ## Minimal example
