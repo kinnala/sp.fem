@@ -311,9 +311,11 @@ class AssemblerAbstract(Assembler):
             ddw[k] = const_cell(zero, dim, dim)
             for j in range(Nbfun_u):
                 jdofs = self.dofnum_u.t_dof[j, :]
-                w[k] += interp[k][jdofs][:, None]*self.u[j]
+                w[k] += interp[k][jdofs][:, None]\
+                        * self.u[j]
                 for a in range(dim):
-                    dw[k][a] += interp[k][jdofs][:, None]*self.du[j][a]
+                    dw[k][a] += interp[k][jdofs][:, None]\
+                                * self.du[j][a]
                     for b in range(dim):
                         ddw[k][a][b] += interp[k][jdofs][:, None]\
                                         * self.ddu[j][a][b]
@@ -394,13 +396,15 @@ class AssemblerAbstract(Assembler):
             for j in range(Nbfun_u):
                 jdofs1 = self.dofnum_u.t_dof[j, tind1]
                 jdofs2 = self.dofnum_u.t_dof[j, tind2]
-                w1[k] += interp[k][jdofs1][:, None]*u1[j]
+                w1[k] += interp[k][jdofs1][:, None] * u1[j]
                 if interior:
-                    w2[k] += interp[k][jdofs2][:, None]*u2[j]
+                    w2[k] += interp[k][jdofs2][:, None] * u2[j]
                 for a in range(dim):
-                    dw1[k][a] += interp[k][jdofs1][:, None]*du1[j][a]
+                    dw1[k][a] += interp[k][jdofs1][:, None]\
+                                 * du1[j][a]
                     if interior:
-                        dw2[k][a] += interp[k][jdofs2][:, None]*du2[j][a]
+                        dw2[k][a] += interp[k][jdofs2][:, None]\
+                                     * du2[j][a]
                     for b in range(dim):
                         ddw1[k][a][b] += interp[k][jdofs1][:, None]\
                                          * ddu1[j][a][b]
@@ -780,8 +784,10 @@ class AssemblerElement(Assembler):
                               shape=(self.dofnum_v.N, self.dofnum_u.N)).tocsr()
 
         # linear form
-        # TODO do something to interior linear form assembly
         else:
+            if interior:
+                # could not find any use case
+                raise Exception("No interior support in linear facet form.")
             # initialize sparse matrix structures
             data = np.zeros(Nbfun_v*ne)
             rows = np.zeros(Nbfun_v*ne)
@@ -789,17 +795,12 @@ class AssemblerElement(Assembler):
 
             for i in range(Nbfun_v):
                 v1, dv1 = self.elem_v.gbasis(self.mapping, Y1, i, tind1)
-                if interior:
-                    v2, dv2 = self.elem_v.gbasis(self.mapping, Y2, i, tind2)
 
                 # find correct location in data,rows,cols
                 ixs = slice(ne*i, ne*(i + 1))
 
                 # compute entries of local stiffness matrices
-                if interior:
-                    data[ixs] = np.dot(fform(v, dv, x, h, n, w)*np.abs(detDG), W)
-                else:
-                    data[ixs] = np.dot(fform(v1, dv1, x, h, n, w)*np.abs(detDG), W)
+                data[ixs] = np.dot(fform(v1, dv1, x, h, n, w)*np.abs(detDG), W)
                 rows[ixs] = self.dofnum_v.t_dof[i, tind1]
                 cols[ixs] = np.zeros(ne)
 
@@ -928,10 +929,10 @@ class AssemblerElement(Assembler):
         if not isinstance(x, dict):
             uu = np.sum(np.dot((dexact(x)**2) * np.abs(detDF), W))
         elif len(x) == 2:
-            uu = np.sum(np.dot((dexact[0](x)**2+dexact[1](x)**2)
+            uu = np.sum(np.dot((dexact[0](x)**2 + dexact[1](x)**2)
                                * np.abs(detDF), W))
         elif len(x) == 3:
-            uu = np.sum(np.dot((dexact[0](x)**2+dexact[1](x)**2
+            uu = np.sum(np.dot((dexact[0](x)**2 + dexact[1](x)**2
                                 + dexact[2](x)**2) * np.abs(detDF), W))
         else:
             raise NotImplementedError("AssemblerElement.H1error not "
@@ -952,7 +953,8 @@ class Dofnum(object):
 
     def __init__(self, mesh, element):
         # vertex dofs
-        self.n_dof = np.reshape(np.arange(element.n_dofs*mesh.p.shape[1],
+        self.n_dof = np.reshape(np.arange(element.n_dofs
+                                          * mesh.p.shape[1],
                                           dtype=np.int64),
                                 (element.n_dofs, mesh.p.shape[1]), order='F')
         offset = element.n_dofs*mesh.p.shape[1]
@@ -973,10 +975,11 @@ class Dofnum(object):
                                               dtype=np.int64),
                                     (element.f_dofs, mesh.facets.shape[1]),
                                     order='F') + offset
-            offset = offset+element.f_dofs*mesh.facets.shape[1]
+            offset = offset + element.f_dofs*mesh.facets.shape[1]
 
         # interior dofs
-        self.i_dof = np.reshape(np.arange(element.i_dofs*mesh.t.shape[1],
+        self.i_dof = np.reshape(np.arange(element.i_dofs
+                                          * mesh.t.shape[1],
                                           dtype=np.int64),
                                 (element.i_dofs, mesh.t.shape[1]),
                                 order='F') + offset
@@ -986,7 +989,8 @@ class Dofnum(object):
 
         # nodal dofs
         for itr in range(mesh.t.shape[0]):
-            self.t_dof = np.vstack((self.t_dof, self.n_dof[:, mesh.t[itr, :]]))
+            self.t_dof = np.vstack((self.t_dof,
+                                    self.n_dof[:, mesh.t[itr, :]]))
 
         # edge dofs (if 3D)
         if hasattr(mesh, 'edges'):
