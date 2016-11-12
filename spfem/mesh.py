@@ -302,13 +302,16 @@ class MeshQuad(Mesh):
             self._single_refine()
 
     def _single_refine(self):
-        """Perform a single mesh refine that halves 'h'."""
+        """Perform a single mesh refine that halves 'h'.
+        
+        Each quadrilateral is split into four subquads."""
         # rename variables
         t = self.t
         p = self.p
         e = self.facets
         sz = p.shape[1]
         t2f = self.t2f + sz
+        # quadrilateral middle point
         mid = range(self.t.shape[1]) + np.max(t2f) + 1
         # new vertices are the midpoints of edges ...
         newp1 = 0.5*np.vstack((p[0, e[0, :]] + p[0, e[1, :]],
@@ -320,72 +323,96 @@ class MeshQuad(Mesh):
                               + p[1, t[2, :]] + p[1, t[3, :]]))
         newp = np.hstack((p, newp1, newp2))
         # build new quadrilateral definitions
-        newt = np.vstack((t[0, :], t2f[0, :], mid,t2f[3, :]))
-        newt = np.hstack((newt, np.vstack((t2f[0, :], t[1, :], t2f[1, :], mid))))
-        newt = np.hstack((newt, np.vstack((mid, t2f[1, :], t[2, :], t2f[2, :]))))
-        newt = np.hstack((newt, np.vstack((t2f[3, :], mid, t2f[2, :], t[3, :]))))
+        newt = np.vstack((t[0, :],
+                          t2f[0, :],
+                          mid,
+                          t2f[3, :]))
+        newt = np.hstack((newt, np.vstack((t2f[0, :],
+                                           t[1, :],
+                                           t2f[1, :],
+                                           mid))))
+        newt = np.hstack((newt, np.vstack((mid,
+                                           t2f[1, :],
+                                           t[2, :],
+                                           t2f[2, :]))))
+        newt = np.hstack((newt, np.vstack((t2f[3, :],
+                                           mid,
+                                           t2f[2, :],
+                                           t[3, :]))))
         # update fields
         self.p = newp
         self.t = newt
 
         self._build_mappings()
 
-    def splitquads(self,z):
+    def _splitquads(self, z):
         """Split each quad into a triangle and return MeshTri."""
-        if len(z)==self.t.shape[1]:
+        if len(z) == self.t.shape[1]:
             # preserve elemental constant functions
-            Z=np.concatenate((z,z))
+            Z = np.concatenate((z, z))
         else:
-            Z=z
-        t=self.t[[0,1,3],:]
-        t=np.hstack((t,self.t[[1,2,3]]))
-        return MeshTri(self.p,t),Z
+            Z = z
+        t = self.t[[0, 1, 3], :]
+        t = np.hstack((t, self.t[[1, 2, 3]]))
+        return MeshTri(self.p, t), Z
 
-    def plot(self,z,smooth=False):
-        """Visualize nodal or elemental function (2d)."""
-        m,z=self.splitquads(z)
-        return m.plot(z,smooth)
+    def plot(self, z, smooth=False):
+        """Visualize nodal or elemental function (2d).
+        
+        The quadrilateral mesh is split into triangular mesh (MeshTri) and
+        the respective plotting function for the triangular mesh is used.
+        """
+        m, z = self._splitquads(z)
+        return m.plot(z, smooth)
 
-    def plot3(self,z,smooth=False):
-        """Visualize nodal function (3d i.e. three axes)."""
-        m,z=self.splitquads(z)
-        return m.plot3(z,smooth)
+    def plot3(self, z, smooth=False):
+        """Visualize nodal function (3d i.e. three axes).
+        
+        The quadrilateral mesh is split into triangular mesh (MeshTri) and
+        the respective plotting function for the triangular mesh is used.
+        """
+        m, z = self._splitquads(z)
+        return m.plot3(z, smooth)
 
-    def jiggle(self,z=None):
-        """Jiggle the interior nodes of the mesh."""
-        if z is None:
-            y=0.2*self.param()
-        else:
-            y=z*self.param()
-        I=self.interior_nodes()
-        self.p[0,I]=self.p[0,I]+y*np.random.rand(len(I))
-        self.p[1,I]=self.p[1,I]+y*np.random.rand(len(I))
+    def jiggle(self, z=0.2):
+        """Jiggle the interior nodes of the mesh.
+ 
+        Parameters
+        ----------
+        z : (OPTIONAL, default=0.2) float
+            Mesh parameter is multiplied by this number. The resulting number
+            corresponds to the standard deviation of the jiggle.
+        """
+        y = z*self.param()
+        I = self.interior_nodes()
+        self.p[0, I] = self.p[0, I] + y*np.random.rand(len(I))
+        self.p[1, I] = self.p[1, I] + y*np.random.rand(len(I))
 
     def param(self):
         """Return mesh parameter."""
-        return np.max(np.sqrt(np.sum((self.p[:,self.facets[0,:]]-
-                                      self.p[:,self.facets[1,:]])**2,
+        return np.max(np.sqrt(np.sum((self.p[:, self.facets[0, :]]
+                                    - self.p[:, self.facets[1, :]])**2,
                                      axis=0)))
 
     def draw(self):
         """Draw the mesh."""
-        fig=plt.figure()
+        fig = plt.figure()
         # visualize the mesh
         # faster plotting is achieved through
         # None insertion trick.
-        xs=[]
-        ys=[]
-        for s,t,u,v in zip(self.p[0,self.facets[0,:]],
-                           self.p[1,self.facets[0,:]],
-                           self.p[0,self.facets[1,:]],
-                           self.p[1,self.facets[1,:]]):
+        xs = []
+        ys = []
+        for s, t, u, v in zip(self.p[0, self.facets[0, :]],
+                              self.p[1, self.facets[0, :]],
+                              self.p[0, self.facets[1, :]],
+                              self.p[1, self.facets[1, :]]):
             xs.append(s)
             xs.append(u)
             xs.append(None)
             ys.append(t)
             ys.append(v)
             ys.append(None)
-        plt.plot(xs,ys,'k')
+        plt.plot(xs, ys, 'k')
         return fig
 
     def mapping(self):
