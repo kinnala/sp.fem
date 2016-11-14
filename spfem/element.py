@@ -836,27 +836,51 @@ class ElementTetP2(ElementH1):
                 }[i](X[0],X[1],X[2])
                 
         return phi,dphi
-        
-class ElementLineP1(ElementH1):
-    """Linear element for one dimension."""
 
-    n_dofs=1
-    dim=1
-    maxdeg=1
+class ElementLineP2(ElementH1):
+    """Quadratic element for one dimension."""
+
+    n_dofs = 1
+    i_dofs = 1
+    dim = 1
+    maxdeg = 2
     
-    def lbasis(self,X,i):
-        phi={
-            0:lambda x: 1-x,
-            1:lambda x: x,
+    def lbasis(self, X, i):
+        phi = {
+            0: lambda x: 1-x,
+            1: lambda x: x,
+            2: lambda x: 4*x-4*x**2,
             }[i](X[0])
 
         dphi={}
         dphi={
-                0:lambda x: -1+0*x,
-                1:lambda x: 1+0*x,
+                0: lambda x: -1+0*x,
+                1: lambda x: 1+0*x,
+                2: lambda x: 4-8*x,
                 }[i](X[0])
                 
-        return phi,dphi        
+        return phi, dphi        
+        
+class ElementLineP1(ElementH1):
+    """Linear element for one dimension."""
+
+    n_dofs = 1
+    dim = 1
+    maxdeg = 1
+    
+    def lbasis(self, X, i):
+        phi = {
+            0: lambda x: 1-x,
+            1: lambda x: x,
+            }[i](X[0])
+
+        dphi={}
+        dphi={
+                0: lambda x: -1+0*x,
+                1: lambda x: 1+0*x,
+                }[i](X[0])
+                
+        return phi, dphi        
         
 class ElementTriP1(ElementH1):
     """The simplest triangular element."""
