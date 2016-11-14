@@ -193,8 +193,6 @@ class MeshLine(Mesh):
 
     def plot(self, u, color='ko-'):
         """Plot a function defined on the nodes of the mesh."""
-        plt.figure()
-
         xs = []
         ys = []
         for y1, y2, s, t in zip(u[self.t[0, :]],
