@@ -50,10 +50,7 @@ class Mesh(object):
 
     @abc.abstractmethod
     def __init__(self, p, t):
-        raise NotImplementedError("Mesh constructor not implemented!")
-
-    def plot(self):
-        raise NotImplementedError("Mesh.plot() not implemented!")
+        pass
 
     def show(self):
         """Call the correct pyplot/mayavi show commands after plotting."""
@@ -68,15 +65,16 @@ class Mesh(object):
 
     @abc.abstractmethod
     def mapping(self):
-        raise NotImplementedError("Mesh.mapping() not implemented!")
+        """Default local-to-global mapping for the mesh."""
+        raise NotImplementedError("Default mapping not implemented!")
 
-    def remove_elements(self, ix):
+    def remove_elements(self, element_indices):
         """Construct new mesh with elements removed
         based on their indices.
-        
+
         Parameters
         ----------
-        ix : numpy array
+        element_indices : numpy array
             List of element indices to remove.
 
         Returns
@@ -84,7 +82,7 @@ class Mesh(object):
         spfem.Mesh
             A new mesh object with elements removed as per requested.
         """
-        keep = np.setdiff1d(np.arange(self.t.shape[1]), ix)
+        keep = np.setdiff1d(np.arange(self.t.shape[1]), element_indices)
         newt = self.t[:, keep]
         ptix = np.unique(newt)
         reverse = np.zeros(self.p.shape[1])
@@ -124,33 +122,33 @@ class Mesh(object):
         """Perform mesh validity checks."""
         # check that element connectivity contains integers
         # NOTE: this is neccessary for some plotting functionality
-        if not np.issubdtype(self.t[0,0],  int):
-            msg=("Mesh._validate(): Element connectivity "
-                 "must consist of integers.")
+        if not np.issubdtype(self.t[0, 0], int):
+            msg = ("Mesh._validate(): Element connectivity "
+                   "must consist of integers.")
             raise Exception(msg)
         # check that vertex matrix has "correct" size
         if self.p.shape[0] > 3:
-            msg=("Mesh._validate(): We do not allow meshes "
-                 "embedded into larger than 3-dimensional "
-                 "Euclidean space! Please check that "
-                 "the given vertex matrix is of size Ndim x Nvertices.")
+            msg = ("Mesh._validate(): We do not allow meshes "
+                   "embedded into larger than 3-dimensional "
+                   "Euclidean space! Please check that "
+                   "the given vertex matrix is of size Ndim x Nvertices.")
             raise Exception(msg)
         # check that element connectivity matrix has correct size
-        nvertices={'line': 2, 'tri': 3, 'quad': 4, 'tet': 4}
+        nvertices = {'line': 2, 'tri': 3, 'quad': 4, 'tet': 4}
         if self.t.shape[0] != nvertices[self.refdom]:
-            msg=("Mesh._validate(): The given connectivity "
-                 "matrix has wrong shape!")
+            msg = ("Mesh._validate(): The given connectivity "
+                   "matrix has wrong shape!")
             raise Exception(msg)
         # check that all points are at least in some element
         if len(np.setdiff1d(np.arange(self.p.shape[1]), np.unique(self.t))):
-            msg=("Mesh._validate(): Mesh contains a vertex "
-                 "not belonging to any element.")
+            msg = ("Mesh._validate(): Mesh contains a vertex "
+                   "not belonging to any element.")
             raise Exception(msg)
         # check that there are no duplicate points
         tmp = np.ascontiguousarray(self.p.T)
         if self.p.shape[1] != np.unique(tmp.view([('', tmp.dtype)]
                                                  * tmp.shape[1])).shape[0]:
-            msg=("Mesh._validate(): Mesh contains duplicate vertices.")
+            msg = "Mesh._validate(): Mesh contains duplicate vertices."
             raise Exception(msg)
 
 
@@ -161,9 +159,10 @@ class MeshLine(Mesh):
     brefdom = "point"
 
     def __init__(self, p=None, t=None, validate=True):
+        super(MeshLine, self).__init__(p, t)
         if p is None and t is None:
-            p = np.array([[0,1]]).T
-            t = np.array([[0],[1]])
+            p = np.array([[0, 1]]).T
+            t = np.array([[0], [1]])
         elif p is None or t is None:
             raise Exception("Must provide p AND t or neither")
         self.p = p
@@ -173,7 +172,7 @@ class MeshLine(Mesh):
 
     def refine(self, N=1):
         """Perform one or more uniform refines on the mesh."""
-        for itr in range(N):
+        for _ in range(N):
             self._single_refine()
 
     def _single_refine(self):
@@ -213,11 +212,12 @@ class MeshLine(Mesh):
 
 class MeshQuad(Mesh):
     """A mesh consisting of quadrilateral elements."""
-    
+
     refdom = "quad"
     brefdom = "line"
 
     def __init__(self, p=None, t=None, validate=True):
+        super(MeshQuad, self).__init__(p, t)
         if p is None and t is None:
             p = np.array([[0, 0], [1, 0], [1, 1], [0, 1]]).T
             t = np.array([[0, 1, 2, 3]]).T
@@ -259,7 +259,7 @@ class MeshQuad(Mesh):
                            self.t2f[3, :]))
         t_tmp = np.tile(np.arange(self.t.shape[1]), (1, 4))[0]
 
-        e_first, ix_first = np.unique(e_tmp,return_index=True)
+        e_first, ix_first = np.unique(e_tmp, return_index=True)
         # this emulates matlab unique(e_tmp,'last')
         e_last, ix_last = np.unique(e_tmp[::-1], return_index=True)
         ix_last = e_tmp.shape[0] - ix_last - 1
@@ -296,12 +296,12 @@ class MeshQuad(Mesh):
 
     def refine(self, N=1):
         """Perform one or more refines on the mesh."""
-        for itr in range(N):
+        for _ in range(N):
             self._single_refine()
 
     def _single_refine(self):
         """Perform a single mesh refine that halves 'h'.
-        
+
         Each quadrilateral is split into four subquads."""
         # rename variables
         t = self.t
@@ -315,10 +315,10 @@ class MeshQuad(Mesh):
         newp1 = 0.5*np.vstack((p[0, e[0, :]] + p[0, e[1, :]],
                                p[1, e[0, :]] + p[1, e[1, :]]))
         # ... and element middle points
-        newp2 = 0.25*np.vstack((p[0, t[0, :]] + p[0, t[1, :]]
-                              + p[0, t[2, :]] + p[0, t[3, :]],
-                                p[1, t[0, :]] + p[1, t[1, :]]
-                              + p[1, t[2, :]] + p[1, t[3, :]]))
+        newp2 = 0.25*np.vstack((p[0, t[0, :]] + p[0, t[1, :]] +
+                                p[0, t[2, :]] + p[0, t[3, :]],
+                                p[1, t[0, :]] + p[1, t[1, :]] +
+                                p[1, t[2, :]] + p[1, t[3, :]]))
         newp = np.hstack((p, newp1, newp2))
         # build new quadrilateral definitions
         newt = np.vstack((t[0, :],
@@ -343,20 +343,20 @@ class MeshQuad(Mesh):
 
         self._build_mappings()
 
-    def _splitquads(self, z):
+    def _splitquads(self, x):
         """Split each quad into a triangle and return MeshTri."""
-        if len(z) == self.t.shape[1]:
+        if len(x) == self.t.shape[1]:
             # preserve elemental constant functions
-            Z = np.concatenate((z, z))
+            X = np.concatenate((x, x))
         else:
-            Z = z
+            X = x
         t = self.t[[0, 1, 3], :]
         t = np.hstack((t, self.t[[1, 2, 3]]))
-        return MeshTri(self.p, t), Z
+        return MeshTri(self.p, t), X
 
     def plot(self, z, smooth=False):
         """Visualize nodal or elemental function (2d).
-        
+
         The quadrilateral mesh is split into triangular mesh (MeshTri) and
         the respective plotting function for the triangular mesh is used.
         """
@@ -365,7 +365,7 @@ class MeshQuad(Mesh):
 
     def plot3(self, z, smooth=False):
         """Visualize nodal function (3d i.e. three axes).
-        
+
         The quadrilateral mesh is split into triangular mesh (MeshTri) and
         the respective plotting function for the triangular mesh is used.
         """
@@ -374,7 +374,7 @@ class MeshQuad(Mesh):
 
     def jiggle(self, z=0.2):
         """Jiggle the interior nodes of the mesh.
- 
+
         Parameters
         ----------
         z : (OPTIONAL, default=0.2) float
@@ -388,8 +388,8 @@ class MeshQuad(Mesh):
 
     def param(self):
         """Return mesh parameter."""
-        return np.max(np.sqrt(np.sum((self.p[:, self.facets[0, :]]
-                                    - self.p[:, self.facets[1, :]])**2,
+        return np.max(np.sqrt(np.sum((self.p[:, self.facets[0, :]] -
+                                      self.p[:, self.facets[1, :]])**2,
                                      axis=0)))
 
     def draw(self):
@@ -419,11 +419,12 @@ class MeshQuad(Mesh):
 
 class MeshTet(Mesh):
     """Tetrahedral mesh."""
-    
+
     refdom = "tet"
     brefdom = "tri"
 
     def __init__(self, p=None, t=None, validate=True):
+        super(MeshTet, self).__init__(p, t)
         if p is None and t is None:
             p = np.array([[0, 0, 0], [0, 0, 1], [0, 1, 0], [1, 0, 0],
                           [0, 1, 1], [1, 0, 1], [1, 1, 0], [1, 1, 1]]).T
@@ -508,18 +509,18 @@ class MeshTet(Mesh):
 
     def facets_satisfying(self, test):
         """Return facets whose midpoints satisfy some condition."""
-        mx = 0.3333333*(self.p[0, self.facets[0, :]]
-                      + self.p[0, self.facets[1, :]]
-                      + self.p[0, self.facets[2, :]])
-        my = 0.3333333*(self.p[1, self.facets[0, :]]
-                      + self.p[1, self.facets[1, :]]
-                      + self.p[1, self.facets[2, :]])
-        mz = 0.3333333*(self.p[2, self.facets[0, :]]
-                      + self.p[2, self.facets[1, :]]
-                      + self.p[2, self.facets[2, :]])
+        mx = 0.3333333*(self.p[0, self.facets[0, :]] +
+                        self.p[0, self.facets[1, :]] +
+                        self.p[0, self.facets[2, :]])
+        my = 0.3333333*(self.p[1, self.facets[0, :]] +
+                        self.p[1, self.facets[1, :]] +
+                        self.p[1, self.facets[2, :]])
+        mz = 0.3333333*(self.p[2, self.facets[0, :]] +
+                        self.p[2, self.facets[1, :]] +
+                        self.p[2, self.facets[2, :]])
         return np.nonzero(test(mx, my, mz))[0]
 
-    def edges_satisfying(self,test):
+    def edges_satisfying(self, test):
         """Return edges whose midpoints satisfy some condition."""
         mx = 0.5*(self.p[0, self.edges[0, :]] + self.p[0, self.edges[1, :]])
         my = 0.5*(self.p[1, self.edges[0, :]] + self.p[1, self.edges[1, :]])
@@ -528,7 +529,7 @@ class MeshTet(Mesh):
 
     def _single_refine(self):
         """Perform a single mesh refine.
-        
+
         Let the nodes of a tetrahedron be numbered as 0, 1, 2 and 3.
         It is assumed that the edges in self.t2e are given in the order
 
@@ -568,17 +569,17 @@ class MeshTet(Mesh):
                               p[2, e[0, :]] + p[2, e[1, :]]))
         newp = np.hstack((p, newp))
         # new tets
-        newt=np.vstack((t[0,:],t2e[0,:],t2e[2,:],t2e[3,:]))
-        newt=np.hstack((newt,np.vstack((t[1,:],t2e[0,:],t2e[1,:],t2e[4,:]))))
-        newt=np.hstack((newt,np.vstack((t[2,:],t2e[1,:],t2e[2,:],t2e[5,:]))))
-        newt=np.hstack((newt,np.vstack((t[3,:],t2e[3,:],t2e[4,:],t2e[5,:]))))
+        newt = np.vstack((t[0, :], t2e[0, :], t2e[2, :], t2e[3, :]))
+        newt = np.hstack((newt, np.vstack((t[1, :], t2e[0, :], t2e[1, :], t2e[4, :]))))
+        newt = np.hstack((newt, np.vstack((t[2, :], t2e[1, :], t2e[2, :], t2e[5, :]))))
+        newt = np.hstack((newt, np.vstack((t[3, :], t2e[3, :], t2e[4, :], t2e[5, :]))))
         # compute middle pyramid diagonal lengths and choose shortest
-        d1 = ((newp[0, t2e[2, :]] - newp[0, t2e[4, :]])**2
-            + (newp[1, t2e[2, :]] - newp[1, t2e[4, :]])**2)
-        d2 = ((newp[0, t2e[1, :]] - newp[0, t2e[3, :]])**2
-            + (newp[1, t2e[1, :]] - newp[1, t2e[3, :]])**2)
-        d3 = ((newp[0, t2e[0, :]] - newp[0, t2e[5, :]])**2
-            + (newp[1, t2e[0, :]] - newp[1, t2e[5, :]])**2)
+        d1 = ((newp[0, t2e[2, :]] - newp[0, t2e[4, :]])**2 +
+              (newp[1, t2e[2, :]] - newp[1, t2e[4, :]])**2)
+        d2 = ((newp[0, t2e[1, :]] - newp[0, t2e[3, :]])**2 +
+              (newp[1, t2e[1, :]] - newp[1, t2e[3, :]])**2)
+        d3 = ((newp[0, t2e[0, :]] - newp[0, t2e[5, :]])**2 +
+              (newp[1, t2e[0, :]] - newp[1, t2e[5, :]])**2)
         I1 = d1 < d2
         I2 = d1 < d3
         I3 = d2 < d3
@@ -641,15 +642,15 @@ class MeshTet(Mesh):
     def draw_facets(self, test=None, u=None):
         """Draw all facets."""
         if test is not None:
-            xs = 1./3.*(self.p[0, self.facets[0, :]]
-                      + self.p[0, self.facets[1, :]]
-                      + self.p[0, self.facets[2, :]])
-            ys = 1./3.*(self.p[1, self.facets[0, :]]
-                      + self.p[1, self.facets[1, :]]
-                      + self.p[1, self.facets[2, :]])
-            zs = 1./3.*(self.p[2, self.facets[0, :]]
-                      + self.p[2, self.facets[1, :]]
-                      + self.p[2, self.facets[2, :]])
+            xs = 1./3.*(self.p[0, self.facets[0, :]] +
+                        self.p[0, self.facets[1, :]] +
+                        self.p[0, self.facets[2, :]])
+            ys = 1./3.*(self.p[1, self.facets[0, :]] +
+                        self.p[1, self.facets[1, :]] +
+                        self.p[1, self.facets[2, :]])
+            zs = 1./3.*(self.p[2, self.facets[0, :]] +
+                        self.p[2, self.facets[1, :]] +
+                        self.p[2, self.facets[2, :]])
             fset = np.nonzero(test(xs, ys, zs))[0]
         else:
             fset = range(self.facets.shape[1])
@@ -676,7 +677,7 @@ class MeshTet(Mesh):
                                          newt.T, scalars=newu)
                     mlab.triangular_mesh(newp[0, :], newp[1, :], newp[2, :],
                                          newt.T, representation='wireframe',
-                                         color = (0, 0, 0))
+                                         color=(0, 0, 0))
                     mlab.axes()
                     mlab.colorbar()
                 else:
@@ -689,18 +690,18 @@ class MeshTet(Mesh):
     def draw(self, test=None, u=None):
         """Draw all tetrahedra."""
         if test is not None:
-            xs = 1./4.*(self.p[0, self.t[0, :]]
-                      + self.p[0, self.t[1, :]]
-                      + self.p[0, self.t[2, :]]
-                      + self.p[0, self.t[3, :]])
-            ys = 1./4.*(self.p[1, self.t[0, :]]
-                      + self.p[1, self.t[1, :]]
-                      + self.p[1, self.t[2, :]]
-                      + self.p[1, self.t[3, :]])
-            zs = 1./4.*(self.p[2, self.t[0, :]]
-                      + self.p[2, self.t[1, :]]
-                      + self.p[2, self.t[2, :]]
-                      + self.p[2, self.t[3, :]])
+            xs = 1./4.*(self.p[0, self.t[0, :]] +
+                        self.p[0, self.t[1, :]] +
+                        self.p[0, self.t[2, :]] +
+                        self.p[0, self.t[3, :]])
+            ys = 1./4.*(self.p[1, self.t[0, :]] +
+                        self.p[1, self.t[1, :]] +
+                        self.p[1, self.t[2, :]] +
+                        self.p[1, self.t[3, :]])
+            zs = 1./4.*(self.p[2, self.t[0, :]] +
+                        self.p[2, self.t[1, :]] +
+                        self.p[2, self.t[2, :]] +
+                        self.p[2, self.t[3, :]])
             tset = np.nonzero(test(xs, ys, zs))[0]
         else:
             tset = range(self.t.shape[1])
@@ -731,8 +732,8 @@ class MeshTet(Mesh):
     def boundary_edges(self):
         """Return an array of boundary edge indices."""
         bnodes = self.boundary_nodes()[:, None]
-        return np.nonzero(np.sum(self.edges[0, :] == bnodes, axis=0)
-                        * np.sum(self.edges[1, :] == bnodes, axis=0))[0]
+        return np.nonzero(np.sum(self.edges[0, :] == bnodes, axis=0) *
+                          np.sum(self.edges[1, :] == bnodes, axis=0))[0]
 
     def interior_nodes(self):
         """Return an array of interior node indices."""
@@ -740,14 +741,14 @@ class MeshTet(Mesh):
 
     def param(self):
         """Return (maximum) mesh parameter."""
-        return np.max(np.sqrt(np.sum((self.p[:, self.edges[0, :]]
-                                    - self.p[:, self.edges[1, :]])**2, axis=0)))
+        return np.max(np.sqrt(np.sum((self.p[:, self.edges[0, :]] -
+                                      self.p[:, self.edges[1, :]])**2, axis=0)))
 
     def shapereg(self):
         """Return the largest shape-regularity constant."""
         def edgelen(n):
-            return np.sqrt(np.sum((self.p[:, self.edges[0, self.t2e[n, :]]]
-                                 - self.p[:, self.edges[1, self.t2e[n, :]]])**2,
+            return np.sqrt(np.sum((self.p[:, self.edges[0, self.t2e[n, :]]] -
+                                   self.p[:, self.edges[1, self.t2e[n, :]]])**2,
                                   axis=0))
         edgelenmat = np.vstack(tuple(edgelen(i) for i in range(6)))
         return np.max(np.max(edgelenmat, axis=0)/np.min(edgelenmat, axis=0))
@@ -763,6 +764,7 @@ class MeshTri(Mesh):
     brefdom = "line"
 
     def __init__(self, p=None, t=None, validate=True):
+        super(MeshTri, self).__init__(p, t)
         if p is None and t is None:
             p = np.array([[0, 1, 0, 1], [0, 0, 1, 1]], dtype=np.float_)
             t = np.array([[0, 1, 2], [1, 3, 2]], dtype=np.intp).T
@@ -801,7 +803,7 @@ class MeshTri(Mesh):
 
         e_first, ix_first = np.unique(e_tmp, return_index=True)
         # this emulates matlab unique(e_tmp,'last')
-        e_last, ix_last=np.unique(e_tmp[::-1], return_index=True)
+        e_last, ix_last = np.unique(e_tmp[::-1], return_index=True)
         ix_last = e_tmp.shape[0] - ix_last - 1
 
         self.f2t = np.zeros((2, self.facets.shape[1]), dtype=np.int64)
@@ -809,108 +811,101 @@ class MeshTri(Mesh):
         self.f2t[1, e_last] = t_tmp[ix_last]
 
         # second row to zero if repeated (i.e., on boundary)
-        self.f2t[1, np.nonzero(self.f2t[0,:] == self.f2t[1, :])[0]] = -1
+        self.f2t[1, np.nonzero(self.f2t[0, :] == self.f2t[1, :])[0]] = -1
 
     def boundary_nodes(self):
         """Return an array of boundary node indices."""
-        return np.unique(self.facets[:,self.boundary_facets()])
+        return np.unique(self.facets[:, self.boundary_facets()])
 
     def boundary_facets(self):
         """Return an array of boundary facet indices."""
-        return np.nonzero(self.f2t[1,:]==-1)[0]
+        return np.nonzero(self.f2t[1, :] == -1)[0]
 
     def interior_facets(self):
         """Return an array of interior facet indices."""
-        return np.nonzero(self.f2t[1,:]>0)[0]
+        return np.nonzero(self.f2t[1, :] > 0)[0]
 
-    def nodes_satisfying(self,test):
+    def nodes_satisfying(self, test):
         """Return nodes that satisfy some condition."""
-        return np.nonzero(test(self.p[0,:],self.p[1,:]))[0]
+        return np.nonzero(test(self.p[0, :], self.p[1, :]))[0]
 
-    def elements_satisfying(self,test):
+    def elements_satisfying(self, test):
         """Return elements whose midpoints satisfy some condition."""
-        mx=.33333*np.sum(self.p[0,self.t],axis=0)
-        my=.33333*np.sum(self.p[1,self.t],axis=0)
-        return np.nonzero(test(mx,my))[0]
+        mx = .33333*np.sum(self.p[0, self.t], axis=0)
+        my = .33333*np.sum(self.p[1, self.t], axis=0)
+        return np.nonzero(test(mx, my))[0]
 
-    def facets_satisfying(self,test):
+    def facets_satisfying(self, test):
         """Return facets whose midpoints satisfy some condition."""
-        mx=0.5*(self.p[0,self.facets[0,:]]+self.p[0,self.facets[1,:]])
-        my=0.5*(self.p[1,self.facets[0,:]]+self.p[1,self.facets[1,:]])
-        return np.nonzero(test(mx,my))[0]
+        mx = 0.5*(self.p[0, self.facets[0, :]] + self.p[0, self.facets[1, :]])
+        my = 0.5*(self.p[1, self.facets[0, :]] + self.p[1, self.facets[1, :]])
+        return np.nonzero(test(mx, my))[0]
 
     def interior_nodes(self):
         """Return an array of interior node indices."""
-        return np.setdiff1d(np.arange(0,self.p.shape[1]),self.boundary_nodes())
+        return np.setdiff1d(np.arange(0, self.p.shape[1]), self.boundary_nodes())
 
-    def interpolator(self,x):
+    def interpolator(self, x):
         """Return a function which interpolates values with P1 basis."""
-        triang=mtri.Triangulation(self.p[0,:],self.p[1,:],self.t.T)
-        interpf=mtri.LinearTriInterpolator(triang,x)
+        triang = mtri.Triangulation(self.p[0, :], self.p[1, :], self.t.T)
+        interpf = mtri.LinearTriInterpolator(triang, x)
         # contruct an interpolator handle
-        def handle(X,Y):
-            return interpf(X,Y).data
+        def handle(X, Y):
+            return interpf(X, Y).data
         return handle
 
     def param(self):
         """Return mesh parameter."""
-        return np.max(np.sqrt(np.sum((self.p[:,self.facets[0,:]]-
-                                      self.p[:,self.facets[1,:]])**2,axis=0)))
+        return np.max(np.sqrt(np.sum((self.p[:, self.facets[0, :]] -
+                                      self.p[:, self.facets[1, :]])**2, axis=0)))
 
-    def draw(self,nofig=False):
+    def draw(self, nofig=False):
         """Draw the mesh."""
         if nofig:
-            fig=0
+            fig = 0
         else:
             # create new figure
-            fig=plt.figure()
+            fig = plt.figure()
         # visualize the mesh faster plotting is achieved through
         # None insertion trick.
-        xs=[]
-        ys=[]
-        for s,t,u,v in zip(self.p[0,self.facets[0,:]],
-                           self.p[1,self.facets[0,:]],
-                           self.p[0,self.facets[1,:]],
-                           self.p[1,self.facets[1,:]]):
+        xs = []
+        ys = []
+        for s, t, u, v in zip(self.p[0, self.facets[0, :]],
+                              self.p[1, self.facets[0, :]],
+                              self.p[0, self.facets[1, :]],
+                              self.p[1, self.facets[1, :]]):
             xs.append(s)
             xs.append(u)
             xs.append(None)
             ys.append(t)
             ys.append(v)
             ys.append(None)
-        plt.plot(xs,ys,'k')
+        plt.plot(xs, ys, 'k')
         return fig
 
-    def draw_nodes(self,nodes,mark='bo'):
+    def draw_nodes(self, nodes, mark='bo'):
         """Highlight some nodes."""
-        if isinstance(nodes,str):
-            try:
-                plt.plot(self.p[0,self.markers[nodes]],
-                         self.p[1,self.markers[nodes]],mark)
-            except:
-                raise Exception("MeshTri: Given node set name not found!")
-        else:
-            plt.plot(self.p[0,nodes],self.p[1,nodes],mark)
+        plt.plot(self.p[0, nodes], self.p[1, nodes], mark)
 
-    def plot(self,z,smooth=False,nofig=False,zlim=None):
+    def plot(self, z, smooth=False, nofig=False, zlim=None):
         """Visualize nodal or elemental function (2d)."""
         if nofig:
-            fig=0
+            fig = 0
         else:
-            fig=plt.figure()
-        if zlim==None:
+            fig = plt.figure()
+        if zlim == None:
             if smooth:
-                plt.tripcolor(self.p[0,:],self.p[1,:],self.t.T,z,
-                                     shading='gouraud')
+                plt.tripcolor(self.p[0, :], self.p[1, :], self.t.T, z,
+                              shading='gouraud')
             else:
-                plt.tripcolor(self.p[0,:],self.p[1,:],self.t.T,z)
+                plt.tripcolor(self.p[0, :], self.p[1, :], self.t.T, z)
         else:
             if smooth:
-                plt.tripcolor(self.p[0,:],self.p[1,:],self.t.T,z,
-                        shading='gouraud',vmin=zlim[0],vmax=zlim[1])
+                plt.tripcolor(self.p[0, :], self.p[1, :], self.t.T, z,
+                              shading='gouraud', vmin=zlim[0], vmax=zlim[1])
             else:
-                plt.tripcolor(self.p[0,:],self.p[1,:],self.t.T,z,
-                        vmin=zlim[0],vmax=zlim[1])
+                plt.tripcolor(self.p[0, :], self.p[1, :], self.t.T, z,
+                              vmin=zlim[0], vmax=zlim[1])
         return fig
 
     def plot3(self, z, smooth=False):
@@ -967,25 +962,25 @@ class MeshTri(Mesh):
     def _single_refine(self):
         """Perform a single mesh refine."""
         # rename variables
-        t=self.t
-        p=self.p
-        e=self.facets
-        sz=p.shape[1]
-        t2f=self.t2f+sz
+        t = self.t
+        p = self.p
+        e = self.facets
+        sz = p.shape[1]
+        t2f = self.t2f + sz
         # new vertices are the midpoints of edges
-        newp=0.5*np.vstack((p[0,e[0,:]]+p[0,e[1,:]],p[1,e[0,:]]+p[1,e[1,:]]))
-        newp=np.hstack((p,newp))
+        newp = 0.5*np.vstack((p[0, e[0, :]] + p[0, e[1, :]],
+                              p[1, e[0, :]] + p[1, e[1, :]]))
+        newp = np.hstack((p, newp))
         # build new triangle definitions
-        newt=np.vstack((t[0,:],t2f[0,:],t2f[2,:]))
-        newt=np.hstack((newt,np.vstack((t[1,:],t2f[0,:],t2f[1,:]))))
-        newt=np.hstack((newt,np.vstack((t[2,:],t2f[2,:],t2f[1,:]))))
-        newt=np.hstack((newt,np.vstack((t2f[0,:],t2f[1,:],t2f[2,:]))))
+        newt = np.vstack((t[0, :], t2f[0, :], t2f[2, :]))
+        newt = np.hstack((newt, np.vstack((t[1, :], t2f[0, :], t2f[1, :]))))
+        newt = np.hstack((newt, np.vstack((t[2, :], t2f[2, :], t2f[1, :]))))
+        newt = np.hstack((newt, np.vstack((t2f[0, :], t2f[1, :], t2f[2, :]))))
         # update fields
-        self.p=newp
-        self.t=newt
+        self.p = newp
+        self.t = newt
 
         self._build_mappings()
 
     def mapping(self):
         return spfem.mapping.MappingAffine(self)
-
