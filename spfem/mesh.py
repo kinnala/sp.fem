@@ -425,10 +425,10 @@ class MeshTet(Mesh):
 
     def __init__(self, p=None, t=None, validate=True):
         if p is None and t is None:
-            p=np.array([[0, 0, 0], [0, 0, 1], [0, 1, 0], [1, 0, 0],
-                        [0, 1, 1], [1, 0, 1], [1, 1, 0], [1, 1, 1]]).T
-            t=np.array([[0, 1, 2, 3], [3, 5, 1, 7], [2, 3, 6, 7],
-                        [2, 3, 1, 7], [1, 2, 4, 7]]).T
+            p = np.array([[0, 0, 0], [0, 0, 1], [0, 1, 0], [1, 0, 0],
+                          [0, 1, 1], [1, 0, 1], [1, 1, 0], [1, 1, 1]]).T
+            t = np.array([[0, 1, 2, 3], [3, 5, 1, 7], [2, 3, 6, 7],
+                          [2, 3, 1, 7], [1, 2, 4, 7]]).T
         elif p is None or t is None:
             raise Exception("Must provide p AND t or neither")
         self.p = p
@@ -764,52 +764,52 @@ class MeshTri(Mesh):
 
     def __init__(self, p=None, t=None, validate=True):
         if p is None and t is None:
-            p = np.array([[0,1,0,1],[0,0,1,1]], dtype=np.float_)
-            t = np.array([[0,1,2],[1,3,2]], dtype=np.intp).T
+            p = np.array([[0, 1, 0, 1], [0, 0, 1, 1]], dtype=np.float_)
+            t = np.array([[0, 1, 2], [1, 3, 2]], dtype=np.intp).T
         elif p is None or t is None:
             raise Exception("Must provide p AND t or neither")
-        self.p=p
-        self.t=t
+        self.p = p
+        self.t = t
         if validate:
             self._validate()
         self._build_mappings()
 
     def _build_mappings(self):
         # sort to preserve orientations etc.
-        self.t=np.sort(self.t,axis=0)
+        self.t = np.sort(self.t, axis=0)
 
         # define facets: in the order (0,1) (1,2) (0,2)
-        self.facets=np.sort(np.vstack((self.t[0,:],self.t[1,:])),axis=0)
-        self.facets=np.hstack((self.facets,
-                               np.sort(np.vstack((self.t[1,:],self.t[2,:])),
-                                       axis=0)))
-        self.facets=np.hstack((self.facets,
-                               np.sort(np.vstack((self.t[0,:],self.t[2,:])),
-                                       axis=0)))
+        self.facets = np.sort(np.vstack((self.t[0, :], self.t[1, :])), axis=0)
+        self.facets = np.hstack((self.facets,
+                                 np.sort(np.vstack((self.t[1, :], self.t[2, :])),
+                                         axis=0)))
+        self.facets = np.hstack((self.facets,
+                                 np.sort(np.vstack((self.t[0, :], self.t[2, :])),
+                                         axis=0)))
 
         # get unique facets and build triangle-to-facet
         # mapping: 3 (edges) x Ntris
-        tmp=np.ascontiguousarray(self.facets.T)
-        tmp,ixa,ixb=np.unique(tmp.view([('',tmp.dtype)]*tmp.shape[1]),
-                              return_index=True,return_inverse=True)
-        self.facets=self.facets[:,ixa]
-        self.t2f=ixb.reshape((3,self.t.shape[1]))
+        tmp = np.ascontiguousarray(self.facets.T)
+        tmp, ixa, ixb = np.unique(tmp.view([('', tmp.dtype)] * tmp.shape[1]),
+                                  return_index=True, return_inverse=True)
+        self.facets = self.facets[:, ixa]
+        self.t2f = ixb.reshape((3, self.t.shape[1]))
 
         # build facet-to-triangle mapping: 2 (triangles) x Nedges
-        e_tmp=np.hstack((self.t2f[0,:],self.t2f[1,:],self.t2f[2,:]))
-        t_tmp=np.tile(np.arange(self.t.shape[1]),(1,3))[0]
+        e_tmp = np.hstack((self.t2f[0, :], self.t2f[1, :], self.t2f[2, :]))
+        t_tmp = np.tile(np.arange(self.t.shape[1]), (1, 3))[0]
 
-        e_first,ix_first=np.unique(e_tmp,return_index=True)
+        e_first, ix_first = np.unique(e_tmp, return_index=True)
         # this emulates matlab unique(e_tmp,'last')
-        e_last,ix_last=np.unique(e_tmp[::-1],return_index=True)
-        ix_last=e_tmp.shape[0]-ix_last-1
+        e_last, ix_last=np.unique(e_tmp[::-1], return_index=True)
+        ix_last = e_tmp.shape[0] - ix_last - 1
 
-        self.f2t=np.zeros((2,self.facets.shape[1]),dtype=np.int64)
-        self.f2t[0,e_first]=t_tmp[ix_first]
-        self.f2t[1,e_last]=t_tmp[ix_last]
+        self.f2t = np.zeros((2, self.facets.shape[1]), dtype=np.int64)
+        self.f2t[0, e_first] = t_tmp[ix_first]
+        self.f2t[1, e_last] = t_tmp[ix_last]
 
         # second row to zero if repeated (i.e., on boundary)
-        self.f2t[1,np.nonzero(self.f2t[0,:]==self.f2t[1,:])[0]]=-1
+        self.f2t[1, np.nonzero(self.f2t[0,:] == self.f2t[1, :])[0]] = -1
 
     def boundary_nodes(self):
         """Return an array of boundary node indices."""
