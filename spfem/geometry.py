@@ -180,7 +180,7 @@ class GeometryMeshPyTetgen(GeometryMeshPy):
 class GeometryMeshPyTriangle(GeometryMeshPy):
     """Define and mesh 2-dimensional domains with MeshPy/Triangle."""
 
-    def __init__(self,points,facets=None,holes=None):
+    def __init__(self, points, facets=None, holes=None):
         """Define a domain using boundary segments (PLSG).
         
         Default behavior is to connect all points.
@@ -194,35 +194,36 @@ class GeometryMeshPyTriangle(GeometryMeshPy):
         holes : (OPTIONAL) array of tuples
             The list of points that define the holes.
         """
-        self.info=meshpy.triangle.MeshInfo()
+        self.info = meshpy.triangle.MeshInfo()
         self.info.set_points(points)
         if holes is not None:
             self.info.set_holes(holes)
         if facets is None:
-            self.info.set_facets([(i,i+1) for i in range(0,len(points)-1)]+[(len(points)-1,0)])
+            self.info.set_facets([(i, i+1) for i in range(0, len(points) - 1)]
+                                 + [(len(points) - 1, 0)])
         else:
             self.info.set_facets(facets)
 
     def mesh(self,h):
-        def ref_func(tri_points,area):
-            return bool(area>h*h)
-        self.m=meshpy.triangle.build(self.info,refinement_func=ref_func)
+        def ref_func(tri_points, area):
+            return bool(area > h*h)
+        self.m = meshpy.triangle.build(self.info, refinement_func=ref_func)
         return self._mesh_output()
 
-    def refine(self,ref_elems):
-        p=np.array(self.m.points).T
-        t=np.array(self.m.elements).T
+    def refine(self, ref_ts):
+        p = np.array(self.m.points).T
+        t = np.array(self.m.elements).T
 
         # define new points and stack
-        points=np.hstack((p,.5*(p[:,t[0,ref_elems]]+p[:,t[1,ref_elems]]),
-                            .5*(p[:,t[1,ref_elems]]+p[:,t[2,ref_elems]]),
-                            .5*(p[:,t[0,ref_elems]]+p[:,t[2,ref_elems]]))).T
+        points = np.hstack((p, .5*(p[:, t[0, ref_ts]] + p[:, t[1, ref_ts]]),
+                               .5*(p[:, t[1, ref_ts]] + p[:, t[2, ref_ts]]),
+                               .5*(p[:, t[0, ref_ts]] + p[:, t[2, ref_ts]]))).T
 
         # build new mesh
         self.info.set_points(np.array(points))
         self.info.set_facets(np.array(self.m.facets))
-        self.m=meshpy.triangle.build(self.info,allow_volume_steiner=False,
-                allow_boundary_steiner=False)
+        self.m = meshpy.triangle.build(self.info, allow_volume_steiner=False,
+                                       allow_boundary_steiner=False)
         return self._mesh_output()
 
 
