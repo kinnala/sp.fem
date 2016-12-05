@@ -41,6 +41,130 @@ class Assembler(object):
     def __init__(self):
         pass
 
+    def find_dofs(self, test, boundary=True, dofrows=None, check_vertices=True,
+                  check_facets=True, check_edges=True):
+        """Find DOF numbers and locations based on a function handle. Does not
+        test for interior DOFs since they are not typically included in
+        boundary conditions! Checks only DOF's corresponding to 'u' variable.
+
+        Remark: More convenient replacement for Assembler.dofnum_u.getdofs().
+        
+        Parameters
+        ----------
+        test : lambda
+            An anonymous function with Ndim arguments. If returns other than 0
+            when evaluated at the DOF location, the respective DOF is included
+            in the return set.
+        boundary : (OPTIONAL, default=True) bool
+            Check only boundary DOFs. 
+        dofrows : (OPTIONAL, default=None) np.array
+            List of rows that are extracted from the DOF structures.
+            For example, if each node/facet/edge contains 3 DOFs (say, in three
+            dimensional problems x, y and z displacements) you can give [0, 1]
+            to consider only two first DOFs.
+        check_vertices : (OPTIONAL, default=True) bool
+            Whether to consider vertex dofs or not.
+        check_facets: (OPTIONAL, default=True) bool
+            Whether to consider facet dofs or not.
+        check_edges: (OPTIONAL, default=True) bool
+            Whether to consider edge dofs or not. 3D only.
+
+        Returns
+        -------
+        np.array
+            Set of DOF numbers to the global stiffness matrix.
+        np.array
+            Locations of the DOF's for setting Dirichlet BC's etc.
+        """
+        if self.mesh.dim() == 1:
+            raise Exception("Assembler.find_dofs not implemented for 1D mesh.")
+
+        dofs = np.zeros(0, dtype=np.int64)
+        locs = np.zeros((self.mesh.dim(), 0))
+        
+        if check_vertices:
+            # handle nodes
+            N = self.mesh.nodes_satisfying(test)
+            if boundary:
+                N = np.intersect1d(N, self.mesh.boundary_nodes())
+            if dofrows is None:
+                Ndofs = self.dofnum_u.n_dof[:, N]
+            else:
+                Ndofs = self.dofnum_u.n_dof[dofrows][:, N]
+
+            Ndofx = np.tile(self.mesh.p[0, N], (Ndofs.shape[0], 1)).flatten()
+            Ndofy = np.tile(self.mesh.p[1, N], (Ndofs.shape[0], 1)).flatten()
+            if self.mesh.dim() == 3:
+                Ndofz = np.tile(self.mesh.p[2, N], (Ndofs.shape[0], 1)).flatten()
+                locs = np.hstack((locs, np.vstack((Ndofx, Ndofy, Ndofz))))
+            else:
+                locs = np.hstack((locs, np.vstack((Ndofx, Ndofy))))
+
+            dofs = np.hstack((dofs, Ndofs.flatten()))
+        
+        if check_facets:
+            # handle facets
+            F = self.mesh.facets_satisfying(test)
+            if boundary:
+                F = np.intersect1d(F, self.mesh.boundary_facets())
+            if dofrows is None:
+                Fdofs = self.dofnum_u.f_dof[:, F]
+            else:
+                Fdofs = self.dofnum_u.f_dof[dofrows][:, F]
+
+            if self.mesh.dim() == 2:
+                mx = 0.5*(self.mesh.p[0, self.mesh.facets[0, F]] +
+                          self.mesh.p[0, self.mesh.facets[1, F]])
+                my = 0.5*(self.mesh.p[1, self.mesh.facets[0, F]] +
+                          self.mesh.p[1, self.mesh.facets[1, F]])
+                Fdofx = np.tile(mx, (Fdofs.shape[0], 1)).flatten()
+                Fdofy = np.tile(my, (Fdofs.shape[0], 1)).flatten()
+                locs = np.hstack((locs, np.vstack((Fdofx, Fdofy))))
+            else:
+                mx = 0.3333333*(self.mesh.p[0, self.mesh.facets[0, F]] +
+                                self.mesh.p[0, self.mesh.facets[1, F]] +
+                                self.mesh.p[0, self.mesh.facets[2, F]])
+                my = 0.3333333*(self.mesh.p[1, self.mesh.facets[0, F]] +
+                                self.mesh.p[1, self.mesh.facets[1, F]] +
+                                self.mesh.p[1, self.mesh.facets[2, F]])
+                mz = 0.3333333*(self.mesh.p[2, self.mesh.facets[0, F]] +
+                                self.mesh.p[2, self.mesh.facets[1, F]] +
+                                self.mesh.p[2, self.mesh.facets[2, F]])
+                Fdofx = np.tile(mx, (Fdofs.shape[0], 1)).flatten()
+                Fdofy = np.tile(my, (Fdofs.shape[0], 1)).flatten()
+                Fdofz = np.tile(mz, (Fdofs.shape[0], 1)).flatten()
+                locs = np.hstack((locs, np.vstack((Fdofx, Fdofy, Fdofz))))
+
+            dofs = np.hstack((dofs, Fdofs.flatten()))
+
+        if check_edges:
+            # handle edges
+            if self.mesh.dim() == 3:
+                E = self.mesh.edges_satisfying(test)
+                if boundary:
+                    E = np.intersect1d(E, self.mesh.boundary_edges())
+                if dofrows is None:
+                    Edofs = self.dofnum_u.e_dof[:, E]
+                else:
+                    Edofs = self.dofnum_u.e_dof[dofrows][:, E]
+
+                mx = 0.5*(self.mesh.p[0, self.mesh.edges[0, E]] +
+                          self.mesh.p[0, self.mesh.edges[1, E]])
+                my = 0.5*(self.mesh.p[1, self.mesh.edges[0, E]] +
+                          self.mesh.p[1, self.mesh.edges[1, E]])
+                mz = 0.5*(self.mesh.p[2, self.mesh.edges[0, E]] +
+                          self.mesh.p[2, self.mesh.edges[1, E]])
+
+                Edofx = np.tile(mx, (Edofs.shape[0], 1)).flatten()
+                Edofy = np.tile(my, (Edofs.shape[0], 1)).flatten()
+                Edofz = np.tile(mz, (Edofs.shape[0], 1)).flatten()
+
+                locs = np.hstack((locs, np.vstack((Edofx, Edofy, Edofz))))
+
+                dofs = np.hstack((dofs, Edofs.flatten()))
+
+        return dofs, locs
+
     def fillargs(self, oldform, newargs):
         """Used for filling functions with required set of arguments."""
         oldargs = inspect.getargspec(oldform).args
