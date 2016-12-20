@@ -1036,10 +1036,10 @@ class AssemblerElement(Assembler):
             dw[k] = const_cell(zero, dim)
             for j in range(Nbfun_u):
                 jdofs = self.dofnum_u.t_dof[j, :]
-                phi, _ = self.elem_u.lbasis(X, j)
+                phi, dphi = self.elem_u.lbasis(X, j)
                 w[k] += np.outer(interp[k][jdofs], phi)
                 for a in range(dim):
-                    dw[k][a] += 0 # TODO fix this
+                    dw[k][a] += np.outer(interp[k][jdofs], dphi[a])
 
         # compute the mesh parameter from jacobian determinant
         h = np.abs(detDF)**(1.0/self.mesh.dim())
