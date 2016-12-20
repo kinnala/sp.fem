@@ -1014,7 +1014,7 @@ class AssemblerElement(Assembler):
 
         # check and fix parameters of form
         oldparams = inspect.getargspec(form).args
-        paramlist = ['u', 'du', , 'x', 'h']
+        paramlist = ['u', 'du', 'x', 'h']
         fform = self.fillargs(form, paramlist)
 
         X, W = get_quadrature(self.mesh.refdom, intorder)
@@ -1036,11 +1036,10 @@ class AssemblerElement(Assembler):
             dw[k] = const_cell(zero, dim)
             for j in range(Nbfun_u):
                 jdofs = self.dofnum_u.t_dof[j, :]
-                w[k] += interp[k][jdofs][:, None]\
-                        * self.u[j]
+                phi, _ = self.elem_u.lbasis(X, j)
+                w[k] += np.outer(interp[k][jdofs], phi)
                 for a in range(dim):
-                    dw[k][a] += interp[k][jdofs][:, None]\
-                                * self.du[j][a]
+                    dw[k][a] += 0 # TODO fix this
 
         # compute the mesh parameter from jacobian determinant
         h = np.abs(detDF)**(1.0/self.mesh.dim())
