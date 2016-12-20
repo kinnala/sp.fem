@@ -854,6 +854,15 @@ class MeshTri(Mesh):
             return interpf(X, Y).data
         return handle
 
+    def const_interpolator(self, x):
+        """Return a function which interpolates values with P0 basis."""
+        triang = mtri.Triangulation(self.p[0, :], self.p[1, :], self.t.T)
+        finder = triang.get_trifinder()
+        # construct an interpolator handle
+        def handle(X, Y):
+            return x[finder(X, Y)]
+        return handle
+
     def param(self):
         """Return mesh parameter."""
         return np.max(np.sqrt(np.sum((self.p[:, self.facets[0, :]] -

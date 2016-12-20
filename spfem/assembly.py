@@ -276,6 +276,40 @@ class AssemblerAbstract(Assembler):
                               shape=(self.dofnum_v.N, 1)).toarray().T[0]
 
     def inorm(self, form, interp, intorder=None):
+        """Evaluate L2-norms of solution vectors inside elements. Useful for
+        e.g. evaluating a posteriori estimators.
+
+        Parameters
+        ----------
+        form : function handle
+            The function for which the L2 norm is evaluated. Can consist
+            of the following
+
+            +-----------+----------------------+
+            | Parameter | Explanation          |
+            +-----------+----------------------+
+            | u         | solution             |
+            +-----------+----------------------+
+            | du        | solution derivatives |
+            +-----------+----------------------+
+            | ddu       | -||- 2nd derivatives |
+            +-----------+----------------------+
+            | x         | spatial location     |
+            +-----------+----------------------+
+            | h         | the mesh parameter   |
+            +-----------+----------------------+
+
+            The function handle must use these exact names for
+            the variables. Unused variable names can be omitted.
+
+        interp : dict of numpy arrays
+            The solutions that are interpolated.
+
+        intorder : (OPTIONAL) int
+            The order of polynomials for which the applied
+            quadrature rule is exact. By default,
+            2*Element.maxdeg is used.
+        """
         # evaluate norm on all elements
         tind = range(self.mesh.t.shape[1])
 
@@ -533,19 +567,23 @@ class AssemblerElement(Assembler):
             The linear forms are automatically detected to be
             non-bilinear through the omission of u or du.
 
-        intorder : int
+        intorder : (OPTIONAL) int
             The order of polynomials for which the applied
             quadrature rule is exact. By default,
             2*Element.maxdeg is used. Reducing this number
             can sometimes reduce the computation time.
 
-        interp : numpy array
+        interp : (OPTIONAL) numpy array
             Using this flag, the user can provide
             a solution vector that is interpolated
             to the quadrature points and included in
             the computation of the bilinear form
             (the variable w). Useful e.g. when solving
             nonlinear problems.
+
+        tind : (OPTIONAL) numpy array
+            The indices of elements that are integrated over.
+            By default, all elements of the mesh are included.
         """
         if tind is None:
             # assemble on all elements by default
@@ -806,6 +844,84 @@ class AssemblerElement(Assembler):
 
             return coo_matrix((data, (rows, cols)),
                               shape=(self.dofnum_v.N, 1)).toarray().T[0]
+
+    def inorm(self, form, interp, intorder=None):
+        """Evaluate L2-norms of solution vectors inside elements. Useful for
+        e.g. evaluating a posteriori estimators.
+
+        Parameters
+        ----------
+        form : function handle
+            The function for which the L2 norm is evaluated. Can consist
+            of the following
+
+            +-----------+----------------------+
+            | Parameter | Explanation          |
+            +-----------+----------------------+
+            | u         | solution             |
+            +-----------+----------------------+
+            | du        | solution derivatives |
+            +-----------+----------------------+
+            | x         | spatial location     |
+            +-----------+----------------------+
+            | h         | the mesh parameter   |
+            +-----------+----------------------+
+
+            The function handle must use these exact names for
+            the variables. Unused variable names can be omitted.
+
+        interp : dict of numpy arrays
+            The solutions that are interpolated.
+
+        intorder : (OPTIONAL) int
+            The order of polynomials for which the applied
+            quadrature rule is exact. By default,
+            2*Element.maxdeg is used.
+        """
+        # evaluate norm on all elements
+        tind = range(self.mesh.t.shape[1])
+
+        if not isinstance(interp, dict):
+            raise Exception("The input solution vector(s) must be in a "
+                            "dictionary! Pass e.g. {0:u} instead of u.")
+
+        if intorder is None:
+            intorder = 2*self.elem_u.maxdeg
+
+        # check and fix parameters of form
+        oldparams = inspect.getargspec(form).args
+        paramlist = ['u', 'du', , 'x', 'h']
+        fform = self.fillargs(form, paramlist)
+
+        X, W = get_quadrature(self.mesh.refdom, intorder)
+
+        # mappings
+        x = self.mapping.F(X, tind) # reference facet to global facet
+
+        # jacobian at quadrature points
+        detDF = self.mapping.detDF(X, tind)
+
+        Nbfun_u = self.dofnum_u.t_dof.shape[0]
+        dim = self.mesh.p.shape[0]
+
+        # interpolate the solution vectors at quadrature points
+        zero = 0.0*x[0]
+        w, dw = ({} for i in range(2))
+        for k in interp:
+            w[k] = zero
+            dw[k] = const_cell(zero, dim)
+            for j in range(Nbfun_u):
+                jdofs = self.dofnum_u.t_dof[j, :]
+                w[k] += interp[k][jdofs][:, None]\
+                        * self.u[j]
+                for a in range(dim):
+                    dw[k][a] += interp[k][jdofs][:, None]\
+                                * self.du[j][a]
+
+        # compute the mesh parameter from jacobian determinant
+        h = np.abs(detDF)**(1.0/self.mesh.dim())
+
+        return np.dot(fform(w, dw, x, h)**2*np.abs(detDF), W)
 
     def L2error(self, uh, exact, intorder=None):
         """Compute :math:`L^2` error against exact solution.
