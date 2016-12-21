@@ -763,11 +763,19 @@ class MeshTri(Mesh):
     refdom = "tri"
     brefdom = "line"
 
-    def __init__(self, p=None, t=None, validate=True):
+    def __init__(self, p=None, t=None, validate=True, initmesh=None):
         super(MeshTri, self).__init__(p, t)
         if p is None and t is None:
-            p = np.array([[0, 1, 0, 1], [0, 0, 1, 1]], dtype=np.float_)
-            t = np.array([[0, 1, 2], [1, 3, 2]], dtype=np.intp).T
+            if initmesh is 'symmetric':
+                p = np.array([[0, 1, 1, 0, 0.5],
+                              [0, 0, 1, 1, 0.5]], dtype=np.float_)
+                t = np.array([[0, 1, 4],
+                              [1, 2, 4],
+                              [2, 3, 4],
+                              [0, 3, 4]], dtype=np.intp).T
+            else:
+                p = np.array([[0, 1, 0, 1], [0, 0, 1, 1]], dtype=np.float_)
+                t = np.array([[0, 1, 2], [1, 3, 2]], dtype=np.intp).T
         elif p is None or t is None:
             raise Exception("Must provide p AND t or neither")
         self.p = p
