@@ -792,7 +792,7 @@ class AssemblerElement(Assembler):
 
                 # compute entries of local stiffness matrices
                 data[ixs] = np.dot(fform(v, dv, x, w, h)*np.abs(detDF), W)
-                rows[ixs] = self.dofnum_v.t_dof[i, :]
+                rows[ixs] = self.dofnum_v.t_dof[i, tind]
                 cols[ixs] = np.zeros(nt)
 
             return coo_matrix((data, (rows, cols)),
