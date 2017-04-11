@@ -190,6 +190,16 @@ class MeshLine(Mesh):
         self.p = newp
         self.t = newt
 
+    def boundary_nodes(self):
+        """Find the boundary nodes of the mesh."""
+        _, counts = np.unique(self.t.flatten(), return_counts=True)
+        return np.nonzero(counts == 1)[0]
+
+    def interior_nodes(self):
+        """Find the interior nodes of the mesh."""
+        _, counts = np.unique(self.t.flatten(), return_counts=True)
+        return np.nonzero(counts == 2)[0]
+
     def plot(self, u, color='ko-'):
         """Plot a function defined on the nodes of the mesh."""
         xs = []
