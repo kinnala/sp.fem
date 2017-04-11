@@ -161,7 +161,7 @@ class MeshLine(Mesh):
     def __init__(self, p=None, t=None, validate=True):
         super(MeshLine, self).__init__(p, t)
         if p is None and t is None:
-            p = np.array([[0, 1]]).T
+            p = np.array([[0, 1]])
             t = np.array([[0], [1]])
         elif p is None or t is None:
             raise Exception("Must provide p AND t or neither")
