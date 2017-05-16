@@ -773,7 +773,7 @@ class MeshTri(Mesh):
     refdom = "tri"
     brefdom = "line"
 
-    def __init__(self, p=None, t=None, validate=True, initmesh=None):
+    def __init__(self, p=None, t=None, validate=True, initmesh=None, sort_t=True):
         super(MeshTri, self).__init__(p, t)
         if p is None and t is None:
             if initmesh is 'symmetric':
@@ -792,11 +792,12 @@ class MeshTri(Mesh):
         self.t = t
         if validate:
             self._validate()
-        self._build_mappings()
+        self._build_mappings(sort_t=sort_t)
 
-    def _build_mappings(self):
+    def _build_mappings(self, sort_t=True):
         # sort to preserve orientations etc.
-        self.t = np.sort(self.t, axis=0)
+        if sort_t:
+            self.t = np.sort(self.t, axis=0)
 
         # define facets: in the order (0,1) (1,2) (0,2)
         self.facets = np.sort(np.vstack((self.t[0, :], self.t[1, :])), axis=0)
@@ -1008,6 +1009,107 @@ class MeshTri(Mesh):
         self.t = newt
 
         self._build_mappings()
+
+    def _neighbors(self, tris=None):
+        """Return the matrix 3 x len(tris) containing the indices
+        of the neighboring elements. Neighboring element over boundary
+        is defined as the element itself."""
+        if tris is None:
+            # by default, all triangles
+            tris = np.arange(self.t.shape[1])
+        facet_tris_0 = self.f2t[:, self.t2f[0, tris]]
+        facet_tris_1 = self.f2t[:, self.t2f[1, tris]]
+        facet_tris_2 = self.f2t[:, self.t2f[2, tris]]
+        ntris_0 = (facet_tris_0 != tris)
+        ntris_1 = (facet_tris_1 != tris)
+        ntris_2 = (facet_tris_2 != tris)
+        neighbors = np.vstack((facet_tris_0[ntris_0].flatten('F'),
+                               facet_tris_1[ntris_1].flatten('F'),
+                               facet_tris_2[ntris_2].flatten('F')))
+        ix = (neighbors == -1)
+        neighbors[ix] = np.vstack((tris, tris, tris))[ix]
+        return neighbors
+
+    def local_refine(self, marked, interp=None):
+        """Perform adaptive refinement of the given triangles
+        and return a new mesh. Uses newest vertex bisection.
+
+        If the second parameter is a piecewise linear function
+        defined on the nodes, it is interpolated to the
+        refined mesh.
+        
+        An adaptation of iFEM's bisect.m."""
+
+        # vertex to opposite edge map
+        v2o = np.array([1, 2, 0])
+        # self.t2f[v2o[0], k] # opposite to 0'th vertex
+        # self.t2f[v2o[1], k] # opposite to 1'th vertex
+        # self.t2f[v2o[2], k] # opposite to 2'th vertex
+        neighbors = self._neighbors()
+
+        is_cut_edge = np.zeros(self.facets.shape[1],dtype=np.int64)
+        while np.sum(marked) > 0:
+            is_cut_edge[self.t2f[v2o[0], marked]] = 1
+            ref_neighbor = neighbors[v2o[0], marked]
+            marked = ref_neighbor[np.logical_not(is_cut_edge[self.t2f[v2o[0], ref_neighbor]])]
+
+        # construct new p matrix
+        cut_edges = np.nonzero(is_cut_edge)[0]
+        p = np.hstack((self.p, np.zeros((2, np.sum(is_cut_edge)))))
+        N = self.p.shape[1]
+        edge2new = np.zeros(self.facets.shape[1]);
+        edge2new[cut_edges] = N + np.arange(np.sum(is_cut_edge), dtype=np.int64)
+        HB = np.zeros((3, np.sum(is_cut_edge)), dtype=np.int64);
+        HB[0, :] = edge2new[cut_edges];
+        HB[1, :] = self.facets[0, cut_edges];
+        HB[2, :] = self.facets[1, cut_edges];
+        p[:, HB[0, :]] = (p[:, HB[1, :]] + p[:, HB[2, :]])/2.0;
+
+        # construct new t matrix
+        nt = self.t.shape[1]
+        t = np.hstack((self.t, np.zeros((3,3*nt))))
+        t2f = np.hstack((self.t2f, np.zeros((3,3*nt)))).astype(np.int64)
+
+        ix = np.nonzero(edge2new[self.t2f[v2o[0], :]] > 0)[0]
+        newnt = len(ix)
+        if newnt != 0:
+            L = ix
+            R = np.arange(newnt)+nt
+            p1 = t[0, ix]
+            p2 = t[1, ix]
+            p3 = t[2, ix]
+            p4 = edge2new[t2f[v2o[0], ix]]
+            t[:, L] = np.vstack((p4, p1, p2))
+            t[:, R] = np.vstack((p4, p3, p1))
+            t2f[v2o[0], L] = t2f[v2o[2], ix]
+            t2f[v2o[0], R] = t2f[v2o[1], ix]
+            nt += newnt
+
+        t2f = t2f[:, 0:nt]
+
+        ix = np.nonzero(edge2new[t2f[v2o[0], :]] > 0)[0]
+        newnt = len(ix)
+        if newnt != 0:
+            L = ix
+            R = np.arange(newnt)+nt
+            p1 = t[0, ix]
+            p2 = t[1, ix]
+            p3 = t[2, ix]
+            p4 = edge2new[t2f[v2o[0], ix]]
+            t[:, L] = np.vstack((p4, p1, p2))
+            t[:, R] = np.vstack((p4, p3, p1))
+            nt += newnt
+
+        newmesh = MeshTri(p, t[:, 0:nt].astype(np.int64), sort_t=False)
+
+        if interp is None:
+            return newmesh
+        else:
+            # interpolate a P1 function to the new mesh
+            u = np.zeros(p.shape[1])
+            u[0:len(interp)] = interp
+            u[HB[0, :]] = (u[HB[1, :]]+u[HB[2, :]])/2.0;
+            return newmesh, u
 
     def mapping(self):
         return spfem.mapping.MappingAffine(self)
