@@ -222,8 +222,8 @@ class GeometryMeshPyTriangle(GeometryMeshPy):
         # build new mesh
         self.info.set_points(np.array(points))
         self.info.set_facets(np.array(self.m.facets))
-        self.m = meshpy.triangle.build(self.info, allow_volume_steiner=False,
-                                       allow_boundary_steiner=False)
+        self.m = meshpy.triangle.build(self.info, allow_volume_steiner=True,
+                                       allow_boundary_steiner=True)
         return self._mesh_output()
 
 

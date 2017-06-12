@@ -314,16 +314,23 @@ class AssemblerAbstract(Assembler):
     def iasm(self, form, tind=None, interp=None):
         if tind is None:
             # assemble on all elements by default
-            tind = range(self.mesh.t.shape[1])
+            tind = np.arange(self.mesh.t.shape[1],dtype=np.int64)
+            indic = 1.0
+        else:
+            # indicator function for multiplying the end result
+            indic = np.zeros(self.mesh.t.shape[1])
+            indic[tind] = 1.0
+            indic = indic[:, None]
+            tind = np.arange(self.mesh.t.shape[1],dtype=np.int64)
         nt = len(tind)
 
         # check and fix parameters of form
         oldparams = inspect.getargspec(form).args
         if 'u' in oldparams or 'du' in oldparams or 'ddu' in oldparams:
-            paramlist = ['u', 'v', 'du', 'dv', 'ddu', 'ddv', 'x', 'w', 'h']
+            paramlist = ['u', 'v', 'du', 'dv', 'ddu', 'ddv', 'x', 'w', 'dw', 'ddw', 'h']
             bilinear = True
         else:
-            paramlist = ['v', 'dv', 'ddv', 'x', 'w', 'h']
+            paramlist = ['v', 'dv', 'ddv', 'x', 'w', 'dw', 'ddw', 'h']
             bilinear = False
         fform = self.fillargs(form, paramlist)
 
@@ -340,19 +347,41 @@ class AssemblerAbstract(Assembler):
         Nbfun_v = self.dofnum_v.t_dof.shape[0]
 
         # interpolate some previous discrete function at quadrature points
-        w = {}
+        #w = {}
+        #if interp is not None:
+        #    if not isinstance(interp, dict):
+        #        raise Exception("The input solution vector(s) must be in a "
+        #                        "dictionary! Pass e.g. {0:u} instead of u.")
+        #    # interpolate the solution vectors at quadrature points
+        #    zero = 0.0*x[0]
+        #    w = {}
+        #    for k in interp:
+        #        w[k] = zero
+        #        for j in range(Nbfun_u):
+        #            jdofs = self.dofnum_u.t_dof[j, :]
+        #            w[k] += interp[k][jdofs][:, None]*self.u[j]
+
+        dim = self.mesh.p.shape[0]
+        zero = 0.0*x[0]
+        w, dw, ddw = ({} for i in range(3))
         if interp is not None:
             if not isinstance(interp, dict):
                 raise Exception("The input solution vector(s) must be in a "
                                 "dictionary! Pass e.g. {0:u} instead of u.")
-            # interpolate the solution vectors at quadrature points
-            zero = 0.0*x[0]
-            w = {}
             for k in interp:
                 w[k] = zero
-                for j in range(self.Nbfun_u):
+                dw[k] = const_cell(zero, dim)
+                ddw[k] = const_cell(zero, dim, dim)
+                for j in range(Nbfun_u):
                     jdofs = self.dofnum_u.t_dof[j, :]
-                    w[k] += interp[k][jdofs][:, None]*self.u[j]
+                    w[k] += interp[k][jdofs][:, None]\
+                            * self.u[j]
+                    for a in range(dim):
+                        dw[k][a] += interp[k][jdofs][:, None]\
+                                    * self.du[j][a]
+                        for b in range(dim):
+                            ddw[k][a][b] += interp[k][jdofs][:, None]\
+                                            * self.ddu[j][a][b]
 
         # compute the mesh parameter from jacobian determinant
         h = np.abs(detDF)**(1.0/self.mesh.dim())
@@ -371,9 +400,9 @@ class AssemblerAbstract(Assembler):
 
                     # compute entries of local stiffness matrices
                     data[ixs] = np.dot(fform(self.u[j], self.v[i],
-                                             self.du[j], self.dv[i],
-                                             self.ddu[j], self.ddv[i],
-                                             x, w, h)*np.abs(detDF), W)
+                                            self.du[j], self.dv[i],
+                                            self.ddu[j], self.ddv[i],
+                                            x, w, dw, ddw, h)*indic*np.abs(detDF), W)
                     rows[ixs] = self.dofnum_v.t_dof[i, tind]
                     cols[ixs] = self.dofnum_u.t_dof[j, tind]
 
@@ -392,7 +421,7 @@ class AssemblerAbstract(Assembler):
 
                 # compute entries of local stiffness matrices
                 data[ixs] = np.dot(fform(self.v[i], self.dv[i], self.ddv[i],
-                                         x, w, h)*np.abs(detDF), W)
+                                         x, w, dw, ddw, h)*indic*np.abs(detDF), W)
                 rows[ixs] = self.dofnum_v.t_dof[i, :]
                 cols[ixs] = np.zeros(nt)
 

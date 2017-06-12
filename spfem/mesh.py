@@ -139,18 +139,17 @@ class Mesh(object):
             msg = ("Mesh._validate(): The given connectivity "
                    "matrix has wrong shape!")
             raise Exception(msg)
-        # check that all points are at least in some element
-        if len(np.setdiff1d(np.arange(self.p.shape[1]), np.unique(self.t))):
-            msg = ("Mesh._validate(): Mesh contains a vertex "
-                   "not belonging to any element.")
-            raise Exception(msg)
         # check that there are no duplicate points
         tmp = np.ascontiguousarray(self.p.T)
         if self.p.shape[1] != np.unique(tmp.view([('', tmp.dtype)]
                                                  * tmp.shape[1])).shape[0]:
             msg = "Mesh._validate(): Mesh contains duplicate vertices."
             raise Exception(msg)
-
+        # check that all points are at least in some element
+        if len(np.setdiff1d(np.arange(self.p.shape[1]), np.unique(self.t))):
+            msg = ("Mesh._validate(): Mesh contains a vertex "
+                   "not belonging to any element.")
+            raise Exception(msg)
 
 class MeshLine(Mesh):
     """One-dimensional mesh."""
@@ -1030,86 +1029,76 @@ class MeshTri(Mesh):
         neighbors[ix] = np.vstack((tris, tris, tris))[ix]
         return neighbors
 
-    def local_refine(self, marked, interp=None):
+    def local_refine_convex(self, ref_elems, interp=None, iters=1):
         """Perform adaptive refinement of the given triangles
-        and return a new mesh. Uses newest vertex bisection.
+        and return a new mesh. Works properly only for convex
+        geometries."""
 
-        If the second parameter is a piecewise linear function
-        defined on the nodes, it is interpolated to the
-        refined mesh.
-        
-        An adaptation of iFEM's bisect.m."""
+        import scipy.spatial as spspat
 
-        # vertex to opposite edge map
-        v2o = np.array([1, 2, 0])
-        # self.t2f[v2o[0], k] # opposite to 0'th vertex
-        # self.t2f[v2o[1], k] # opposite to 1'th vertex
-        # self.t2f[v2o[2], k] # opposite to 2'th vertex
-        neighbors = self._neighbors()
+        # split each element into three
+        p = self.p
+        t = self.t
+        points_old = p.T
+        points_new_x_1 = 1./2.*(p[0,t[0,ref_elems]]+\
+                                p[0,t[1,ref_elems]])
+        points_new_y_1 = 1./2.*(p[1,t[0,ref_elems]]+\
+                                p[1,t[1,ref_elems]])
+        points_new_x_2 = 1./2.*(p[0,t[1,ref_elems]]+\
+                                p[0,t[2,ref_elems]])
+        points_new_y_2 = 1./2.*(p[1,t[1,ref_elems]]+\
+                                p[1,t[2,ref_elems]])
+        points_new_x_3 = 1./2.*(p[0,t[0,ref_elems]]+\
+                                p[0,t[2,ref_elems]])
+        points_new_y_3 = 1./2.*(p[1,t[0,ref_elems]]+\
+                                p[1,t[2,ref_elems]])
+        points_new_1 = np.vstack((points_new_x_1, points_new_y_1)).T
+        points_new_2 = np.vstack((points_new_x_2, points_new_y_2)).T
+        points_new_3 = np.vstack((points_new_x_3, points_new_y_3)).T
+        points = np.vstack((points_old, points_new_1, points_new_2, points_new_3))
 
-        is_cut_edge = np.zeros(self.facets.shape[1],dtype=np.int64)
-        while np.sum(marked) > 0:
-            is_cut_edge[self.t2f[v2o[0], marked]] = 1
-            ref_neighbor = neighbors[v2o[0], marked]
-            marked = ref_neighbor[np.logical_not(is_cut_edge[self.t2f[v2o[0], ref_neighbor]])]
+        # remove duplicates
+        tmp = np.ascontiguousarray(points)
+        tmp, ixa = np.unique(tmp.view([('', tmp.dtype)]*tmp.shape[1]), return_index=True)
+        points = points[ixa, :]
 
-        # construct new p matrix
-        cut_edges = np.nonzero(is_cut_edge)[0]
-        p = np.hstack((self.p, np.zeros((2, np.sum(is_cut_edge)))))
-        N = self.p.shape[1]
-        edge2new = np.zeros(self.facets.shape[1]);
-        edge2new[cut_edges] = N + np.arange(np.sum(is_cut_edge), dtype=np.int64)
-        HB = np.zeros((3, np.sum(is_cut_edge)), dtype=np.int64);
-        HB[0, :] = edge2new[cut_edges];
-        HB[1, :] = self.facets[0, cut_edges];
-        HB[2, :] = self.facets[1, cut_edges];
-        p[:, HB[0, :]] = (p[:, HB[1, :]] + p[:, HB[2, :]])/2.0;
+        # create first mesh candidate
+        tri = spspat.Delaunay(points)
+        newmesh = MeshTri(points.T, tri.simplices.copy().T)
 
-        # construct new t matrix
-        nt = self.t.shape[1]
-        t = np.hstack((self.t, np.zeros((3,3*nt))))
-        t2f = np.hstack((self.t2f, np.zeros((3,3*nt)))).astype(np.int64)
+        # try to fix shape regularity by bisecting long edges
+        for itr in range(iters):
+            e1=np.sqrt(np.diff(newmesh.p[0,newmesh.facets[:,newmesh.t2f[0,:]]],axis=0)**2+\
+                       np.diff(newmesh.p[1,newmesh.facets[:,newmesh.t2f[0,:]]],axis=0)**2)
+            e2=np.sqrt(np.diff(newmesh.p[0,newmesh.facets[:,newmesh.t2f[1,:]]],axis=0)**2+\
+                       np.diff(newmesh.p[1,newmesh.facets[:,newmesh.t2f[1,:]]],axis=0)**2)
+            e3=np.sqrt(np.diff(newmesh.p[0,newmesh.facets[:,newmesh.t2f[2,:]]],axis=0)**2+\
+                       np.diff(newmesh.p[1,newmesh.facets[:,newmesh.t2f[2,:]]],axis=0)**2)
 
-        ix = np.nonzero(edge2new[self.t2f[v2o[0], :]] > 0)[0]
-        newnt = len(ix)
-        if newnt != 0:
-            L = ix
-            R = np.arange(newnt)+nt
-            p1 = t[0, ix]
-            p2 = t[1, ix]
-            p3 = t[2, ix]
-            p4 = edge2new[t2f[v2o[0], ix]]
-            t[:, L] = np.vstack((p4, p1, p2))
-            t[:, R] = np.vstack((p4, p3, p1))
-            t2f[v2o[0], L] = t2f[v2o[2], ix]
-            t2f[v2o[0], R] = t2f[v2o[1], ix]
-            nt += newnt
+            emin = np.min(np.vstack((e1,e2,e3)),axis=0)
+            coeff = 2.0
+            npoints = 0.5*(newmesh.p[:,newmesh.facets[0,newmesh.t2f[0,(e1>coeff*emin)[0]]]] +\
+                           newmesh.p[:,newmesh.facets[1,newmesh.t2f[0,(e1>coeff*emin)[0]]]])
+            print npoints.shape[1]
+            points = np.vstack((points, npoints.T))
+            npoints = 0.5*(newmesh.p[:,newmesh.facets[0,newmesh.t2f[1,(e2>coeff*emin)[0]]]] +\
+                           newmesh.p[:,newmesh.facets[1,newmesh.t2f[1,(e2>coeff*emin)[0]]]])
+            print npoints.shape[1]
+            points = np.vstack((points, npoints.T))
+            npoints = 0.5*(newmesh.p[:,newmesh.facets[0,newmesh.t2f[2,(e3>coeff*emin)[0]]]] +\
+                           newmesh.p[:,newmesh.facets[1,newmesh.t2f[2,(e3>coeff*emin)[0]]]])
+            print npoints.shape[1]
+            points = np.vstack((points, npoints.T))
 
-        t2f = t2f[:, 0:nt]
+            # remove duplicates
+            tmp = np.ascontiguousarray(points)
+            tmp, ixa = np.unique(tmp.view([('', tmp.dtype)]*tmp.shape[1]), return_index=True)
+            points = points[ixa, :]
 
-        ix = np.nonzero(edge2new[t2f[v2o[0], :]] > 0)[0]
-        newnt = len(ix)
-        if newnt != 0:
-            L = ix
-            R = np.arange(newnt)+nt
-            p1 = t[0, ix]
-            p2 = t[1, ix]
-            p3 = t[2, ix]
-            p4 = edge2new[t2f[v2o[0], ix]]
-            t[:, L] = np.vstack((p4, p1, p2))
-            t[:, R] = np.vstack((p4, p3, p1))
-            nt += newnt
+            tri = spspat.Delaunay(points)
+            newmesh = MeshTri(points.T, tri.simplices.copy().T)
 
-        newmesh = MeshTri(p, t[:, 0:nt].astype(np.int64), sort_t=False)
-
-        if interp is None:
-            return newmesh
-        else:
-            # interpolate a P1 function to the new mesh
-            u = np.zeros(p.shape[1])
-            u[0:len(interp)] = interp
-            u[HB[0, :]] = (u[HB[1, :]]+u[HB[2, :]])/2.0;
-            return newmesh, u
+        return newmesh
 
     def mapping(self):
         return spfem.mapping.MappingAffine(self)

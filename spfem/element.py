@@ -173,6 +173,11 @@ class AbstractElement(object):
             if save_figures:
                 plt.savefig('bfun' + str(itr) + '.pdf')
 
+        for itr in range(len(u)):
+            m.plot3(ddu[itr][0][0].flatten())
+            if save_figures:
+                plt.savefig('bfun' + str(itr) + '.pdf')
+
         if not save_figures:
             m.show()
 
@@ -189,6 +194,21 @@ class AbstractElementTriDG(AbstractElement):
 
     def gdof(self, v, i, j):
         return self.elem.gdof(v, i, j)
+
+class AbstractElementTriP0(AbstractElement):
+    """Piecewise constant triangles."""
+
+    dim = 2
+
+    def __init__(self):
+        self.maxdeg = 0
+        self.n_dofs = 0
+        self.f_dofs = 0
+        self.i_dofs = 1
+    def gdof(self, v, i, j):
+        return [
+                lambda: self._pbasis[i]((v['v1'][0, :] + v['v2'][0, :] + v['v3'][0, :])/3.0, (v['v1'][1, :] + v['v2'][1, :] + v['v3'][1, :])/3.0),
+                ][j]()
 
 class AbstractElementTriPp(AbstractElement):
     """Triangular Pp element, Lagrange DOFs."""
