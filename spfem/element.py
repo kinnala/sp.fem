@@ -101,6 +101,7 @@ class AbstractElement(object):
         u = const_cell(0*qps[0], N)
         du = const_cell(0*qps[0], N, self.dim)
         ddu = const_cell(0*qps[0], N, self.dim, self.dim)
+        d4u = const_cell(0*qps[0], N, self.dim, self.dim)
 
         # loop over new basis
         for jtr in range(N):
@@ -119,10 +120,17 @@ class AbstractElement(object):
                                       * self._pbasisdxy[itr](qps[0], qps[1])
                     ddu[jtr][1][1] += V[:, itr, jtr][:, None]\
                                       * self._pbasisdyy[itr](qps[0], qps[1])
+                    d4u[jtr][0][0] += V[:, itr, jtr][:, None]\
+                                      * self._pbasisdxxxx[itr](qps[0], qps[1])
+                    d4u[jtr][1][1] += V[:, itr, jtr][:, None]\
+                                      * self._pbasisdyyyy[itr](qps[0], qps[1])
+                    d4u[jtr][0][1] += V[:, itr, jtr][:, None]\
+                                      * self._pbasisdxxyy[itr](qps[0], qps[1])
                 else:
                     raise NotImplementedError("!")
             ddu[jtr][1][0] = ddu[jtr][0][1]
-        return u, du, ddu
+            d4u[jtr][1][0] = d4u[jtr][0][1]
+        return u, du, ddu, d4u
 
     def _pbasisNinit(self, dim, N):
         """Define power bases."""
@@ -137,6 +145,9 @@ class AbstractElement(object):
                 'dxx': lambda a: sp.diff(a, x, 2),
                 'dyy': lambda a: sp.diff(a, y, 2),
                 'dxy': lambda a: sp.diff(sp.diff(a, x), y),
+                'dxxxx': lambda a: sp.diff(a, x, 4),
+                'dyyyy': lambda a: sp.diff(a, y, 4),
+                'dxxyy': lambda a: sp.diff(sp.diff(a, x, 2), y, 2),
             }
             if dim==2:
                 for name, op in ops.iteritems():
@@ -151,7 +162,62 @@ class AbstractElement(object):
             else:
                 raise NotImplementedError("The given dimension not implemented!")
 
-    def visualize_basis_tri(self, save_figures=False):
+    def plot_lagmult(self, mesh, dofnum, sol, minval, maxval, lambdaeval, nref=2):
+        """Draw plate obstacle lagrange multiplier on refined mesh."""
+        print "Plotting on a refined mesh. This is slowish due to loop over elements..."
+        import copy
+        import spfem.mesh as fmsh
+        plt.figure()
+        for itr in range(mesh.t.shape[1]):
+            m = fmsh.MeshTri(np.array([[mesh.p[0,mesh.t[0,itr]], mesh.p[0,mesh.t[1,itr]], mesh.p[0,mesh.t[2,itr]]],
+                                       [mesh.p[1,mesh.t[0,itr]], mesh.p[1,mesh.t[1,itr]], mesh.p[1,mesh.t[2,itr]]]]),
+                            np.array([[0], [1], [2]]))
+            M = copy.deepcopy(m)
+            m.refine(nref)
+            qps = {}
+            qps[0] = np.array([m.p[0,:]])
+            qps[1] = np.array([m.p[1,:]])
+            u, _, _, d4u = self.evalbasis(M, qps, [0])
+            newu = u[0].flatten()*0.0
+            #newd4u = d4u[0].flatten()*0.0
+            newd4u = const_cell(0*qps[0], self.dim, self.dim)
+            for jtr in range(len(u)):
+                newu += sol[dofnum.t_dof[jtr, itr]]*u[jtr].flatten()
+                newd4u[0][0] += sol[dofnum.t_dof[jtr, itr]]*d4u[jtr][0][0].flatten()
+                newd4u[0][1] += sol[dofnum.t_dof[jtr, itr]]*d4u[jtr][0][1].flatten()
+                newd4u[1][0] += sol[dofnum.t_dof[jtr, itr]]*d4u[jtr][1][0].flatten()
+                newd4u[1][1] += sol[dofnum.t_dof[jtr, itr]]*d4u[jtr][1][1].flatten()
+            #tmp = lambdaeval(newu, newd4u, qps, M.param())
+            #print tmp.shape
+            m.plot(lambdaeval(newu, newd4u, qps, M.param()).flatten(), nofig=True, smooth=True, zlim=(minval, maxval))
+            plt.hold('on')
+        plt.colorbar()
+
+    def plot_refined(self, mesh, dofnum, sol, minval, maxval, nref=2):
+        """Draw a discrete function on refined mesh."""
+        print "Plotting on a refined mesh. This is slowish due to loop over elements..."
+        import copy
+        import spfem.mesh as fmsh
+        plt.figure()
+        for itr in range(mesh.t.shape[1]):
+            m = fmsh.MeshTri(np.array([[mesh.p[0,mesh.t[0,itr]], mesh.p[0,mesh.t[1,itr]], mesh.p[0,mesh.t[2,itr]]],
+                                       [mesh.p[1,mesh.t[0,itr]], mesh.p[1,mesh.t[1,itr]], mesh.p[1,mesh.t[2,itr]]]]),
+                            np.array([[0], [1], [2]]))
+            M = copy.deepcopy(m)
+            m.refine(nref)
+            qps = {}
+            qps[0] = np.array([m.p[0,:]])
+            qps[1] = np.array([m.p[1,:]])
+            u, _, _, _ = self.evalbasis(M, qps, [0])
+            newu = u[0].flatten()*0.0
+            for jtr in range(len(u)):
+                newu += sol[dofnum.t_dof[jtr, itr]]*u[jtr].flatten()
+            m.plot(newu, nofig=True, smooth=True, zlim=(minval, maxval))
+            plt.hold('on')
+        plt.colorbar()
+
+
+    def visualize_basis_tri(self, save_figures=False, draw_derivatives=False):
         """Draw the basis functions given by self.evalbasis.
         Only for triangular elements. For debugging purposes."""
         if self.dim!=2:
@@ -159,7 +225,7 @@ class AbstractElement(object):
                                       "only triangular elements.")
         import copy
         import spfem.mesh as fmsh
-        m = fmsh.MeshTri(np.array([[0.5, 0.0, 1.0], [0.0, 1.0, 1.0]]),
+        m = fmsh.MeshTri(np.array([[0, 1.0, 0.0], [0.0, 0.0, 1.0]]),
                         np.array([[0], [1], [2]]))
         M = copy.deepcopy(m)
         m.refine(4)
@@ -173,10 +239,11 @@ class AbstractElement(object):
             if save_figures:
                 plt.savefig('bfun' + str(itr) + '.pdf')
 
-        for itr in range(len(u)):
-            m.plot3(ddu[itr][0][0].flatten())
-            if save_figures:
-                plt.savefig('bfun' + str(itr) + '.pdf')
+        if draw_derivatives:
+            for itr in range(len(u)):
+                m.plot3(ddu[itr][0][0].flatten())
+                if save_figures:
+                    plt.savefig('bfun' + str(itr) + '.pdf')
 
         if not save_figures:
             m.show()

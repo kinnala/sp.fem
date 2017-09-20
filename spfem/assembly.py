@@ -231,6 +231,23 @@ class Assembler(object):
                 return oldform(x[y[0]], x[y[1]], x[y[2]], x[y[3]], x[y[4]],
                                x[y[5]], x[y[6]], x[y[7]], x[y[8]], x[y[9]],
                                x[y[10]], x[y[11]], x[y[12]])
+        elif len(oldargs) == 14:
+            def newform(*x):
+                return oldform(x[y[0]], x[y[1]], x[y[2]], x[y[3]], x[y[4]],
+                               x[y[5]], x[y[6]], x[y[7]], x[y[8]], x[y[9]],
+                               x[y[10]], x[y[11]], x[y[12]], x[y[13]])
+        elif len(oldargs) == 15:
+            def newform(*x):
+                return oldform(x[y[0]], x[y[1]], x[y[2]], x[y[3]], x[y[4]],
+                               x[y[5]], x[y[6]], x[y[7]], x[y[8]], x[y[9]],
+                               x[y[10]], x[y[11]], x[y[12]], x[y[13]],
+                               x[y[14]])
+        elif len(oldargs) == 16:
+            def newform(*x):
+                return oldform(x[y[0]], x[y[1]], x[y[2]], x[y[3]], x[y[4]],
+                               x[y[5]], x[y[6]], x[y[7]], x[y[8]], x[y[9]],
+                               x[y[10]], x[y[11]], x[y[12]], x[y[13]],
+                               x[y[14]], x[y[15]])
         else:
             raise NotImplementedError("Maximum number of arguments reached.")
 
@@ -302,14 +319,15 @@ class AssemblerAbstract(Assembler):
         # global quadrature points
         x = self.mapping.F(X, range(self.mesh.t.shape[1]))
         # pre-compute basis functions at quadrature points
-        self.u, self.du, self.ddu = self.elem_u.evalbasis(self.mesh, x)
+        self.u, self.du, self.ddu, self.d4u = self.elem_u.evalbasis(self.mesh, x)
 
         if elem_v is None:
             self.v = self.u
             self.dv = self.du
             self.ddv = self.ddu
+            self.d4v = self.d4u
         else:
-            self.v, self.dv, self.ddv = self.elem_v.evalbasis(self.mesh, x)
+            self.v, self.dv, self.ddv, self.d4v = self.elem_v.evalbasis(self.mesh, x)
 
     def iasm(self, form, tind=None, interp=None):
         if tind is None:
@@ -326,11 +344,11 @@ class AssemblerAbstract(Assembler):
 
         # check and fix parameters of form
         oldparams = inspect.getargspec(form).args
-        if 'u' in oldparams or 'du' in oldparams or 'ddu' in oldparams:
-            paramlist = ['u', 'v', 'du', 'dv', 'ddu', 'ddv', 'x', 'w', 'dw', 'ddw', 'h']
+        if 'u' in oldparams or 'du' in oldparams or 'ddu' in oldparams or 'd4u' in oldparams:
+            paramlist = ['u', 'v', 'du', 'dv', 'ddu', 'ddv', 'd4u', 'd4v', 'x', 'w', 'dw', 'ddw', 'd4w', 'h']
             bilinear = True
         else:
-            paramlist = ['v', 'dv', 'ddv', 'x', 'w', 'dw', 'ddw', 'h']
+            paramlist = ['v', 'dv', 'ddv', 'd4v', 'x', 'w', 'dw', 'ddw', 'd4w', 'h']
             bilinear = False
         fform = self.fillargs(form, paramlist)
 
@@ -363,7 +381,7 @@ class AssemblerAbstract(Assembler):
 
         dim = self.mesh.p.shape[0]
         zero = 0.0*x[0]
-        w, dw, ddw = ({} for i in range(3))
+        w, dw, ddw, d4w = ({} for i in range(4))
         if interp is not None:
             if not isinstance(interp, dict):
                 raise Exception("The input solution vector(s) must be in a "
@@ -372,6 +390,7 @@ class AssemblerAbstract(Assembler):
                 w[k] = zero
                 dw[k] = const_cell(zero, dim)
                 ddw[k] = const_cell(zero, dim, dim)
+                d4w[k] = const_cell(zero, dim, dim)
                 for j in range(Nbfun_u):
                     jdofs = self.dofnum_u.t_dof[j, :]
                     w[k] += interp[k][jdofs][:, None]\
@@ -382,6 +401,8 @@ class AssemblerAbstract(Assembler):
                         for b in range(dim):
                             ddw[k][a][b] += interp[k][jdofs][:, None]\
                                             * self.ddu[j][a][b]
+                            d4w[k][a][b] += interp[k][jdofs][:, None]\
+                                            * self.d4u[j][a][b]
 
         # compute the mesh parameter from jacobian determinant
         h = np.abs(detDF)**(1.0/self.mesh.dim())
@@ -402,7 +423,8 @@ class AssemblerAbstract(Assembler):
                     data[ixs] = np.dot(fform(self.u[j], self.v[i],
                                             self.du[j], self.dv[i],
                                             self.ddu[j], self.ddv[i],
-                                            x, w, dw, ddw, h)*indic*np.abs(detDF), W)
+                                            self.d4u[j], self.d4v[i],
+                                            x, w, dw, ddw, d4w, h)*indic*np.abs(detDF), W)
                     rows[ixs] = self.dofnum_v.t_dof[i, tind]
                     cols[ixs] = self.dofnum_u.t_dof[j, tind]
 
@@ -420,13 +442,165 @@ class AssemblerAbstract(Assembler):
                 ixs = slice(nt*i, nt*(i + 1))
 
                 # compute entries of local stiffness matrices
-                data[ixs] = np.dot(fform(self.v[i], self.dv[i], self.ddv[i],
-                                         x, w, dw, ddw, h)*indic*np.abs(detDF), W)
+                data[ixs] = np.dot(fform(self.v[i], self.dv[i], self.ddv[i], self.d4v[i],
+                                         x, w, dw, ddw, d4w, h)*indic*np.abs(detDF), W)
                 rows[ixs] = self.dofnum_v.t_dof[i, :]
                 cols[ixs] = np.zeros(nt)
 
             return coo_matrix((data, (rows, cols)),
                               shape=(self.dofnum_v.N, 1)).toarray().T[0]
+
+    def fasm(self, form, interp={}, intorder=None, interior=False, normals=True):
+        if interior:
+            # assemble on all interior facets
+            find = self.mesh.interior_facets()
+        else:
+            # assemble on all boundary facets
+            find = self.mesh.boundary_facets()
+
+        ne = find.shape[0]
+
+        if not isinstance(interp, dict):
+            raise Exception("The input solution vector(s) must be in a "
+                            "dictionary! Pass e.g. {0:u} instead of u.")
+
+        if intorder is None:
+            intorder = 2*self.elem_u.maxdeg
+
+        # check and fix parameters of form
+        oldparams = inspect.getargspec(form).args
+        if 'u1' in oldparams or 'du1' in oldparams or 'ddu1' in oldparams:
+            bilinear = True
+            if interior is False:
+                raise Exception("The supplied form contains u1 although "
+                                "no interior=True is given.")
+        else:
+            if 'u' in oldparams or 'du' in oldparams or 'ddu' in oldparams:
+                bilinear = True
+            else:
+                bilinear = False
+        if interior:
+            if bilinear:
+                paramlist = ['u1', 'u2', 'du1', 'du2', 'ddu1', 'ddu2',
+                             'v1', 'v2', 'dv1', 'dv2', 'ddv1', 'ddv2',
+                             'x', 'n', 't', 'h']
+            else:
+                paramlist = ['v1', 'v2', 'dv1', 'dv2', 'ddv1', 'ddv2',
+                             'x', 'n', 't', 'h']
+        else:
+            if bilinear:
+                paramlist = ['u', 'du', 'ddu', 'v', 'dv', 'ddv',
+                             'x', 'n', 't', 'h']
+            else:
+                paramlist = ['v', 'dv', 'ddv',
+                             'x', 'n', 't', 'h']
+
+        fform = self.fillargs(form, paramlist)
+
+        X, W = get_quadrature(self.mesh.brefdom, intorder)
+
+        # indices of elements at different sides of facets
+        tind1 = self.mesh.f2t[0, find]
+        tind2 = self.mesh.f2t[1, find]
+
+        # mappings
+        x = self.mapping.G(X, find=find) # reference facet to global facet
+        detDG = self.mapping.detDG(X, find)
+
+        # compute basis function values at quadrature points
+        u1, du1, ddu1 = self.elem_u.evalbasis(self.mesh, x, tind=tind1)
+        if interior:
+            u2, du2, ddu2 = self.elem_u.evalbasis(self.mesh, x, tind=tind2)
+
+        Nbfun_u = self.dofnum_u.t_dof.shape[0]
+        Nbfun_v = self.dofnum_v.t_dof.shape[0]
+        dim = self.mesh.p.shape[0]
+
+        n = {}
+        t = {}
+        if normals:
+            Y = self.mapping.invF(x, tind=tind1) # global facet to ref element
+            n = self.mapping.normals(Y, tind1, find, self.mesh.t2f)
+            if len(n) == 2: # TODO fix for 3D and other than triangles?
+                t[0] = -n[1]
+                t[1] = n[0]
+
+        if 0:
+            # TODO function interpolation not done!!!
+            zero = np.zeros((len(find), len(W)))
+            w1, dw1, ddw1 = ({} for i in range(3))
+            if interior:
+                w2, dw2, ddw2 = ({} for i in range(3))
+            for k in interp:
+                w1[k] = zero
+                dw1[k] = const_cell(zero, dim)
+                ddw1[k] = const_cell(zero, dim, dim)
+                if interior:
+                    w2[k] = zero
+                    dw2[k] = const_cell(zero, dim)
+                    ddw2[k] = const_cell(zero, dim, dim)
+                for j in range(Nbfun_u):
+                    jdofs1 = self.dofnum_u.t_dof[j, tind1]
+                    jdofs2 = self.dofnum_u.t_dof[j, tind2]
+                    w1[k] += interp[k][jdofs1][:, None] * u1[j]
+                    if interior:
+                        w2[k] += interp[k][jdofs2][:, None] * u2[j]
+                    for a in range(dim):
+                        dw1[k][a] += interp[k][jdofs1][:, None]\
+                                     * du1[j][a]
+                        if interior:
+                            dw2[k][a] += interp[k][jdofs2][:, None]\
+                                         * du2[j][a]
+                        for b in range(dim):
+                            ddw1[k][a][b] += interp[k][jdofs1][:, None]\
+                                             * ddu1[j][a][b]
+                            if interior:
+                                ddw2[k][a][b] += interp[k][jdofs2][:, None]\
+                                                 * ddu2[j][a][b]
+
+        h = np.abs(detDG)**(1.0/(self.mesh.dim()-1.0))
+
+        #if interior:
+        #    return np.dot(fform(w1, w2, dw1, dw2, ddw1, ddw2,
+        #                        x, n, t, h)**2*np.abs(detDG), W), find
+        #else:
+        #    return np.dot(fform(w1, dw1, ddw1,
+        #                        x, n, t, h)**2*np.abs(detDG), W), find
+
+        # bilinear form
+        if bilinear:
+            raise NotImplementedError("Bilinear fasm not yet worked out!")
+        # linear form
+        else:
+            if interior:
+                ndata = Nbfun_v*ne
+                data = np.zeros(2*ndata)
+                rows = np.zeros(2*ndata)
+                cols = np.zeros(2*ndata)
+
+                for i in range(Nbfun_v):
+                    if i == 0:
+                        # these are zeros corresponding to the shapes of u,du
+                        z = const_cell(0, *cell_shape(u1))
+                        dz = const_cell(0, *cell_shape(du1))
+                        ddz = const_cell(0, *cell_shape(ddu1))
+                    ixs1 = slice(ne*i,
+                                 ne*(i + 1))
+                    ixs2 = slice(ne*i + ndata,
+                                 ne*(i + 1) + ndata)
+
+                    data[ixs1] = np.dot(fform(u1[i], z[i], du1[i], dz[i], ddu1[i], ddz[i], x, n, t, h)*np.abs(detDG), W)
+                    rows[ixs1] = self.dofnum_v.t_dof[i, tind1]
+                    cols[ixs1] = np.zeros(ne)
+
+                    data[ixs2] = np.dot(fform(z[i], u2[i], dz[i], du2[i], ddz[i], ddu2[i], x, n, t, h)*np.abs(detDG), W)
+                    rows[ixs2] = self.dofnum_v.t_dof[i, tind2]
+                    cols[ixs2] = np.zeros(ne)
+
+                return coo_matrix((data, (rows, cols)),
+                                  shape=(self.dofnum_v.N, 1)).toarray().T[0]
+            else:
+                raise NotImplementedError("linear + boundary not yet worked out")
 
     def inorm(self, form, interp, intorder=None):
         """Evaluate L2-norms of solution vectors inside elements. Useful for
@@ -475,7 +649,7 @@ class AssemblerAbstract(Assembler):
 
         # check and fix parameters of form
         oldparams = inspect.getargspec(form).args
-        paramlist = ['u', 'du', 'ddu', 'x', 'h']
+        paramlist = ['u', 'du', 'ddu', 'd4u', 'x', 'h']
         fform = self.fillargs(form, paramlist)
 
         X, W = get_quadrature(self.mesh.refdom, intorder)
@@ -491,11 +665,12 @@ class AssemblerAbstract(Assembler):
 
         # interpolate the solution vectors at quadrature points
         zero = 0.0*x[0]
-        w, dw, ddw = ({} for i in range(3))
+        w, dw, ddw, d4w = ({} for i in range(4))
         for k in interp:
             w[k] = zero
             dw[k] = const_cell(zero, dim)
             ddw[k] = const_cell(zero, dim, dim)
+            d4w[k] = const_cell(zero, dim, dim)
             for j in range(Nbfun_u):
                 jdofs = self.dofnum_u.t_dof[j, :]
                 w[k] += interp[k][jdofs][:, None]\
@@ -506,11 +681,13 @@ class AssemblerAbstract(Assembler):
                     for b in range(dim):
                         ddw[k][a][b] += interp[k][jdofs][:, None]\
                                         * self.ddu[j][a][b]
+                        d4w[k][a][b] += interp[k][jdofs][:, None]\
+                                        * self.d4u[j][a][b]
 
         # compute the mesh parameter from jacobian determinant
         h = np.abs(detDF)**(1.0/self.mesh.dim())
 
-        return np.dot(fform(w, dw, ddw, x, h)**2*np.abs(detDF), W)
+        return np.dot(fform(w, dw, ddw, d4w, x, h)**2*np.abs(detDF), W)
 
     def fnorm(self, form, interp, intorder=None, interior=False, normals=True):
         if interior:
@@ -551,9 +728,9 @@ class AssemblerAbstract(Assembler):
         detDG = self.mapping.detDG(X, find)
 
         # compute basis function values at quadrature points
-        u1, du1, ddu1 = self.elem_u.evalbasis(self.mesh, x, tind=tind1)
+        u1, du1, ddu1, _ = self.elem_u.evalbasis(self.mesh, x, tind=tind1)
         if interior:
-            u2, du2, ddu2 = self.elem_u.evalbasis(self.mesh, x, tind=tind2)
+            u2, du2, ddu2, _ = self.elem_u.evalbasis(self.mesh, x, tind=tind2)
 
         Nbfun_u = self.dofnum_u.t_dof.shape[0]
         dim = self.mesh.p.shape[0]

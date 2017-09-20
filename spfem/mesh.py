@@ -782,6 +782,21 @@ class MeshTri(Mesh):
                               [1, 2, 4],
                               [2, 3, 4],
                               [0, 3, 4]], dtype=np.intp).T
+            elif initmesh is 'sqsymmetric':
+                p = np.array([[0, 0.5, 1,   0, 0.5,   1, 0, 0.5, 1],
+                              [0, 0,   0, 0.5, 0.5, 0.5, 1,   1, 1]], dtype=np.float_)
+                t = np.array([[0, 1, 4],
+                              [1, 2, 4],
+                              [2, 4, 5],
+                              [0, 3, 4],
+                              [3, 4, 6],
+                              [4, 6, 7],
+                              [4, 7, 8],
+                              [4, 5, 8]], dtype=np.intp).T
+            elif initmesh is 'reftri':
+                p = np.array([[0, 1, 0],
+                              [0, 0, 1]], dtype=np.float_)
+                t = np.array([[0, 1, 2]], dtype=np.intp).T
             else:
                 p = np.array([[0, 1, 0, 1], [0, 0, 1, 1]], dtype=np.float_)
                 t = np.array([[0, 1, 2], [1, 3, 2]], dtype=np.intp).T
@@ -841,7 +856,7 @@ class MeshTri(Mesh):
 
     def interior_facets(self):
         """Return an array of interior facet indices."""
-        return np.nonzero(self.f2t[1, :] > 0)[0]
+        return np.nonzero(self.f2t[1, :] >= 0)[0]
 
     def nodes_satisfying(self, test):
         """Return nodes that satisfy some condition."""
@@ -1029,7 +1044,25 @@ class MeshTri(Mesh):
         neighbors[ix] = np.vstack((tris, tris, tris))[ix]
         return neighbors
 
-    def local_refine_convex(self, ref_elems, interp=None, iters=1):
+    def mirror_mesh(self, a, b, c):
+        tmp = -2.0*(a*self.p[0, :] + b*self.p[1, :] + c)/(a**2 + b**2)
+        newx = a*tmp + self.p[0, :]
+        newy = b*tmp + self.p[1, :]
+        newpoints = np.vstack((newx, newy))
+        points = np.hstack((self.p, newpoints))
+        tris = np.hstack((self.t, self.t + self.p.shape[1]))
+
+
+
+        # remove duplicates
+        tmp = np.ascontiguousarray(points.T)
+        tmp, ixa, ixb = np.unique(tmp.view([('', tmp.dtype)]*tmp.shape[1]), return_index=True, return_inverse=True)
+        points = points[:, ixa]
+        tris = ixb[tris]
+
+        return MeshTri(points, tris)
+
+    def local_refine_convex(self, ref_elems, interp=None, iters=0):
         """Perform adaptive refinement of the given triangles
         and return a new mesh. Works properly only for convex
         geometries."""
@@ -1079,15 +1112,12 @@ class MeshTri(Mesh):
             coeff = 2.0
             npoints = 0.5*(newmesh.p[:,newmesh.facets[0,newmesh.t2f[0,(e1>coeff*emin)[0]]]] +\
                            newmesh.p[:,newmesh.facets[1,newmesh.t2f[0,(e1>coeff*emin)[0]]]])
-            print npoints.shape[1]
             points = np.vstack((points, npoints.T))
             npoints = 0.5*(newmesh.p[:,newmesh.facets[0,newmesh.t2f[1,(e2>coeff*emin)[0]]]] +\
                            newmesh.p[:,newmesh.facets[1,newmesh.t2f[1,(e2>coeff*emin)[0]]]])
-            print npoints.shape[1]
             points = np.vstack((points, npoints.T))
             npoints = 0.5*(newmesh.p[:,newmesh.facets[0,newmesh.t2f[2,(e3>coeff*emin)[0]]]] +\
                            newmesh.p[:,newmesh.facets[1,newmesh.t2f[2,(e3>coeff*emin)[0]]]])
-            print npoints.shape[1]
             points = np.vstack((points, npoints.T))
 
             # remove duplicates
