@@ -738,6 +738,10 @@ class MeshTet(Mesh):
         """Return an array of boundary facet indices."""
         return np.nonzero(self.f2t[1, :] == -1)[0]
 
+    def interior_facets(self):
+        """Return an array of interior facet indices."""
+        return np.nonzero(self.f2t[1, :] >= 0)[0]
+
     def boundary_edges(self):
         """Return an array of boundary edge indices."""
         bnodes = self.boundary_nodes()[:, None]
@@ -901,13 +905,43 @@ class MeshTri(Mesh):
         return np.max(np.sqrt(np.sum((self.p[:, self.facets[0, :]] -
                                       self.p[:, self.facets[1, :]])**2, axis=0)))
 
-    def draw(self, nofig=False):
+    def smooth(self, c=1.0):
+        """Apply smoothing to interior nodes."""
+        from spfem.asm import AssemblerElement
+        from spfem.element import ElementTriP1
+        from spfem.utils import direct
+
+        e = ElementTriP1()
+        a = AssemblerElement(self, e)
+
+        K = a.iasm(lambda du,dv: du[0]*dv[0] + du[1]*dv[1])
+        M = a.iasm(lambda u,v: u*v)
+
+        I = self.interior_nodes()
+        dx = - k*direct(M, K.dot(self.p[0, :]))
+        dy = - k*direct(M, K.dot(self.p[1, :]))
+
+        self.p[0, I] += dx[I]
+        self.p[1, I] += dy[I]
+
+    def draw_debug(self):
+        fig = plt.figure()
+        plt.hold('on')
+        for itr in range(self.t.shape[1]):
+            plt.plot(self.p[0,self.t[[0,1],itr]], self.p[1,self.t[[0,1],itr]], 'k-')
+            plt.plot(self.p[0,self.t[[1,2],itr]], self.p[1,self.t[[1,2],itr]], 'k-')
+            plt.plot(self.p[0,self.t[[0,2],itr]], self.p[1,self.t[[0,2],itr]], 'k-')
+        return fig
+
+
+    def draw(self, nofig=False, trinum=False):
         """Draw the mesh."""
         if nofig:
             fig = 0
         else:
             # create new figure
             fig = plt.figure()
+            ax = fig.add_subplot(111)
         # visualize the mesh faster plotting is achieved through
         # None insertion trick.
         xs = []
@@ -922,7 +956,14 @@ class MeshTri(Mesh):
             ys.append(t)
             ys.append(v)
             ys.append(None)
-        plt.plot(xs, ys, 'k')
+        ax.plot(xs, ys, 'k')
+        if trinum:
+            if fig==0:
+                raise Exception("Must create figure to plot elem numbers")
+            for itr in range(self.t.shape[1]):
+                mx = .3333*(self.p[0, self.t[0, itr]] + self.p[0, self.t[1, itr]] + self.p[0, self.t[2, itr]])
+                my = .3333*(self.p[1, self.t[0, itr]] + self.p[1, self.t[1, itr]] + self.p[1, self.t[2, itr]])
+                ax.text(mx, my, str(itr))
         return fig
 
     def draw_nodes(self, nodes, mark='bo'):
@@ -1060,75 +1101,238 @@ class MeshTri(Mesh):
         points = points[:, ixa]
         tris = ixb[tris]
 
-        return MeshTri(points, tris)
+        return MeshTri(points, marked)
 
-    def local_refine_convex(self, ref_elems, interp=None, iters=0):
-        """Perform adaptive refinement of the given triangles
-        and return a new mesh. Works properly only for convex
-        geometries."""
-
-        import scipy.spatial as spspat
-
-        # split each element into three
-        p = self.p
+    def local_rgb(self, marked):
+        """Perform adaptive RGB refinement.
+        This is more or less directly ported from the book of Sören Bartels."""
         t = self.t
-        points_old = p.T
-        points_new_x_1 = 1./2.*(p[0,t[0,ref_elems]]+\
-                                p[0,t[1,ref_elems]])
-        points_new_y_1 = 1./2.*(p[1,t[0,ref_elems]]+\
-                                p[1,t[1,ref_elems]])
-        points_new_x_2 = 1./2.*(p[0,t[1,ref_elems]]+\
-                                p[0,t[2,ref_elems]])
-        points_new_y_2 = 1./2.*(p[1,t[1,ref_elems]]+\
-                                p[1,t[2,ref_elems]])
-        points_new_x_3 = 1./2.*(p[0,t[0,ref_elems]]+\
-                                p[0,t[2,ref_elems]])
-        points_new_y_3 = 1./2.*(p[1,t[0,ref_elems]]+\
-                                p[1,t[2,ref_elems]])
-        points_new_1 = np.vstack((points_new_x_1, points_new_y_1)).T
-        points_new_2 = np.vstack((points_new_x_2, points_new_y_2)).T
-        points_new_3 = np.vstack((points_new_x_3, points_new_y_3)).T
-        points = np.vstack((points_old, points_new_1, points_new_2, points_new_3))
+        p = self.p
 
-        # remove duplicates
-        tmp = np.ascontiguousarray(points)
-        tmp, ixa = np.unique(tmp.view([('', tmp.dtype)]*tmp.shape[1]), return_index=True)
-        points = points[ixa, :]
+        #tmp = np.zeros(self.t.shape[1])
+        #tmp[marked] = 1
+        #marked = tmp
+        #print marked
 
-        # create first mesh candidate
-        tri = spspat.Delaunay(points)
-        newmesh = MeshTri(points.T, tri.simplices.copy().T)
+        # change (0,2) to longest edge
+        # TODO vectorize this
+        for itr in range(t.shape[1]):
+            l01 = np.sqrt(np.sum((p[:, t[0, itr]] - p[:, t[1, itr]])**2))
+            l12 = np.sqrt(np.sum((p[:, t[1, itr]] - p[:, t[2, itr]])**2))
+            l02 = np.sqrt(np.sum((p[:, t[0, itr]] - p[:, t[2, itr]])**2))
+            if l02 > l01 and l02 > l12:
+                # OK. (0 2) is longest
+                continue
+            elif l01 > l02 and l01 > l12:
+                # (0 1) is longest
+                tmp = t[2, itr]
+                t[2, itr] = t[1, itr]
+                t[1, itr] = tmp
+            elif l12 > l01 and l12 > l02:
+                # (1 2) is longest
+                tmp = t[0, itr]
+                t[0, itr] = t[1, itr]
+                t[1, itr] = tmp
 
-        # try to fix shape regularity by bisecting long edges
-        for itr in range(iters):
-            e1=np.sqrt(np.diff(newmesh.p[0,newmesh.facets[:,newmesh.t2f[0,:]]],axis=0)**2+\
-                       np.diff(newmesh.p[1,newmesh.facets[:,newmesh.t2f[0,:]]],axis=0)**2)
-            e2=np.sqrt(np.diff(newmesh.p[0,newmesh.facets[:,newmesh.t2f[1,:]]],axis=0)**2+\
-                       np.diff(newmesh.p[1,newmesh.facets[:,newmesh.t2f[1,:]]],axis=0)**2)
-            e3=np.sqrt(np.diff(newmesh.p[0,newmesh.facets[:,newmesh.t2f[2,:]]],axis=0)**2+\
-                       np.diff(newmesh.p[1,newmesh.facets[:,newmesh.t2f[2,:]]],axis=0)**2)
 
-            emin = np.min(np.vstack((e1,e2,e3)),axis=0)
-            coeff = 2.0
-            npoints = 0.5*(newmesh.p[:,newmesh.facets[0,newmesh.t2f[0,(e1>coeff*emin)[0]]]] +\
-                           newmesh.p[:,newmesh.facets[1,newmesh.t2f[0,(e1>coeff*emin)[0]]]])
-            points = np.vstack((points, npoints.T))
-            npoints = 0.5*(newmesh.p[:,newmesh.facets[0,newmesh.t2f[1,(e2>coeff*emin)[0]]]] +\
-                           newmesh.p[:,newmesh.facets[1,newmesh.t2f[1,(e2>coeff*emin)[0]]]])
-            points = np.vstack((points, npoints.T))
-            npoints = 0.5*(newmesh.p[:,newmesh.facets[0,newmesh.t2f[2,(e3>coeff*emin)[0]]]] +\
-                           newmesh.p[:,newmesh.facets[1,newmesh.t2f[2,(e3>coeff*emin)[0]]]])
-            points = np.vstack((points, npoints.T))
+        detA = (p[0,t[1,:]]-p[0,t[0,:]])*(p[1,t[2,:]]-p[1,t[0,:]])-\
+               (p[0,t[2,:]]-p[0,t[0,:]])*(p[1,t[1,:]]-p[1,t[0,:]])
 
-            # remove duplicates
-            tmp = np.ascontiguousarray(points)
-            tmp, ixa = np.unique(tmp.view([('', tmp.dtype)]*tmp.shape[1]), return_index=True)
-            points = points[ixa, :]
 
-            tri = spspat.Delaunay(points)
-            newmesh = MeshTri(points.T, tri.simplices.copy().T)
+        swap = detA<0
 
-        return newmesh
+        temppi = t[0,swap] 
+        t[0,swap] = t[2,swap] 
+        t[2,swap] = temppi
+
+        detA = (p[0,t[1,:]]-p[0,t[0,:]])*(p[1,t[2,:]]-p[1,t[0,:]])-\
+               (p[0,t[2,:]]-p[0,t[0,:]])*(p[1,t[1,:]]-p[1,t[0,:]])
+        #print detA
+
+        n4e = t.T
+        c4n = p.T
+
+        # edges and edge mappings
+        edges = np.reshape(n4e[:,[1,2,0,2,0,1]].T, (2,-1)).T
+
+        edges = np.sort(edges,axis=1)
+
+        tmp = np.ascontiguousarray(edges)
+        xoxo, ixa, ixb = np.unique(tmp.view([('', tmp.dtype)] * tmp.shape[1]),
+                                  return_index=True, return_inverse=True)
+        edges = edges[ixa]
+        el2edges = ixb.reshape((3, -1)).T
+
+        nEdges = edges.shape[0]
+        nC = c4n.shape[0]
+        tmp = 1
+
+        markedEdges = np.zeros(nEdges)
+        #print el2edges.shape
+        markedEdges[np.reshape(el2edges[marked], (-1, 1))] = 1
+
+        while tmp > 0:
+            tmp = np.count_nonzero(markedEdges)
+            el2markedEdges = markedEdges[el2edges]
+            el2markedEdges[el2markedEdges[:,0] + el2markedEdges[:,2]>0,1] = 1.0
+            markedEdges[el2edges[el2markedEdges==1.0]] = 1
+            tmp = np.count_nonzero(markedEdges)-tmp
+
+        newNodes = np.zeros(nEdges)-1
+        newNodes[markedEdges==1.0] = np.arange(np.count_nonzero(markedEdges)) + nC
+        newInd = newNodes[el2edges]
+
+        red = (newInd[:,0]>=0) & (newInd[:,1] >= 0) & (newInd[:,2] >= 0)
+        blue1 = (newInd[:,0]>=0) & (newInd[:,1] >= 0) & (newInd[:,2] == -1)
+        blue3 = (newInd[:,0]==-1) & (newInd[:,1] >= 0) & (newInd[:,2] >= 0)
+        green = (newInd[:,0]==-1) & (newInd[:,1] >= 0) & (newInd[:,2] == -1)
+        remain = (newInd[:,0]==-1) & (newInd[:,1] == -1) & (newInd[:,2] == -1)
+
+        n4e_red = np.vstack((n4e[red,0],newInd[red,2],newInd[red,1]))
+        n4e_red_1 = np.reshape(n4e_red,(3,-1)).T
+        n4e_red = np.vstack((newInd[red,1],newInd[red,0],n4e[red,2]))
+        n4e_red_2 = np.reshape(n4e_red,(3,-1)).T
+        n4e_red = np.vstack((newInd[red,2],n4e[red,1],newInd[red,0]))
+        n4e_red_3 = np.reshape(n4e_red,(3,-1)).T
+        n4e_red = np.vstack((newInd[red,0],newInd[red,1],newInd[red,2]))
+        n4e_red_4 = np.reshape(n4e_red,(3,-1)).T
+        n4e_red = np.vstack((n4e_red_1, n4e_red_2, n4e_red_3, n4e_red_4))
+        #n4e_red = np.vstack((n4e[red,2],newInd[red,2],newInd[red,1],
+        #    newInd[red,1],newInd[red,0],n4e[red,1],
+        #    newInd[red,2],n4e[red,0],newInd[red,0],
+        #    newInd[red,0],newInd[red,1],newInd[red,2]))
+        #n4e_red = np.reshape(n4e_red,(3,-1)).T
+
+        n4e_blue1 = np.vstack((n4e[blue1,1],newInd[blue1,1],n4e[blue1,0]))
+        n4e_blue1_1 = np.reshape(n4e_blue1,(3,-1)).T
+        n4e_blue1 = np.vstack((n4e[blue1,1],newInd[blue1,0],newInd[blue1,1]))
+        n4e_blue1_2 = np.reshape(n4e_blue1,(3,-1)).T
+        n4e_blue1 = np.vstack((newInd[blue1,1],newInd[blue1,0],n4e[blue1,2]))
+        n4e_blue1_3 = np.reshape(n4e_blue1,(3,-1)).T
+        n4e_blue1 = np.vstack((n4e_blue1_1, n4e_blue1_2, n4e_blue1_3))
+        #n4e_blue1 = np.vstack((n4e[blue1,1],newInd[blue1,1],n4e[blue1,0],
+        #    n4e[blue1,1],newInd[blue1,0],newInd[blue1,1],
+        #    newInd[blue1,1],newInd[blue1,0],n4e[blue1,2]))
+        #n4e_blue1 = np.reshape(n4e_blue1,(3,-1)).T
+
+        n4e_blue3 = np.vstack((n4e[blue3,0],newInd[blue3,2],newInd[blue3,1]))
+        n4e_blue3_1 = np.reshape(n4e_blue3,(3,-1)).T
+        n4e_blue3 = np.vstack((newInd[blue3,1],newInd[blue3,2],n4e[blue3,1]))
+        n4e_blue3_2 = np.reshape(n4e_blue3,(3,-1)).T
+        n4e_blue3 = np.vstack((n4e[blue3,2],newInd[blue3,1],n4e[blue3,1]))
+        n4e_blue3_3 = np.reshape(n4e_blue3,(3,-1)).T
+        n4e_blue3 = np.vstack((n4e_blue3_1, n4e_blue3_2, n4e_blue3_3))
+
+        # TODO fix green?
+        n4e_green = np.vstack((n4e[green,1],newInd[green,1],n4e[green,0],
+            n4e[green,2],newInd[green,1],n4e[green,1]))
+        n4e_green = np.reshape(n4e_green,(3,-1)).T
+
+        n4e = np.vstack((n4e[remain], n4e_red, n4e_blue1, n4e_blue3, n4e_green))
+        #n4e = np.vstack((n4e_red))
+
+        newCoord = .5*(c4n[edges[markedEdges==1.0,0]]
+                + c4n[edges[markedEdges==1.0,1]])
+
+        c4n = np.vstack((c4n, newCoord))
+
+        return MeshTri(c4n.T, n4e.T.astype(np.int64), validate=True)
+
+
+    def local_refine(self, ref_elems, ref_data=None):
+        """Perform adaptive refinement of the given triangles
+        and return a new mesh (red green only)."""
+        
+        if ref_data is None:
+            ref_data = np.zeros(self.t.shape[1])
+
+        fsplit = self.t2f[:, ref_elems].flatten('F')
+
+        ref_facets = np.zeros(self.facets.shape[1])
+        ref_facets[fsplit] = 1
+
+        for itr in range(1000):
+            ix1 = np.nonzero((np.sum(ref_facets[self.t2f], axis=0) == 1)*(ref_data == 1))[0]
+            ix2 = np.nonzero(np.sum(ref_facets[self.t2f], axis=0) == 2)[0]
+
+            if len(ix1) + len(ix2) == 0:
+                break
+
+            ref_elems = np.concatenate((ref_elems, ix2, ix1))
+
+            fsplit_n = np.hstack((self.t2f[:, ix2], self.t2f[:, ix1]))
+            ref_facets[fsplit_n] = 1
+
+            fsplit = np.concatenate((fsplit, fsplit_n.flatten('F')))
+
+            #print ref_elems
+
+        fsplit = np.unique(fsplit)
+
+        f1 = self.facets[0, fsplit]
+        f2 = self.facets[1, fsplit]
+        p = self.p
+        
+        pf = .5*(p[:, f1] + p[:, f2])
+
+        fnotsplit = np.setdiff1d(np.arange(self.facets.shape[1]), fsplit)
+
+        fenum = np.zeros(self.facets.shape[1])
+        fenum[fsplit] = np.arange(len(fsplit), dtype=np.int64)
+
+        new_facets = np.hstack((self.facets[:, fnotsplit],
+                                np.vstack((f1, fenum[fsplit] + p.shape[1])),
+                                np.vstack((f2, fenum[fsplit] + p.shape[1]))))
+
+        ix0 = np.nonzero(np.sum(ref_facets[self.t2f], axis=0) == 0)[0]
+        ix1 = np.nonzero(np.sum(ref_facets[self.t2f], axis=0) == 1)[0]
+
+        tbi = self.t[:, ix0]
+        ref_data_n = ref_data[ix0]
+
+        # split to two subtriangles
+        for n in range(3):
+            # splitted edge
+            ind = ix1[np.nonzero(ref_facets[self.t2f[n, ix1]] == 1)[0]]
+
+            f = self.t2f[n, ind]
+            f1 = self.facets[0, f]
+            f2 = self.facets[1, f]
+
+            # free vertex
+            vf = self.t[(n+2)%3, ind]
+
+            tmp = fenum[f] + p.shape[1]
+            tbi = np.hstack((tbi, np.vstack((vf, tmp, f1)), np.vstack((vf, tmp, f2))))
+
+            ref_data_n = np.concatenate((ref_data_n, ref_data[ind]+1, ref_data[ind]+1))
+        
+        # split to four subtriangles
+        ix3 = np.nonzero(np.sum(ref_facets[self.t2f], axis=0) == 3)[0]
+
+        v1 = self.t[0, ix3]
+        v2 = self.t[1, ix3]
+        v3 = self.t[2, ix3]
+
+        f1 = fenum[self.t2f[0, ix3]] + p.shape[1]
+        f2 = fenum[self.t2f[1, ix3]] + p.shape[1]
+        f3 = fenum[self.t2f[2, ix3]] + p.shape[1]
+
+        tbi = np.hstack((tbi,
+                         np.vstack((f3, v1, f1)),
+                         np.vstack((f1, v2, f2)),
+                         np.vstack((f2, v3, f3)),
+                         np.vstack((f1, f2, f3))))
+
+        ref_data_n = np.concatenate((ref_data_n,
+                                     ref_data[ix3],
+                                     ref_data[ix3],
+                                     ref_data[ix3],
+                                     ref_data[ix3]))
+
+        p = np.hstack((p, pf))
+
+        return MeshTri(p, tbi.astype(np.int64)), ref_data_n
 
     def mapping(self):
         return spfem.mapping.MappingAffine(self)

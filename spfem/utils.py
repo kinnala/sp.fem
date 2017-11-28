@@ -49,7 +49,7 @@ def const_cell(nparr, *arg):
         u = {i: const_cell(nparr, *arg[1:]) for (i, _) in enumerate(range(arg[0]))}
     return u
 
-def direct(A, b, x=None, I=None, use_umfpack=True):
+def direct(A, b, x=None, I=None, use_umfpack=True, cholmod=False):
     """Solve system Ax=b with Dirichlet boundary conditions.
     
     Parameters
@@ -67,15 +67,30 @@ def direct(A, b, x=None, I=None, use_umfpack=True):
     """
 
     if I is None:
-        x = spl.spsolve(A, b, use_umfpack=use_umfpack)
+        if cholmod:
+            from sksparse.cholmod import cholesky
+            factor = cholesky(A)
+            x = factor(b)
+        else:
+            x = spl.spsolve(A, b, use_umfpack=use_umfpack)
     else:
         if x is None:
             x = np.zeros(A.shape[0])
-            x[I] = spl.spsolve(A[I].T[I].T, b[I], use_umfpack=use_umfpack)
+            if cholmod:
+                from sksparse.cholmod import cholesky
+                factor = cholesky(A[I].T[I].T)
+                x[I] = factor(b[I])
+            else:
+                x[I] = spl.spsolve(A[I].T[I].T, b[I], use_umfpack=use_umfpack)
         else:
             D = np.setdiff1d(np.arange(A.shape[0]), I)
-            x[I] = spl.spsolve(A[I].T[I].T, b[I] - A[I].T[D].T.dot(x[D]),
-                               use_umfpack=use_umfpack)
+            if cholmod:
+                from sksparse.cholmod import cholesky
+                factor = cholesky(A[I].T[I].T)
+                x[I] = factor(b[I] - A[I].T[D].T.dot(x[D]))
+            else:
+                x[I] = spl.spsolve(A[I].T[I].T, b[I] - A[I].T[D].T.dot(x[D]),
+                                   use_umfpack=use_umfpack)
 
     return x
 

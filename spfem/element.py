@@ -162,12 +162,13 @@ class AbstractElement(object):
             else:
                 raise NotImplementedError("The given dimension not implemented!")
 
-    def plot_lagmult(self, mesh, dofnum, sol, minval, maxval, lambdaeval, nref=2):
+    def plot_lagmult(self, mesh, dofnum, sol, minval, maxval, lambdaeval, nref=2, cbar=True):
         """Draw plate obstacle lagrange multiplier on refined mesh."""
         print "Plotting on a refined mesh. This is slowish due to loop over elements..."
         import copy
         import spfem.mesh as fmsh
         plt.figure()
+        totmaxval = 0
         for itr in range(mesh.t.shape[1]):
             m = fmsh.MeshTri(np.array([[mesh.p[0,mesh.t[0,itr]], mesh.p[0,mesh.t[1,itr]], mesh.p[0,mesh.t[2,itr]]],
                                        [mesh.p[1,mesh.t[0,itr]], mesh.p[1,mesh.t[1,itr]], mesh.p[1,mesh.t[2,itr]]]]),
@@ -187,11 +188,15 @@ class AbstractElement(object):
                 newd4u[0][1] += sol[dofnum.t_dof[jtr, itr]]*d4u[jtr][0][1].flatten()
                 newd4u[1][0] += sol[dofnum.t_dof[jtr, itr]]*d4u[jtr][1][0].flatten()
                 newd4u[1][1] += sol[dofnum.t_dof[jtr, itr]]*d4u[jtr][1][1].flatten()
-            #tmp = lambdaeval(newu, newd4u, qps, M.param())
+            tmp = lambdaeval(newu, newd4u, qps, M.param())
             #print tmp.shape
-            m.plot(lambdaeval(newu, newd4u, qps, M.param()).flatten(), nofig=True, smooth=True, zlim=(minval, maxval))
+            if np.max(tmp)>totmaxval:
+                totmaxval=np.max(tmp)
+            m.plot(tmp.flatten(), nofig=True, smooth=True, zlim=(minval, maxval))
             plt.hold('on')
-        plt.colorbar()
+        print "Maximum value: " + str(totmaxval)
+        if cbar:
+            plt.colorbar()
 
     def plot_refined(self, mesh, dofnum, sol, minval, maxval, nref=2):
         """Draw a discrete function on refined mesh."""
