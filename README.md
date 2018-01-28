@@ -2,6 +2,8 @@
 
 [![Build Status](https://travis-ci.org/kinnala/sp.fem.svg)](https://travis-ci.org/kinnala/sp.fem) [![codecov](https://codecov.io/gh/kinnala/sp.fem/branch/master/graph/badge.svg)](https://codecov.io/gh/kinnala/sp.fem)
 
+The code has been renamed, relicensed and ported to Python 3. Find the latests developments [here](https://github.com/kinnala/scikit-fem). This Python 2 version is not updated anymore.
+
 In this repository you find the working draft of a lightweight,
 fully-interpreted and yet well-performing finite element code written in
 SciPy/Python.
