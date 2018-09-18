@@ -1,4 +1,4 @@
-# sp.fem
+# (DEPRECATED) sp.fem
 
 [![Build Status](https://travis-ci.org/kinnala/sp.fem.svg)](https://travis-ci.org/kinnala/sp.fem) [![codecov](https://codecov.io/gh/kinnala/sp.fem/branch/master/graph/badge.svg)](https://codecov.io/gh/kinnala/sp.fem)
 
